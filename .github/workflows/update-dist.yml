@@ -1,0 +1,141 @@
+name: Update Dist Branch
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build from'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  update-dist:
+    name: Update Distribution Branch
+    runs-on: ubuntu-latest
+    
+    steps:
+      # STEP 1: Checkout and build in main workspace
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'  # This works because package-lock.json exists here
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build production assets
+        run: npm run build
+        
+      - name: Verify build output
+        run: |
+          if [ ! -d "build" ] || [ -z "$(ls -A build)" ]; then
+            echo "❌ Build directory is missing or empty"
+            exit 1
+          fi
+          echo "✅ Build successful"
+          ls -la build/
+      
+      # STEP 2: Handle dist in separate clone (NO CONFLICTS!)
+      - name: Update dist branch
+        env:
+          VERSION: ${{ github.event.release.tag_name || inputs.tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Configure git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Clone to separate directory WITH AUTHENTICATION
+          echo "📦 Cloning repository to temp directory..."
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git /tmp/dist-repo
+          cd /tmp/dist-repo
+          
+          # Fetch or create dist branch
+          echo "🔄 Setting up dist branch..."
+          if git ls-remote --heads origin dist | grep -q dist; then
+            echo "Found existing dist branch"
+            git fetch origin dist:dist
+            git checkout dist
+          else
+            echo "Creating new dist branch"
+            git checkout -B dist
+          fi
+          
+          # Clear everything except .git (preserves history)
+          echo "🧹 Cleaning dist branch..."
+          find . -maxdepth 1 ! -name '.git' ! -name '.' ! -name '..' -exec rm -rf {} +
+          
+          # Copy production files from build workspace
+          echo "📂 Copying production files..."
+          cp -r ${{ github.workspace }}/build .
+          cp ${{ github.workspace }}/*.php .
+          cp ${{ github.workspace }}/readme.txt .
+          cp ${{ github.workspace }}/LICENSE .
+          
+          # Copy languages if exists
+          if [ -d "${{ github.workspace }}/languages" ]; then
+            cp -r ${{ github.workspace }}/languages .
+          fi
+          
+          # Create production composer.json
+          cat > composer.json << 'EOF'
+          {
+            "name": "pikari-inc/pikari-query-filter",
+            "description": "Filter controls for the query loop block, using the interactivity API",
+            "type": "wordpress-plugin",
+            "license": "GPL-2.0-or-later",
+            "require": {
+              "php": ">=8.2"
+            },
+            "extra": {
+              "installer-name": "pikari-query-filter"
+            }
+          }
+          EOF
+          
+          # Create VERSION file
+          echo "$VERSION" > VERSION
+          
+          # Create minimal .gitignore
+          cat > .gitignore << 'EOF'
+          .DS_Store
+          Thumbs.db
+          *.log
+          EOF
+          
+          # Commit changes
+          echo "💾 Committing distribution build..."
+          git add -A
+          
+          # Check if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Distribution build for $VERSION"
+            
+            # Push branch (not force after first time - preserves history)
+            echo "🚀 Pushing to dist branch..."
+            if git ls-remote --heads origin dist | grep -q dist; then
+              git push origin dist
+            else
+              git push -u origin dist
+            fi
+          fi
+          
+          # Tag this commit
+          echo "🏷️ Creating version tag..."
+          git tag -f "$VERSION"
+          git push -f origin "$VERSION"
+          
+          echo "✅ Distribution branch updated successfully!"
+          echo "📦 Version $VERSION is now available for Composer installation"

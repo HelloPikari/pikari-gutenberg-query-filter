@@ -1,0 +1,11 @@
+{
+	"permissions": {
+		"allow": [
+			"Bash(npm run lint:*)",
+			"WebSearch",
+			"Bash(./vendor/bin/phpcs:*)"
+		],
+		"deny": [],
+		"ask": []
+	}
+}

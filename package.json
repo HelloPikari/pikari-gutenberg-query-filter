@@ -1,0 +1,58 @@
+{
+	"name": "pikari-query-filter",
+	"version": "0.1.0",
+	"description": "Filter controls for the query loop block, using the interactivity API",
+	"author": "Pikari Inc. <development@pikari.io>",
+	"homepage": "https://pikari.io",
+	"license": "GPL-2.0-or-later",
+	"keywords": [
+		"wordpress",
+		"plugin"
+	],
+	"scripts": {
+		"start": "wp-scripts start --experimental-modules",
+		"build": "wp-scripts build --experimental-modules",
+		"lint:all": "npm run lint:js && npm run lint:css && npm run lint:php && npm run lint:md:docs",
+		"lint:fix": "npm run lint:js:fix && npm run lint:css:fix && npm run lint:php:fix && npm run lint:md:fix",
+		"lint:js": "wp-scripts lint-js src",
+		"lint:js:fix": "wp-scripts lint-js src --fix",
+		"lint:css": "wp-scripts lint-style src/**/*.{css,scss}",
+		"lint:css:fix": "wp-scripts lint-style src/**/*.{css,scss} --fix",
+		"lint:php": "composer lint",
+		"lint:php:fix": "composer lint:fix",
+		"lint:md:docs": "wp-scripts lint-md-docs",
+		"lint:md:fix": "wp-scripts lint-md-docs --fix",
+		"lint:pkg-json": "wp-scripts lint-pkg-json",
+		"test": "wp-scripts test-unit-js",
+		"test:e2e": "wp-scripts test-e2e",
+		"test:unit": "wp-scripts test-unit-js",
+		"packages-update": "wp-scripts packages-update",
+		"plugin-zip": "wp-scripts plugin-zip",
+		"playground": "npx @wp-now/wp-now start --blueprint=_playground/blueprint-local.json",
+		"playground:demo": "npx @wp-now/wp-now start --blueprint=_playground/blueprint.json",
+		"prepare": "husky",
+		"wp-env": "wp-env"
+	},
+	"devDependencies": {
+		"@wordpress/env": "^10.30.0",
+		"@wordpress/scripts": "latest",
+		"husky": "latest",
+		"lint-staged": "latest"
+	},
+	"lint-staged": {
+		"*.php": [
+			"composer run lint"
+		],
+		"*.js": [
+			"wp-scripts lint-js",
+			"prettier --write"
+		],
+		"*.{scss,css}": [
+			"wp-scripts lint-style",
+			"prettier --write"
+		],
+		"*.{json,md}": [
+			"prettier --write"
+		]
+	}
+}

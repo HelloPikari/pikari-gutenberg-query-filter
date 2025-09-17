@@ -1,0 +1,30 @@
+- name: breaking
+  color: d73a4a
+  description: Breaking change requiring major version bump
+- name: feature
+  color: 0075ca
+  description: New feature or enhancement
+- name: enhancement
+  color: 0075ca
+  description: Enhancement to existing feature
+- name: bug
+  color: d73a4a
+  description: Bug fix
+- name: fix
+  color: d73a4a
+  description: Bug fix
+- name: docs
+  color: 0052cc
+  description: Documentation improvements
+- name: dependencies
+  color: 0e8a16
+  description: Dependency updates
+- name: chore
+  color: fef2c0
+  description: Maintenance and chores
+- name: ci
+  color: "000000"
+  description: CI/CD improvements
+- name: skip-changelog
+  color: eeeeee
+  description: Skip release notes

@@ -1,0 +1,68 @@
+name: Auto-merge Dependabot
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Auto-merge Dependencies
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    
+    steps:
+      - name: Check PR details
+        id: pr-details
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const title = pr.title.toLowerCase();
+            
+            // Only auto-merge patch and minor updates
+            const isPatch = title.includes('patch') || /bump .+ from \d+\.\d+\.\d+ to \d+\.\d+\.\d+$/.test(title);
+            const isMinor = title.includes('minor') || /bump .+ from \d+\.\d+\.\d+ to \d+\.\d+\.\d+$/.test(title);
+            
+            // Don't auto-merge major updates or WordPress core packages
+            const isMajor = title.includes('major');
+            const isWordPressCore = title.includes('@wordpress/');
+            
+            const shouldAutoMerge = (isPatch || isMinor) && !isMajor && !isWordPressCore;
+            
+            console.log(`Title: ${title}`);
+            console.log(`Should auto-merge: ${shouldAutoMerge}`);
+            
+            return { autoMerge: shouldAutoMerge };
+      
+      - name: Wait for CI
+        if: fromJSON(steps.pr-details.outputs.result).autoMerge
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: 'Code Quality'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 30
+      
+      - name: Enable auto-merge
+        if: fromJSON(steps.pr-details.outputs.result).autoMerge
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              event: 'APPROVE',
+              body: '✅ Auto-approving dependency update'
+            });
+            
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              merge_method: 'squash'
+            });

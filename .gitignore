@@ -1,0 +1,87 @@
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Editor and IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Dependencies
+node_modules/
+vendor/
+bower_components/
+
+# Build outputs
+dist/
+build/
+*.min.js
+*.min.css
+
+# Logs and databases
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.sql
+*.sqlite
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage/
+.nyc_output/
+.phpunit.result.cache
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+.sass-cache/
+
+# OS generated files
+.Trash-*
+.nfs*
+
+# Pikari Dev Setup
+pikari-dev-setup/
+pikari-dev-setup-*/
+
+# Package files
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Backup files
+*.bak
+*.backup
+*_backup
+*_old
+*.orig
+
+# Lock files (uncomment if you don't want to track lock files)
+# package-lock.json
+# yarn.lock
+# composer.lock

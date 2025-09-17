@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-upload:
+    name: Build Release Assets
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build production
+        run: npm run build
+      
+      - name: Create distribution ZIP
+        run: |
+          # Plugin slug
+          SLUG="pikari-query-filter"
+          
+          # Create temp directory for clean distribution
+          mkdir -p /tmp/dist/$SLUG
+          
+          # Copy production files only (exclude dev files)
+          echo "Creating production distribution..."
+          rsync -av \
+            --exclude='.git*' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='src' \
+            --exclude='tests' \
+            --exclude='vendor' \
+            --exclude='.*' \
+            --exclude='*.log' \
+            --exclude='*.lock' \
+            --exclude='composer.*' \
+            --exclude='package*' \
+            --exclude='webpack.*' \
+            --exclude='*.md' \
+            --exclude='bin' \
+            --exclude='_playground' \
+            --exclude='.husky' \
+            --exclude='*.sh' \
+            --exclude='phpcs.xml' \
+            --exclude='*.config.*' \
+            . /tmp/dist/$SLUG/
+          
+          # Ensure build directory is included
+          if [ ! -d "/tmp/dist/$SLUG/build" ]; then
+            echo "❌ Build directory missing from distribution"
+            exit 1
+          fi
+          
+          # Create ZIP
+          cd /tmp/dist
+          zip -r "$SLUG.zip" $SLUG
+          mv "$SLUG.zip" $GITHUB_WORKSPACE/
+          
+          echo "✅ Created distribution ZIP: pikari-query-filter.zip"
+          
+          # Generate checksums
+          cd $GITHUB_WORKSPACE
+          sha256sum $SLUG.zip > checksums.txt
+          md5sum $SLUG.zip >> checksums.txt
+      
+      - name: Verify distribution
+        run: |
+          echo "Distribution contents:"
+          unzip -l pikari-query-filter.zip | head -20
+          
+          echo -e "\nChecksums:"
+          cat checksums.txt
+          
+          echo -e "\nZIP size:"
+          ls -lh pikari-query-filter.zip
+      
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            pikari-query-filter.zip
+            checksums.txt
+          tag_name: ${{ github.event.release.tag_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

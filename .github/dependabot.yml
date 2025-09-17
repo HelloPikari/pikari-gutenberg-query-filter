@@ -1,0 +1,52 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+    groups:
+      wordpress:
+        patterns:
+          - "@wordpress/*"
+        update-types:
+          - "minor"
+          - "patch"
+      development:
+        patterns:
+          - "*eslint*"
+          - "*prettier*"
+          - "*stylelint*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Ignore major version updates for WordPress packages to avoid breaking changes
+      - dependency-name: "@wordpress/*"
+        update-types: ["version-update:semver-major"]
+  
+  - package-ecosystem: "composer"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+    ignore:
+      # Ignore major PHP version updates
+      - dependency-name: "php"
+        update-types: ["version-update:semver-major"]
+  
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "ci"

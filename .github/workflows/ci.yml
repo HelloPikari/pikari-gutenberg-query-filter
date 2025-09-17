@@ -1,0 +1,169 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+      
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-
+      
+      - name: Install dependencies
+        run: |
+          npm ci
+          composer install --prefer-dist --no-progress
+      
+      - name: Verify lock files are in sync
+        run: |
+          npm ls >/dev/null 2>&1 || (echo "❌ package-lock.json out of sync" && exit 1)
+          composer validate --strict
+      
+      - name: Run linters
+        id: lint
+        run: |
+          set +e  # Don't exit on first failure
+          
+          echo "Running JavaScript linting..."
+          npm run lint:js
+          JS_EXIT=$?
+          
+          echo "Running CSS linting..."
+          npm run lint:css
+          CSS_EXIT=$?
+          
+          echo "Running PHP linting..."
+          composer lint
+          PHP_EXIT=$?
+          
+          # Set outputs for failure tracking
+          [ $JS_EXIT -ne 0 ] && echo "js-failed=true" >> $GITHUB_OUTPUT
+          [ $CSS_EXIT -ne 0 ] && echo "css-failed=true" >> $GITHUB_OUTPUT  
+          [ $PHP_EXIT -ne 0 ] && echo "php-failed=true" >> $GITHUB_OUTPUT
+          
+          # Exit with failure if any linter failed
+          [ $JS_EXIT -ne 0 ] || [ $CSS_EXIT -ne 0 ] || [ $PHP_EXIT -ne 0 ] && exit 1 || exit 0
+      
+      - name: Comment PR on lint failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const failures = [];
+            if ('${{ steps.lint.outputs.js-failed }}' === 'true') failures.push('JavaScript');
+            if ('${{ steps.lint.outputs.css-failed }}' === 'true') failures.push('CSS');
+            if ('${{ steps.lint.outputs.php-failed }}' === 'true') failures.push('PHP');
+            
+            const body = `❌ Linting failed for: ${failures.join(', ')}
+            
+            Please run the following locally to fix issues:
+            ${failures.includes('JavaScript') ? '- \`npm run lint:js -- --fix\`' : ''}
+            ${failures.includes('CSS') ? '- \`npm run lint:css -- --fix\`' : ''}
+            ${failures.includes('PHP') ? '- \`composer lint:fix\`' : ''}
+            
+            Then commit and push the changes.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            })
+      
+      - name: Security audit
+        run: |
+          echo "Running npm audit..."
+          npm audit --audit-level=high
+          
+          echo "Running composer audit..."
+          composer audit
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: quality
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install & Build
+        run: |
+          npm ci
+          npm run build
+      
+      - name: Verify build
+        run: |
+          test -d build || (echo "❌ Build directory missing" && exit 1)
+          echo "✅ Build verification successful"
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: build/
+          retention-days: 1
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: quality
+    continue-on-error: true  # Since no tests exist yet
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests
+        run: |
+          if npm run | grep -q "test "; then
+            npm test
+          else
+            echo "::notice::No tests configured yet - this is expected for now"
+          fi

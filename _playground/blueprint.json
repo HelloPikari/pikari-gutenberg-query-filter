@@ -1,0 +1,41 @@
+{
+	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
+	"preferredVersions": {
+		"php": "8.2",
+		"wp": "latest"
+	},
+	"landingPage": "/?p=1",
+	"login": true,
+	"features": {
+		"networking": true
+	},
+	"steps": [
+		{
+			"step": "setSiteOptions",
+			"options": {
+				"blogname": "pikari-query-filter Demo"
+			}
+		},
+		{
+			"step": "installPlugin",
+			"pluginData": {
+				"resource": "url",
+				"url": "https://github-proxy.com/proxy/?repo=[YOUR_GITHUB_ORG]/[YOUR_GITHUB_REPO]&branch=build"
+			},
+			"options": {
+				"activate": true
+			}
+		},
+		{
+			"step": "installTheme",
+			"themeData": {
+				"resource": "wordpress.org/themes",
+				"slug": "twentytwentyfour"
+			}
+		},
+		{
+			"step": "runPHP",
+			"code": "<?php\nrequire '/wordpress/wp-load.php';\n\n// Create demo content\nwp_update_post(array(\n    'ID' => 1,\n    'post_title' => 'pikari-query-filter - Demo',\n    'post_content' => '<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Welcome to pikari-query-filter!</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>This is a demo of the pikari-query-filter plugin. Try out the features below.</p>\n<!-- /wp:paragraph -->',\n    'post_status' => 'publish'\n));\n?>"
+		}
+	]
+}
