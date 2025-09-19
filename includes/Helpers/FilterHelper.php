@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Helper class for query filter functionality.
  */
-class FilterHelper {
+class FilterHelper extends AbstractQueryHelper {
 
     /**
      * Get query variables and URLs for the post type filter.
@@ -28,23 +28,8 @@ class FilterHelper {
      *     @type string $base_url  Base URL without query parameters.
      * }
      */
-    public static function get_filter_query_config( $block ) {
-        if ( $block->context['query']['inherit'] ) {
-            $query_var = 'query-post_type';
-            $page_var  = 'page';
-            $base_url  = str_replace( '/page/' . get_query_var( 'paged' ), '', remove_query_arg( array( $query_var, $page_var ) ) );
-        } else {
-            $query_id  = $block->context['queryId'] ?? 0;
-            $query_var = sprintf( 'query-%d-post_type', $query_id );
-            $page_var  = isset( $block->context['queryId'] ) ? 'query-' . $block->context['queryId'] . '-page' : 'query-page';
-            $base_url  = remove_query_arg( array( $query_var, $page_var ) );
-        }
-
-        return array(
-            'query_var' => $query_var,
-            'page_var'  => $page_var,
-            'base_url'  => $base_url,
-        );
+    public static function get_post_type_filter_config( $block ) {
+        return static::get_query_config( $block, 'post_type' );
     }
 
     /**
@@ -60,46 +45,9 @@ class FilterHelper {
      * }
      */
     public static function get_taxonomy_filter_config( $block, $taxonomy ) {
-        if ( empty( $block->context['query']['inherit'] ) ) {
-            $query_id  = $block->context['queryId'] ?? 0;
-            $query_var = sprintf( 'query-%d-%s', $query_id, $taxonomy );
-            $page_var  = isset( $block->context['queryId'] ) ? 'query-' . $block->context['queryId'] . '-page' : 'query-page';
-            $base_url  = remove_query_arg( array( $query_var, $page_var ) );
-        } else {
-            $query_var = sprintf( 'query-%s', $taxonomy );
-            $page_var  = 'page';
-            $base_url  = str_replace( '/page/' . get_query_var( 'paged' ), '', remove_query_arg( array( $query_var, $page_var ) ) );
-        }
-
-        return array(
-            'query_var' => $query_var,
-            'page_var'  => $page_var,
-            'base_url'  => $base_url,
-        );
+        return static::get_taxonomy_query_config( $block, $taxonomy );
     }
 
-    /**
-     * Build URL for filter option.
-     *
-     * @param string $base_url  Base URL.
-     * @param string $query_var Query variable name.
-     * @param string $page_var  Page variable name.
-     * @param string $value     Filter value.
-     * @return string Filter URL.
-     */
-    public static function build_filter_url( $base_url, $query_var, $page_var, $value = '' ) {
-        if ( empty( $value ) ) {
-            return $base_url;
-        }
-
-        return add_query_arg(
-            array(
-                $query_var => $value,
-                $page_var  => false,
-            ),
-            $base_url
-        );
-    }
 
     /**
      * Get current selected value from query parameters.

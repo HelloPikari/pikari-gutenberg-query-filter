@@ -1,15 +1,16 @@
 {
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
-	"name": "pikari-gutenberg-query-filter/post-type",
+	"name": "pikari-gutenberg-query-filter/sort",
 	"version": "0.1.0",
-	"title": "Post Type Filter",
+	"title": "Sort Filter",
 	"category": "theme",
-	"icon": "filter",
-	"description": "Allows users to filter by post type when placed wihin a query loop block",
+	"icon": "sort",
+	"description": "Allows users to sort posts by date or title when placed within a query loop block",
 	"ancestor": ["core/query"],
 	"usesContext": ["queryId", "query"],
 	"supports": {
+		"align": ["left", "center", "right"],
 		"html": false,
 		"className": true,
 		"customClassName": true,
@@ -52,18 +53,17 @@
 			"type": "boolean",
 			"default": true
 		},
-		"displayType": {
-			"type": "string",
-			"default": "select"
+		"width": {
+			"type": "number"
 		},
-		"layoutDirection": {
-			"type": "string",
-			"default": "vertical"
+		"widthUnit": {
+			"type": "string"
 		}
 	},
 	"textdomain": "pikari-gutenberg-query-filter",
 	"editorScript": "file:./index.js",
+	"style": "file:./style.scss",
+	"editorStyle": "file:./editor.scss",
 	"viewScriptModule": "pikari-gutenberg-query-filter-taxonomy-view-script-module",
-	"style": "pikari-gutenberg-query-filter-taxonomy-style",
 	"render": "file:./render.php"
 }

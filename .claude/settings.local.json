@@ -3,7 +3,11 @@
 		"allow": [
 			"Bash(npm run lint:*)",
 			"WebSearch",
-			"Bash(./vendor/bin/phpcs:*)"
+			"Bash(./vendor/bin/phpcs:*)",
+			"WebFetch(domain:github.com)",
+			"WebFetch(domain:raw.githubusercontent.com)",
+			"Bash(npm run build:*)",
+			"Bash(composer lint:fix:*)"
 		],
 		"deny": [],
 		"ask": []

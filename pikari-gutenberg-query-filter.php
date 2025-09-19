@@ -64,6 +64,9 @@ function pikari_gutenberg_query_filter_init() {
     // Register Gutenberg blocks.
     pikari_gutenberg_query_filter_register_blocks();
 
+    // Setup cache invalidation hooks.
+    pikari_gutenberg_query_filter_setup_cache_hooks();
+
     // Hook frontend script enqueuing.
     add_action( 'wp_enqueue_scripts', 'pikari_gutenberg_query_filter_enqueue_scripts' );
 }
@@ -94,6 +97,24 @@ function pikari_gutenberg_query_filter_enqueue_scripts() {
     // Example:
     // wp_enqueue_style( 'pikari-query-filter', PIKARI_QUERY_FILTER_URL . 'assets/css/style.css', array(), PIKARI_QUERY_FILTER_VERSION );
     // wp_enqueue_script( 'pikari-query-filter', PIKARI_QUERY_FILTER_URL . 'assets/js/script.js', array( 'jquery' ), PIKARI_QUERY_FILTER_VERSION, true );
+}
+
+/**
+ * Setup cache invalidation hooks for author filter data.
+ */
+function pikari_gutenberg_query_filter_setup_cache_hooks() {
+    // Clear author cache when posts are published/updated.
+    add_action( 'save_post', array( 'Pikari\GutenbergQueryFilter\Helpers\AuthorHelper', 'invalidate_author_cache' ) );
+    add_action( 'delete_post', array( 'Pikari\GutenbergQueryFilter\Helpers\AuthorHelper', 'invalidate_author_cache' ) );
+
+    // Clear author cache when users are created/deleted.
+    add_action( 'user_register', array( 'Pikari\GutenbergQueryFilter\Helpers\AuthorHelper', 'invalidate_author_cache' ) );
+    add_action( 'delete_user', array( 'Pikari\GutenbergQueryFilter\Helpers\AuthorHelper', 'invalidate_author_cache' ) );
+
+    // Clear author cache when user capabilities change.
+    add_action( 'add_user_role', array( 'Pikari\GutenbergQueryFilter\Helpers\AuthorHelper', 'invalidate_author_cache' ) );
+    add_action( 'remove_user_role', array( 'Pikari\GutenbergQueryFilter\Helpers\AuthorHelper', 'invalidate_author_cache' ) );
+    add_action( 'set_user_role', array( 'Pikari\GutenbergQueryFilter\Helpers\AuthorHelper', 'invalidate_author_cache' ) );
 }
 
 /**

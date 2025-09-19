@@ -1,12 +1,12 @@
 {
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
-	"name": "pikari-gutenberg-query-filter/taxonomy",
+	"name": "pikari-gutenberg-query-filter/query-filter",
 	"version": "0.1.0",
-	"title": "Taxonomy Filter",
+	"title": "Query Filter",
 	"category": "theme",
 	"icon": "filter",
-	"description": "Allows users to filter by taxonomy terms when placed wihin a query loop block",
+	"description": "Filter posts in a query loop by post type, taxonomy, or author",
 	"ancestor": ["core/query"],
 	"usesContext": ["queryId", "query"],
 	"supports": {
@@ -41,6 +41,10 @@
 		}
 	},
 	"attributes": {
+		"filterType": {
+			"type": "string",
+			"default": "post-type"
+		},
 		"taxonomy": {
 			"type": "string"
 		},
@@ -66,7 +70,8 @@
 	},
 	"textdomain": "pikari-gutenberg-query-filter",
 	"editorScript": "file:./index.js",
-	"style": "file:./index.css",
+	"style": "file:./style-index.css",
+	"editorStyle": "file:./index.css",
 	"viewScriptModule": "file:./view.js",
 	"render": "file:./render.php"
 }

@@ -10,8 +10,8 @@
 		"plugin"
 	],
 	"scripts": {
-		"start": "wp-scripts start --experimental-modules",
-		"build": "wp-scripts build --experimental-modules",
+		"start": "rimraf build && wp-scripts start --experimental-modules",
+		"build": "rimraf build && wp-scripts build --experimental-modules",
 		"lint:all": "npm run lint:js && npm run lint:css && npm run lint:php && npm run lint:md:docs",
 		"lint:fix": "npm run lint:js:fix && npm run lint:css:fix && npm run lint:php:fix && npm run lint:md:fix",
 		"lint:js": "wp-scripts lint-js src",
@@ -31,7 +31,10 @@
 		"playground": "npx @wp-now/wp-now start --blueprint=_playground/blueprint-local.json",
 		"playground:demo": "npx @wp-now/wp-now start --blueprint=_playground/blueprint.json",
 		"prepare": "husky",
-		"wp-env": "wp-env"
+		"wp-env": "wp-env start -- --xdebug"
+	},
+	"dependencies": {
+		"classnames": "^2.5.1"
 	},
 	"devDependencies": {
 		"@wordpress/env": "^10.30.0",
