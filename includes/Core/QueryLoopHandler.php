@@ -237,7 +237,7 @@ class QueryLoopHandler {
                             'taxonomy' => $taxonomy,
                             'field'    => 'slug',
                             'terms'    => $term_slugs,
-                            'operator' => 'IN',
+                            'operator' => 'AND',
                         );
                     }
                 }
