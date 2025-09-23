@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: pikari-gutenberg-query-filter
- * Plugin URI:  https://pikari.io
- * Description: Filter controls for the query loop block, using the interactivity API
+ * Plugin Name: Pikari Gutenberg Query Filter
+ * Plugin URI:  https://github.com/pikariweb/pikari-gutenberg-query-filter
+ * Description: Advanced filtering for Query Loop blocks with search, post types, taxonomies, authors, and sorting. Integrates seamlessly with WordPress core blocks using the Interactivity API.
  * Version:     0.1.0
  * Author:      Pikari Inc.
  * Author URI:  https://pikari.io
@@ -10,6 +10,10 @@
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: pikari-gutenberg-query-filter
  * Domain Path: /languages
+ * Requires at least: 6.8
+ * Tested up to: 6.8
+ * Requires PHP: 8.2
+ * Network: false
  *
  * @package pikari-gutenberg-query-filter
  */
