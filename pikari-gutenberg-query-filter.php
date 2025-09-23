@@ -67,10 +67,21 @@ function pikari_gutenberg_query_filter_init() {
     // Setup cache invalidation hooks.
     pikari_gutenberg_query_filter_setup_cache_hooks();
 
+    // Initialize Query Loop handler.
+    pikari_gutenberg_query_filter_init_query_handler();
+
+    // Initialize core block filters.
+    // Note: Block filters moved outside init to catch core block registration
+    // pikari_gutenberg_query_filter_init_block_filters();
+
     // Hook frontend script enqueuing.
     add_action( 'wp_enqueue_scripts', 'pikari_gutenberg_query_filter_enqueue_scripts' );
 }
 add_action( 'init', 'pikari_gutenberg_query_filter_init' );
+
+// Initialize core block filters immediately to catch all block registrations.
+// This must happen before init to catch core WordPress blocks.
+pikari_gutenberg_query_filter_init_block_filters();
 
 /**
  * Register Gutenberg blocks.
@@ -115,6 +126,22 @@ function pikari_gutenberg_query_filter_setup_cache_hooks() {
     add_action( 'add_user_role', array( 'Pikari\GutenbergQueryFilter\Helpers\AuthorHelper', 'invalidate_author_cache' ) );
     add_action( 'remove_user_role', array( 'Pikari\GutenbergQueryFilter\Helpers\AuthorHelper', 'invalidate_author_cache' ) );
     add_action( 'set_user_role', array( 'Pikari\GutenbergQueryFilter\Helpers\AuthorHelper', 'invalidate_author_cache' ) );
+}
+
+/**
+ * Initialize the Query Loop handler.
+ */
+function pikari_gutenberg_query_filter_init_query_handler() {
+    // Instantiate the handler which will register its own hooks.
+    new \Pikari\GutenbergQueryFilter\Core\QueryLoopHandler();
+}
+
+/**
+ * Initialize core block filters.
+ */
+function pikari_gutenberg_query_filter_init_block_filters() {
+    // Instantiate the block filters which will register their own hooks.
+    new \Pikari\GutenbergQueryFilter\Integrations\BlockFilters();
 }
 
 /**

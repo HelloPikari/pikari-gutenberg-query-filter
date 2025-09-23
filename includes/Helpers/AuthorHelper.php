@@ -51,7 +51,7 @@ class AuthorHelper extends AbstractQueryHelper {
     public static function get_filter_authors( $args = array() ) {
         // Set default arguments
         $defaults = array(
-            'who'                   => 'authors',
+            'can'                   => 'authors',
             'orderby'               => 'display_name',
             'order'                 => 'ASC',
             'has_published_posts'   => true,
@@ -64,6 +64,7 @@ class AuthorHelper extends AbstractQueryHelper {
 
         // Try to get from cache first
         $authors = get_transient( $cache_key );
+        // $authors = false;
 
         if ( false === $authors ) {
             // Cache miss - fetch from database

@@ -10,6 +10,7 @@
 	"ancestor": ["core/query"],
 	"usesContext": ["queryId", "query"],
 	"supports": {
+		"align": ["wide", "full", "left", "center", "right"],
 		"html": false,
 		"className": true,
 		"customClassName": true,

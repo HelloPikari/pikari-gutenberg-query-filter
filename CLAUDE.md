@@ -128,7 +128,7 @@ When fetching WordPress data in React components (Gutenberg blocks, editor plugi
 - Automatic handling of loading states
 - Follows WordPress best practices
 
-#### Example Usage:
+#### Example Usage
 
 ```javascript
 import { useEntityRecords } from '@wordpress/core-data';
@@ -152,7 +152,7 @@ const { records: pdfs } = useEntityRecords('postType', 'attachment', {
 });
 ```
 
-#### Common Query Parameters:
+#### Common Query Parameters
 
 - `per_page`: Number of items to fetch
 - `orderby`: Sort field (date, title, menu_order, etc.)

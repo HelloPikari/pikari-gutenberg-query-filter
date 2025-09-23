@@ -60,7 +60,7 @@ npm test
 **Pikari Inc.**
 
 - Email: development@pikari.io
-- Homepage: https://pikari.io
+- Homepage: <https://pikari.io>
 
 ## Changelog
 

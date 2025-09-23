@@ -45,9 +45,13 @@ class SortHelper extends AbstractQueryHelper {
      * }
      */
     public static function get_current_sort_value( $orderby_var, $order_var ) {
+        // Default to date descending if no parameters are set.
+        $default_orderby = 'date';
+        $default_order   = 'desc';
+
         return array(
-            'orderby' => isset( $_GET[ $orderby_var ] ) ? sanitize_text_field( wp_unslash( $_GET[ $orderby_var ] ) ) : '',
-            'order'   => isset( $_GET[ $order_var ] ) ? sanitize_text_field( wp_unslash( $_GET[ $order_var ] ) ) : '',
+            'orderby' => isset( $_GET[ $orderby_var ] ) ? sanitize_text_field( wp_unslash( $_GET[ $orderby_var ] ) ) : $default_orderby,
+            'order'   => isset( $_GET[ $order_var ] ) ? sanitize_text_field( wp_unslash( $_GET[ $order_var ] ) ) : $default_order,
         );
     }
 }

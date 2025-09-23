@@ -295,4 +295,4 @@ After publishing:
 - **GitHub Issues**: Report problems with the release process
 - **Discussions**: Ask questions about release management
 - **Actions Tab**: Debug workflow failures
-- **Release Drafter Docs**: https://github.com/release-drafter/release-drafter
+- **Release Drafter Docs**: <https://github.com/release-drafter/release-drafter>

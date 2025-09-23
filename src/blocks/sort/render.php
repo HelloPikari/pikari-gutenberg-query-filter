@@ -54,6 +54,10 @@ if ( ! empty( $current_sort['orderby'] ) && ! empty( $current_sort['order'] ) ) 
     $current_value = $current_sort['orderby'] . '-' . $current_sort['order'];
 }
 
+// Check if this is the default state (no URL parameters).
+$has_sort_params = isset( $_GET[ $orderby_var ] ) || isset( $_GET[ $order_var ] );
+$is_default_sort = ! $has_sort_params && $current_value === 'date-desc';
+
 $wrapper_attributes = get_block_wrapper_attributes(
     array(
         'class' => 'wp-block-pikari-gutenberg-query-filter',
@@ -77,7 +81,9 @@ echo wp_json_encode(
     </label>
 
     <select class="wp-block-pikari-gutenberg-query-filter-sort__select wp-block-pikari-gutenberg-query-filter__select" id="<?php echo esc_attr( $id ); ?>" data-wp-on--change="actions.handleSort">
-        <option value="" <?php selected( empty( $current_value ) ); ?>><?php echo esc_html( $empty_label ); ?></option>
+        <?php if ( ! $is_default_sort ) : ?>
+            <option value="" <?php selected( empty( $current_value ) || ( ! $has_sort_params && $current_value === 'date-desc' ) ); ?>><?php echo esc_html( $empty_label ); ?></option>
+        <?php endif; ?>
         <?php foreach ( $sort_options as $option ) : ?>
             <option value="<?php echo esc_attr( $option['value'] ); ?>" <?php selected( $option['value'], $current_value ); ?>>
             <?php echo esc_html( $option['label'] ); ?>

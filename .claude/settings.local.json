@@ -7,7 +7,8 @@
 			"WebFetch(domain:github.com)",
 			"WebFetch(domain:raw.githubusercontent.com)",
 			"Bash(npm run build:*)",
-			"Bash(composer lint:fix:*)"
+			"Bash(composer lint:fix:*)",
+			"WebFetch(domain:developer.wordpress.org)"
 		],
 		"deny": [],
 		"ask": []
