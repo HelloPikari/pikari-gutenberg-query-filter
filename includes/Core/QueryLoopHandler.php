@@ -66,10 +66,24 @@ class QueryLoopHandler {
 
         // Apply taxonomy filtering.
         if ( ! empty( $parameters['tax_query'] ) ) {
-            $query_args['tax_query'] = array_merge(
-                $query_args['tax_query'] ?? array(),
-                $parameters['tax_query']
-            );
+            $existing_tax_query = $query_args['tax_query'] ?? array();
+
+            // If there's an existing tax_query, merge properly with AND relation.
+            if ( ! empty( $existing_tax_query ) ) {
+                // Ensure both queries use AND relation for cumulative filtering.
+                $existing_tax_query['relation'] = 'AND';
+                $parameters['tax_query']['relation'] = 'AND';
+
+                // Merge the two tax queries.
+                $query_args['tax_query'] = array(
+                    'relation' => 'AND',
+                    $existing_tax_query,
+                    $parameters['tax_query'],
+                );
+            } else {
+                // No existing tax_query, just use the new one.
+                $query_args['tax_query'] = $parameters['tax_query'];
+            }
         }
 
         // Apply author filtering.
@@ -223,17 +237,17 @@ class QueryLoopHandler {
                             'taxonomy' => $taxonomy,
                             'field'    => 'slug',
                             'terms'    => $term_slugs,
-                            'operator' => 'AND',
+                            'operator' => 'IN',
                         );
                     }
                 }
             }
         }
 
-        // Set relation to OR if multiple taxonomies are filtered.
-        // This allows posts to match any of the selected taxonomies.
+        // Set relation to AND if multiple taxonomies are filtered.
+        // This creates cumulative filtering where posts must match all selected taxonomies.
         if ( count( $tax_query ) > 1 ) {
-            $tax_query['relation'] = 'OR';
+            $tax_query['relation'] = 'AND';
         }
 
         return $tax_query;
