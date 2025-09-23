@@ -74,9 +74,8 @@ function pikari_gutenberg_query_filter_init() {
     // Initialize Query Loop handler.
     pikari_gutenberg_query_filter_init_query_handler();
 
-    // Initialize core block filters.
-    // Note: Block filters moved outside init to catch core block registration
-    // pikari_gutenberg_query_filter_init_block_filters();
+    // Note: Block filters are initialized early outside init hook to catch core block registration.
+    // See pikari_gutenberg_query_filter_safe_init_block_filters() call above.
 
     // Hook frontend script enqueuing.
     add_action( 'wp_enqueue_scripts', 'pikari_gutenberg_query_filter_enqueue_scripts' );
@@ -85,7 +84,7 @@ add_action( 'init', 'pikari_gutenberg_query_filter_init' );
 
 // Initialize core block filters immediately to catch all block registrations.
 // This must happen before init to catch core WordPress blocks.
-pikari_gutenberg_query_filter_init_block_filters();
+pikari_gutenberg_query_filter_safe_init_block_filters();
 
 /**
  * Register Gutenberg blocks.
@@ -141,11 +140,30 @@ function pikari_gutenberg_query_filter_init_query_handler() {
 }
 
 /**
+ * Safely initialize core block filters with fallback.
+ */
+function pikari_gutenberg_query_filter_safe_init_block_filters() {
+    // Try to initialize early to catch core block registrations.
+    if ( pikari_gutenberg_query_filter_init_block_filters() === false ) {
+        // If early initialization fails, add fallback on init hook with high priority.
+        add_action( 'init', 'pikari_gutenberg_query_filter_init_block_filters', 0 );
+    }
+}
+
+/**
  * Initialize core block filters.
+ *
+ * @return bool True if successful, false if class not available.
  */
 function pikari_gutenberg_query_filter_init_block_filters() {
+    // Check if the class is available before trying to instantiate.
+    if ( ! class_exists( '\Pikari\GutenbergQueryFilter\Integrations\BlockFilters' ) ) {
+        return false;
+    }
+
     // Instantiate the block filters which will register their own hooks.
     new \Pikari\GutenbergQueryFilter\Integrations\BlockFilters();
+    return true;
 }
 
 /**
