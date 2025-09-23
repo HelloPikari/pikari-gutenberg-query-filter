@@ -374,6 +374,34 @@ When working with frontend code, always:
 - Only use trusted packages from reputable sources
 - Review dependency licenses for compatibility
 
+### Code Quality & Security Patterns
+
+#### Input Validation & Sanitization
+
+- **Always validate numeric IDs**: Use `absint()` for query IDs before using in `sprintf()`
+- **GET parameter filtering**: Use phpcs ignore for nonce verification when handling filter parameters (`// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Filtering parameters don't require nonces.`)
+- **Validate existence**: Use `post_type_exists()`, `taxonomy_exists()` before using in queries
+- **Sanitize arrays**: Use `array_filter()` and `array_map()` for cleaning arrays from user input
+
+#### Error Handling
+
+- **JSON encoding**: Always check `wp_json_encode()` return value (can return false)
+- **Database queries**: Validate query parameters exist before using
+- **Context access**: Use null coalescing operator (`??`) for optional context values
+- **Early returns**: Return early when required data is missing
+
+#### Performance Considerations
+
+- **Avoid serialization**: Use `wp_json_encode()` instead of `serialize()` for cache keys when possible
+- **Cache expensive operations**: Use transients for database-heavy operations
+- **Validate before sprintf**: Always validate numeric values before using in `sprintf()`
+
+#### WordPress Integration
+
+- **Filter parameters**: GET parameters for filtering (post types, taxonomies, etc.) don't require nonce verification
+- **Block context**: Always validate block context data types and existence
+- **Hook priorities**: Use higher priorities (20+) for render hooks to ensure proper timing
+
 ## Important Notes
 
 - This project uses Husky for pre-commit hooks

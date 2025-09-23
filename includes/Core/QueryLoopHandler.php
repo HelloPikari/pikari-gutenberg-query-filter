@@ -7,8 +7,6 @@
 
 namespace Pikari\GutenbergQueryFilter\Core;
 
-use Pikari\GutenbergQueryFilter\Helpers\AbstractQueryHelper;
-
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -93,8 +91,15 @@ class QueryLoopHandler {
         }
 
         // Apply default sorting if no sort parameters are present.
-        $orderby_param = $inherit_query ? 'query-orderby' : sprintf( 'query-%d-orderby', $query_id );
-        $order_param   = $inherit_query ? 'query-order' : sprintf( 'query-%d-order', $query_id );
+        if ( $inherit_query ) {
+            $orderby_param = 'query-orderby';
+            $order_param   = 'query-order';
+        } else {
+            // Validate query_id is numeric for sprintf safety.
+            $query_id = absint( $query_id );
+            $orderby_param = sprintf( 'query-%d-orderby', $query_id );
+            $order_param   = sprintf( 'query-%d-order', $query_id );
+        }
         $has_sort_params = isset( $_GET[ $orderby_param ] ) || isset( $_GET[ $order_param ] );
 
         if ( ! $has_sort_params ) {
@@ -119,6 +124,8 @@ class QueryLoopHandler {
         if ( $inherit_query ) {
             $prefix = 'query-';
         } else {
+            // Validate query_id is numeric for sprintf safety.
+            $query_id = absint( $query_id );
             $prefix = sprintf( 'query-%d-', $query_id );
         }
 
@@ -158,7 +165,13 @@ class QueryLoopHandler {
         }
 
         // Parse search parameter.
-        $search_param = $inherit_query ? 's' : sprintf( 'query-%d-s', $query_id );
+        if ( $inherit_query ) {
+            $search_param = 's';
+        } else {
+            // Validate query_id is numeric for sprintf safety.
+            $query_id = absint( $query_id );
+            $search_param = sprintf( 'query-%d-s', $query_id );
+        }
         if ( isset( $_GET[ $search_param ] ) ) {
             $search = sanitize_text_field( wp_unslash( $_GET[ $search_param ] ) );
             if ( ! empty( $search ) ) {
@@ -204,17 +217,21 @@ class QueryLoopHandler {
                 $term_slugs = array_filter( array_map( 'trim', $term_slugs ) );
 
                 if ( ! empty( $term_slugs ) ) {
-                    $tax_query[] = array(
-                        'taxonomy' => $taxonomy,
-                        'field'    => 'slug',
-                        'terms'    => $term_slugs,
-                        'operator' => count( $term_slugs ) > 1 ? 'IN' : 'IN',
-                    );
+                    // Validate taxonomy exists before adding to query.
+                    if ( taxonomy_exists( $taxonomy ) ) {
+                        $tax_query[] = array(
+                            'taxonomy' => $taxonomy,
+                            'field'    => 'slug',
+                            'terms'    => $term_slugs,
+                            'operator' => 'IN',
+                        );
+                    }
                 }
             }
         }
 
-        // Set relation to AND if multiple taxonomies are filtered.
+        // Set relation to OR if multiple taxonomies are filtered.
+        // This allows posts to match any of the selected taxonomies.
         if ( count( $tax_query ) > 1 ) {
             $tax_query['relation'] = 'OR';
         }
