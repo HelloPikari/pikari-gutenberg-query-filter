@@ -20,7 +20,7 @@ jobs:
     
     steps:
       - name: Draft Release
-        uses: release-drafter/release-drafter@v6.3.1
+        uses: release-drafter/release-drafter@v6.1.0
         with:
           config-name: release-drafter.yml
           disable-autolabeler: false
