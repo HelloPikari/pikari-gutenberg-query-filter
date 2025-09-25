@@ -202,7 +202,7 @@ class BlockFilters {
 
         // Set interactivity state for the search value.
         wp_interactivity_state(
-            'pikari-gutenberg-query-filter',
+            'pikari/gutenberg-query-filter',
             array(
                 'searchValue' => $value,
             )
