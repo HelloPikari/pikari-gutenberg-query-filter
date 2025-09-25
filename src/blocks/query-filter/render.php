@@ -81,7 +81,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 );
 ?>
 
-<div <?php echo wp_kses_post( $wrapper_attributes ); ?> data-wp-interactive="pikari-gutenberg-query-filter" data-wp-context='
+<div <?php echo wp_kses_post( $wrapper_attributes ); ?> data-wp-interactive="pikari/gutenberg-query-filter" data-wp-context='
 <?php
 echo wp_json_encode(
     array(
