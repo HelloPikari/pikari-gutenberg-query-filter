@@ -214,7 +214,7 @@ class BlockFilters {
         // Update the form element.
         if ( $processor->next_tag( array( 'tag_name' => 'form' ) ) ) {
             $processor->set_attribute( 'action', $action );
-            $processor->set_attribute( 'data-wp-interactive', 'pikari-gutenberg-query-filter' );
+            $processor->set_attribute( 'data-wp-interactive', 'pikari/gutenberg-query-filter' );
             $processor->set_attribute( 'data-wp-on--submit', 'actions.search' );
             $context_data = wp_json_encode(
                 array(
