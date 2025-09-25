@@ -204,9 +204,9 @@ Note: Prettier is configured to ignore JavaScript files. ESLint handles all Java
 
 #### WordPress Interactivity API Standards
 
-- **Store Name**: This plugin uses `'pikari-gutenberg-query-filter'` as the interactivity store name
-- **HTML Attribute**: Use `data-wp-interactive="pikari-gutenberg-query-filter"` in render.php files
-- **JavaScript Store**: Use `store( 'pikari-gutenberg-query-filter', { ... } )` in view.js files
+- **Store Name**: This plugin uses `'pikari/gutenberg-query-filter'` as the interactivity store name
+- **HTML Attribute**: Use `data-wp-interactive="pikari/gutenberg-query-filter"` in render.php files
+- **JavaScript Store**: Use `store( 'pikari/gutenberg-query-filter', { ... } )` in view.js files
 - **Consistency Rule**: Store name MUST match across all render.php and view.js files
 - **Why Full Name**: Prevents conflicts with other plugins using similar short names
 
@@ -282,6 +282,10 @@ When working with frontend code, always:
 - Main branch: `main`
 - Feature branches: `feature/description`
 - Bugfix branches: `fix/description`
+- **IMPORTANT**: Always create new branches off main when starting new tasks
+  - Switch to main: `git checkout main`
+  - Update main: `git pull origin main`
+  - Create new branch: `git checkout -b feature/task-description`
 - Commit format: `type: Brief description`
   - Types: feat, fix, docs, style, refactor, test, chore
 - Pre-commit hooks run linting automatically via Husky
