@@ -116,11 +116,6 @@ class QueryLoopHandler {
         }
         $has_sort_params = isset( $_GET[ $orderby_param ] ) || isset( $_GET[ $order_param ] );
 
-        if ( ! $has_sort_params ) {
-            $query_args['orderby'] = 'date';
-            $query_args['order']   = 'DESC';
-        }
-
         return $query_args;
     }
 
