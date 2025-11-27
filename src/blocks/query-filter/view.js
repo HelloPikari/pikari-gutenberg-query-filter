@@ -1,6 +1,6 @@
 import { store, getContext, getElement } from '@wordpress/interactivity';
 
-store( 'pikari-gutenberg-query-filter', {
+store( 'pikari/gutenberg-query-filter', {
 	actions: {
 		*updateFilters( event ) {
 			event.preventDefault();
@@ -9,7 +9,7 @@ store( 'pikari-gutenberg-query-filter', {
 			const { queryVar, pageVar } = context;
 
 			// Get all checkboxes in this filter block
-			const filterBlock = ref.closest( '[data-wp-interactive="pikari-gutenberg-query-filter"]' );
+			const filterBlock = ref.closest( '[data-wp-interactive="pikari/gutenberg-query-filter"]' );
 			const checkboxes = filterBlock.querySelectorAll( 'input[type="checkbox"]:checked' );
 			const values = Array.from( checkboxes ).map( ( cb ) => cb.value );
 
