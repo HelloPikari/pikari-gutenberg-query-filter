@@ -7,8 +7,6 @@
 
 namespace Pikari\GutenbergQueryFilter\Core;
 
-use Pikari\GutenbergQueryFilter\Helpers\AbstractQueryHelper;
-
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -68,10 +66,24 @@ class QueryLoopHandler {
 
         // Apply taxonomy filtering.
         if ( ! empty( $parameters['tax_query'] ) ) {
-            $query_args['tax_query'] = array_merge(
-                $query_args['tax_query'] ?? array(),
-                $parameters['tax_query']
-            );
+            $existing_tax_query = $query_args['tax_query'] ?? array();
+
+            // If there's an existing tax_query, merge properly with AND relation.
+            if ( ! empty( $existing_tax_query ) ) {
+                // Ensure both queries use AND relation for cumulative filtering.
+                $existing_tax_query['relation'] = 'AND';
+                $parameters['tax_query']['relation'] = 'AND';
+
+                // Merge the two tax queries.
+                $query_args['tax_query'] = array(
+                    'relation' => 'AND',
+                    $existing_tax_query,
+                    $parameters['tax_query'],
+                );
+            } else {
+                // No existing tax_query, just use the new one.
+                $query_args['tax_query'] = $parameters['tax_query'];
+            }
         }
 
         // Apply author filtering.
@@ -93,14 +105,16 @@ class QueryLoopHandler {
         }
 
         // Apply default sorting if no sort parameters are present.
-        $orderby_param = $inherit_query ? 'query-orderby' : sprintf( 'query-%d-orderby', $query_id );
-        $order_param   = $inherit_query ? 'query-order' : sprintf( 'query-%d-order', $query_id );
-        $has_sort_params = isset( $_GET[ $orderby_param ] ) || isset( $_GET[ $order_param ] );
-
-        if ( ! $has_sort_params ) {
-            $query_args['orderby'] = 'date';
-            $query_args['order']   = 'DESC';
+        if ( $inherit_query ) {
+            $orderby_param = 'query-orderby';
+            $order_param   = 'query-order';
+        } else {
+            // Validate query_id is numeric for sprintf safety.
+            $query_id = absint( $query_id );
+            $orderby_param = sprintf( 'query-%d-orderby', $query_id );
+            $order_param   = sprintf( 'query-%d-order', $query_id );
         }
+        $has_sort_params = isset( $_GET[ $orderby_param ] ) || isset( $_GET[ $order_param ] );
 
         return $query_args;
     }
@@ -119,6 +133,8 @@ class QueryLoopHandler {
         if ( $inherit_query ) {
             $prefix = 'query-';
         } else {
+            // Validate query_id is numeric for sprintf safety.
+            $query_id = absint( $query_id );
             $prefix = sprintf( 'query-%d-', $query_id );
         }
 
@@ -158,7 +174,13 @@ class QueryLoopHandler {
         }
 
         // Parse search parameter.
-        $search_param = $inherit_query ? 's' : sprintf( 'query-%d-s', $query_id );
+        if ( $inherit_query ) {
+            $search_param = 's';
+        } else {
+            // Validate query_id is numeric for sprintf safety.
+            $query_id = absint( $query_id );
+            $search_param = sprintf( 'query-%d-s', $query_id );
+        }
         if ( isset( $_GET[ $search_param ] ) ) {
             $search = sanitize_text_field( wp_unslash( $_GET[ $search_param ] ) );
             if ( ! empty( $search ) ) {
@@ -204,19 +226,23 @@ class QueryLoopHandler {
                 $term_slugs = array_filter( array_map( 'trim', $term_slugs ) );
 
                 if ( ! empty( $term_slugs ) ) {
-                    $tax_query[] = array(
-                        'taxonomy' => $taxonomy,
-                        'field'    => 'slug',
-                        'terms'    => $term_slugs,
-                        'operator' => count( $term_slugs ) > 1 ? 'IN' : 'IN',
-                    );
+                    // Validate taxonomy exists before adding to query.
+                    if ( taxonomy_exists( $taxonomy ) ) {
+                        $tax_query[] = array(
+                            'taxonomy' => $taxonomy,
+                            'field'    => 'slug',
+                            'terms'    => $term_slugs,
+                            'operator' => 'IN',
+                        );
+                    }
                 }
             }
         }
 
         // Set relation to AND if multiple taxonomies are filtered.
+        // This creates cumulative filtering where posts must match all selected taxonomies.
         if ( count( $tax_query ) > 1 ) {
-            $tax_query['relation'] = 'OR';
+            $tax_query['relation'] = 'AND';
         }
 
         return $tax_query;

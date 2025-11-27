@@ -1,15 +1,19 @@
 <?php
 /**
- * Plugin Name: pikari-gutenberg-query-filter
- * Plugin URI:  https://pikari.io
- * Description: Filter controls for the query loop block, using the interactivity API
- * Version:     0.1.0
+ * Plugin Name: Pikari Gutenberg Query Filter
+ * Plugin URI:  https://github.com/pikariweb/pikari-gutenberg-query-filter
+ * Description: Advanced filtering for Query Loop blocks with search, post types, taxonomies, authors, and sorting. Integrates seamlessly with WordPress core blocks using the Interactivity API.
+ * Version:     0.1.6
  * Author:      Pikari Inc.
  * Author URI:  https://pikari.io
  * License:     GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: pikari-gutenberg-query-filter
  * Domain Path: /languages
+ * Requires at least: 6.8
+ * Tested up to: 6.8
+ * Requires PHP: 8.2
+ * Network: false
  *
  * @package pikari-gutenberg-query-filter
  */
@@ -70,9 +74,8 @@ function pikari_gutenberg_query_filter_init() {
     // Initialize Query Loop handler.
     pikari_gutenberg_query_filter_init_query_handler();
 
-    // Initialize core block filters.
-    // Note: Block filters moved outside init to catch core block registration
-    // pikari_gutenberg_query_filter_init_block_filters();
+    // Note: Block filters are initialized early outside init hook to catch core block registration.
+    // See pikari_gutenberg_query_filter_safe_init_block_filters() call above.
 
     // Hook frontend script enqueuing.
     add_action( 'wp_enqueue_scripts', 'pikari_gutenberg_query_filter_enqueue_scripts' );
@@ -81,7 +84,7 @@ add_action( 'init', 'pikari_gutenberg_query_filter_init' );
 
 // Initialize core block filters immediately to catch all block registrations.
 // This must happen before init to catch core WordPress blocks.
-pikari_gutenberg_query_filter_init_block_filters();
+pikari_gutenberg_query_filter_safe_init_block_filters();
 
 /**
  * Register Gutenberg blocks.
@@ -137,11 +140,30 @@ function pikari_gutenberg_query_filter_init_query_handler() {
 }
 
 /**
+ * Safely initialize core block filters with fallback.
+ */
+function pikari_gutenberg_query_filter_safe_init_block_filters() {
+    // Try to initialize early to catch core block registrations.
+    if ( pikari_gutenberg_query_filter_init_block_filters() === false ) {
+        // If early initialization fails, add fallback on init hook with high priority.
+        add_action( 'init', 'pikari_gutenberg_query_filter_init_block_filters', 0 );
+    }
+}
+
+/**
  * Initialize core block filters.
+ *
+ * @return bool True if successful, false if class not available.
  */
 function pikari_gutenberg_query_filter_init_block_filters() {
+    // Check if the class is available before trying to instantiate.
+    if ( ! class_exists( '\Pikari\GutenbergQueryFilter\Integrations\BlockFilters' ) ) {
+        return false;
+    }
+
     // Instantiate the block filters which will register their own hooks.
     new \Pikari\GutenbergQueryFilter\Integrations\BlockFilters();
+    return true;
 }
 
 /**
