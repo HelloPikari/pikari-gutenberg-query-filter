@@ -37,7 +37,7 @@
 		"classnames": "^2.5.1"
 	},
 	"devDependencies": {
-		"@wordpress/env": "^10.31.0",
+		"@wordpress/env": "^10.36.0",
 		"@wordpress/scripts": "latest",
 		"husky": "latest",
 		"lint-staged": "latest"
