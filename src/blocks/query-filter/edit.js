@@ -13,6 +13,7 @@ import {
 	__experimentalToggleGroupControlOption as ToggleGroupControlOption,
 } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
+import FilterInput from '../../components/FilterInput';
 
 export default function Edit( { attributes, setAttributes, context } ) {
 	const {
@@ -336,31 +337,39 @@ export default function Edit( { attributes, setAttributes, context } ) {
 							}
 						) }
 					>
-						<label>
-							<input type="radio" disabled checked />
+						<FilterInput type="radio" disabled checked>
 							{ emptyLabel ||
 								__( 'All', 'pikari-gutenberg-query-filter' ) }
-						</label>
+						</FilterInput>
 						{ filterType === 'post-type' &&
 							postTypes.slice( 0, 3 ).map( ( postType ) => (
-								<label key={ postType.slug }>
-									<input type="radio" disabled />
+								<FilterInput
+									key={ postType.slug }
+									type="radio"
+									disabled
+								>
 									{ postType.name }
-								</label>
+								</FilterInput>
 							) ) }
 						{ filterType === 'taxonomy' &&
 							terms.slice( 0, 3 ).map( ( term ) => (
-								<label key={ term.id }>
-									<input type="radio" disabled />
+								<FilterInput
+									key={ term.id }
+									type="radio"
+									disabled
+								>
 									{ term.name }
-								</label>
+								</FilterInput>
 							) ) }
 						{ filterType === 'author' &&
 							authors.slice( 0, 3 ).map( ( author ) => (
-								<label key={ author.id }>
-									<input type="radio" disabled />
+								<FilterInput
+									key={ author.id }
+									type="radio"
+									disabled
+								>
 									{ author.name }
-								</label>
+								</FilterInput>
 							) ) }
 					</div>
 				) }
@@ -377,24 +386,33 @@ export default function Edit( { attributes, setAttributes, context } ) {
 					>
 						{ filterType === 'post-type' &&
 							postTypes.slice( 0, 3 ).map( ( postType ) => (
-								<label key={ postType.slug }>
-									<input type="checkbox" disabled />
+								<FilterInput
+									key={ postType.slug }
+									type="checkbox"
+									disabled
+								>
 									{ postType.name }
-								</label>
+								</FilterInput>
 							) ) }
 						{ filterType === 'taxonomy' &&
 							terms.slice( 0, 3 ).map( ( term ) => (
-								<label key={ term.id }>
-									<input type="checkbox" disabled />
+								<FilterInput
+									key={ term.id }
+									type="checkbox"
+									disabled
+								>
 									{ term.name }
-								</label>
+								</FilterInput>
 							) ) }
 						{ filterType === 'author' &&
 							authors.slice( 0, 3 ).map( ( author ) => (
-								<label key={ author.id }>
-									<input type="checkbox" disabled />
+								<FilterInput
+									key={ author.id }
+									type="checkbox"
+									disabled
+								>
 									{ author.name }
-								</label>
+								</FilterInput>
 							) ) }
 					</div>
 				) }

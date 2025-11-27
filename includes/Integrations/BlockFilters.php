@@ -171,6 +171,12 @@ class BlockFilters {
             return $block_content;
         }
 
+        // Validate and sanitize query_id.
+        $query_id = absint( $query_id );
+        if ( 0 === $query_id && ! ( $query['inherit'] ?? false ) ) {
+            return $block_content;
+        }
+
         // Enqueue our interactivity script to ensure the store is available.
         wp_enqueue_script_module( 'pikari-gutenberg-query-filter-query-filter-view-script-module' );
 
@@ -196,7 +202,7 @@ class BlockFilters {
 
         // Set interactivity state for the search value.
         wp_interactivity_state(
-            'pikari-gutenberg-query-filter',
+            'pikari/gutenberg-query-filter',
             array(
                 'searchValue' => $value,
             )
@@ -208,18 +214,20 @@ class BlockFilters {
         // Update the form element.
         if ( $processor->next_tag( array( 'tag_name' => 'form' ) ) ) {
             $processor->set_attribute( 'action', $action );
-            $processor->set_attribute( 'data-wp-interactive', 'pikari-gutenberg-query-filter' );
+            $processor->set_attribute( 'data-wp-interactive', 'pikari/gutenberg-query-filter' );
             $processor->set_attribute( 'data-wp-on--submit', 'actions.search' );
-            $processor->set_attribute(
-                'data-wp-context',
-                wp_json_encode(
-                    array(
-                        'searchValue' => $value,
-                        'queryVar'    => $query_var,
-                        'pageVar'     => $page_var,
-                    )
+            $context_data = wp_json_encode(
+                array(
+                    'searchValue' => $value,
+                    'queryVar'    => $query_var,
+                    'pageVar'     => $page_var,
                 )
             );
+
+            // Only set context if JSON encoding succeeded.
+            if ( false !== $context_data ) {
+                $processor->set_attribute( 'data-wp-context', $context_data );
+            }
         }
 
         // Update the input element.
@@ -251,7 +259,7 @@ class BlockFilters {
         $processor->next_tag();
 
         // Always allow region updates on interactivity, use standard core region naming.
-        $query_id = $block['attrs']['queryId'] ?? 0;
+        $query_id = absint( $block['attrs']['queryId'] ?? 0 );
         $processor->set_attribute( 'data-wp-router-region', 'query-' . $query_id );
 
         return $processor->get_updated_html();

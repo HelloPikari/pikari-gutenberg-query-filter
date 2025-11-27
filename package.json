@@ -1,6 +1,6 @@
 {
 	"name": "pikari-query-filter",
-	"version": "0.1.0",
+	"version": "0.1.6",
 	"description": "Filter controls for the query loop block, using the interactivity API",
 	"author": "Pikari Inc. <development@pikari.io>",
 	"homepage": "https://pikari.io",
@@ -37,7 +37,7 @@
 		"classnames": "^2.5.1"
 	},
 	"devDependencies": {
-		"@wordpress/env": "^10.30.0",
+		"@wordpress/env": "^10.36.0",
 		"@wordpress/scripts": "latest",
 		"husky": "latest",
 		"lint-staged": "latest"

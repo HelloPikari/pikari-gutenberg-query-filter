@@ -1,5 +1,6 @@
 name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
+commitish: main
 
 version-resolver:
   major:
@@ -42,7 +43,8 @@ categories:
       - 'ci'
     collapse-after: 3
   - title: '⬆️ Dependencies'
-    label: 'dependencies'
+    labels:
+      - 'dependencies'
     collapse-after: 3
 
 exclude-labels:
@@ -55,10 +57,10 @@ autolabeler:
       - 'docs/**'
   - label: 'bug'
     branch:
-      - '/fix\/.+/'
+      - 'fix/*'
   - label: 'feature'
     branch:
-      - '/feature\/.+/'
+      - 'feature/*'
   - label: 'dependencies'
     files:
       - 'package*.json'

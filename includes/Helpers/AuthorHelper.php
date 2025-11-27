@@ -64,7 +64,6 @@ class AuthorHelper extends AbstractQueryHelper {
 
         // Try to get from cache first
         $authors = get_transient( $cache_key );
-        // $authors = false;
 
         if ( false === $authors ) {
             // Cache miss - fetch from database

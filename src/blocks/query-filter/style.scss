@@ -18,7 +18,7 @@
 .wp-block-pikari-gutenberg-query-filter__radio-item,
 .wp-block-pikari-gutenberg-query-filter__checkbox-item {
 	display: flex;
-	align-items: center;
+	align-items: baseline;
 	gap: var(--pikari-gutenberg-query-filter-option-gap);
 	cursor: pointer;
 	padding: 0.25rem 0;
