@@ -25,7 +25,7 @@ jobs:
           ref: ${{ github.event.release.tag_name || inputs.tag }}
           
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'  # This works because package-lock.json exists here
@@ -81,7 +81,12 @@ jobs:
           cp ${{ github.workspace }}/*.php .
           cp ${{ github.workspace }}/readme.txt .
           cp ${{ github.workspace }}/LICENSE .
-          
+
+          # Copy PHP classes (required for autoloader)
+          if [ -d "${{ github.workspace }}/includes" ]; then
+            cp -r ${{ github.workspace }}/includes .
+          fi
+
           # Copy languages if exists
           if [ -d "${{ github.workspace }}/languages" ]; then
             cp -r ${{ github.workspace }}/languages .
