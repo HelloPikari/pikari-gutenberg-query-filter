@@ -31,7 +31,8 @@
 		"playground": "npx @wp-now/wp-now start --blueprint=_playground/blueprint-local.json",
 		"playground:demo": "npx @wp-now/wp-now start --blueprint=_playground/blueprint.json",
 		"prepare": "husky",
-		"wp-env": "wp-env start -- --xdebug"
+		"wp-env": "wp-env start -- --xdebug",
+		"stop-env": "wp-env stop"
 	},
 	"dependencies": {
 		"classnames": "^2.5.1"
