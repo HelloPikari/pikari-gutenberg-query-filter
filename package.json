@@ -1,6 +1,6 @@
 {
 	"name": "pikari-query-filter",
-	"version": "0.1.6",
+	"version": "0.1.12",
 	"description": "Filter controls for the query loop block, using the interactivity API",
 	"author": "Pikari Inc. <development@pikari.io>",
 	"homepage": "https://pikari.io",
