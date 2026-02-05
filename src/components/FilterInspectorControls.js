@@ -9,7 +9,7 @@ import {
 	__experimentalToggleGroupControlOption as ToggleGroupControlOption,
 } from '@wordpress/components';
 
-export default function FilterInspectorControls({ attributes, setAttributes, defaultLabel }) {
+export default function FilterInspectorControls( { attributes, setAttributes, defaultLabel } ) {
 	const { emptyLabel, label, showLabel, displayType, layoutDirection } = attributes;
 
 	return (
