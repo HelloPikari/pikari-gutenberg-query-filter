@@ -32,13 +32,17 @@
 		"playground:demo": "npx @wp-now/wp-now start --blueprint=_playground/blueprint.json",
 		"prepare": "husky",
 		"wp-env": "wp-env start -- --xdebug",
-		"stop-env": "wp-env stop"
+		"stop-env": "wp-env stop",
+		"i18n:pot": "npx wp-env run cli --env-cwd=wp-content/plugins/pikari-gutenberg-query-filter -- wp i18n make-pot . languages/pikari-gutenberg-query-filter.pot",
+		"i18n:mo": "npx wp-env run cli --env-cwd=wp-content/plugins/pikari-gutenberg-query-filter/languages -- wp i18n make-mo .",
+		"i18n:json": "npx wp-env run cli --env-cwd=wp-content/plugins/pikari-gutenberg-query-filter/languages -- wp i18n make-json . --no-purge",
+		"i18n": "npm run i18n:pot && npm run i18n:mo && npm run i18n:json"
 	},
 	"dependencies": {
 		"classnames": "^2.5.1"
 	},
 	"devDependencies": {
-		"@wordpress/env": "^10.36.0",
+		"@wordpress/env": "^10.39.0",
 		"@wordpress/scripts": "latest",
 		"husky": "latest",
 		"lint-staged": "latest"
