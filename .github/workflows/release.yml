@@ -86,20 +86,20 @@ jobs:
       - name: Verify distribution
         run: |
           echo "Distribution contents:"
-          unzip -l pikari-query-filter.zip | head -20
+          unzip -l "${{ env.ZIP_FILE }}" | head -20
 
           echo -e "\nChecksums:"
-          cat checksums.txt
+          cat "${{ env.CHECKSUMS_FILE }}"
 
           echo -e "\nZIP size:"
-          ls -lh pikari-query-filter.zip
+          ls -lh "${{ env.ZIP_FILE }}"
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            pikari-query-filter.zip
-            checksums.txt
+            ${{ env.ZIP_FILE }}
+            ${{ env.CHECKSUMS_FILE }}
           tag_name: ${{ github.event.release.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
