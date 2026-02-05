@@ -3,7 +3,7 @@
  * Plugin Name: Pikari Gutenberg Query Filter
  * Plugin URI:  https://github.com/pikariweb/pikari-gutenberg-query-filter
  * Description: Advanced filtering for Query Loop blocks with search, post types, taxonomies, authors, and sorting. Integrates seamlessly with WordPress core blocks using the Interactivity API.
- * Version:     0.1.12
+ * Version:     0.1.13
  * Author:      Pikari Inc.
  * Author URI:  https://pikari.io
  * License:     GPL-2.0-or-later
