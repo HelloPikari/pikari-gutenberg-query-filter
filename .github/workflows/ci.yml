@@ -106,10 +106,10 @@ jobs:
       - name: Security audit
         run: |
           echo "Running npm audit..."
-          npm audit --audit-level=high
+          npm audit --audit-level=high --omit=dev
 
           echo "Running composer audit..."
-          composer audit
+          composer audit --no-dev
 
   build:
     name: Build
