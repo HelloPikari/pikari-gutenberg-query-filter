@@ -11,33 +11,36 @@ jobs:
   build-and-upload:
     name: Build Release Assets
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event.release.tag_name }}
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Build production
         run: npm run build
-      
+
       - name: Create distribution ZIP
         run: |
+          VERSION="${GITHUB_REF_NAME#v}"
           # Plugin slug
           SLUG="pikari-query-filter"
-          
+
+          echo "Building release for version: $VERSION"
+
           # Create temp directory for clean distribution
           mkdir -p /tmp/dist/$SLUG
-          
+
           # Copy production files only (exclude dev files)
           echo "Creating production distribution..."
           rsync -av \
@@ -61,36 +64,36 @@ jobs:
             --exclude='phpcs.xml' \
             --exclude='*.config.*' \
             . /tmp/dist/$SLUG/
-          
-          # Ensure build directory is included
+
           if [ ! -d "/tmp/dist/$SLUG/build" ]; then
-            echo "❌ Build directory missing from distribution"
+            echo "Build directory missing from distribution"
             exit 1
           fi
-          
-          # Create ZIP
+
           cd /tmp/dist
-          zip -r "$SLUG.zip" $SLUG
-          mv "$SLUG.zip" $GITHUB_WORKSPACE/
-          
-          echo "✅ Created distribution ZIP: pikari-query-filter.zip"
-          
-          # Generate checksums
+          zip -r "${SLUG}-v${VERSION}.zip" $SLUG
+          mv "${SLUG}-v${VERSION}.zip" $GITHUB_WORKSPACE/
+
+          echo "Created distribution ZIP: ${SLUG}-v${VERSION}.zip"
+
           cd $GITHUB_WORKSPACE
-          sha256sum $SLUG.zip > checksums.txt
-          md5sum $SLUG.zip >> checksums.txt
-      
+          sha256sum "${SLUG}-v${VERSION}.zip" > "${SLUG}-v${VERSION}-checksums.txt"
+          md5sum "${SLUG}-v${VERSION}.zip" >> "${SLUG}-v${VERSION}-checksums.txt"
+
+          echo "ZIP_FILE=${SLUG}-v${VERSION}.zip" >> $GITHUB_ENV
+          echo "CHECKSUMS_FILE=${SLUG}-v${VERSION}-checksums.txt" >> $GITHUB_ENV
+
       - name: Verify distribution
         run: |
           echo "Distribution contents:"
           unzip -l pikari-query-filter.zip | head -20
-          
+
           echo -e "\nChecksums:"
           cat checksums.txt
-          
+
           echo -e "\nZIP size:"
           ls -lh pikari-query-filter.zip
-      
+
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:

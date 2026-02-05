@@ -1,0 +1,36 @@
+{
+	"translation-revision-date": "2026-02-05T16:12:00+00:00",
+	"generator": "WP-CLI/2.12.0",
+	"source": "src/blocks/query-filter/edit.js",
+	"domain": "messages",
+	"locale_data": {
+		"messages": {
+			"": {
+				"domain": "messages",
+				"lang": "fr_CA",
+				"plural-forms": "nplurals=2; plural=(n > 1);"
+			},
+			"Content Type": ["Type de contenu"],
+			"Filter by": ["Filtrer par"],
+			"Author": ["Auteur"],
+			"All": ["Tous"],
+			"Filter": ["Filtre"],
+			"Filter Settings": ["Param\u00e8tres du filtre"],
+			"Taxonomy": ["Taxonomie"],
+			"Select a taxonomy": ["S\u00e9lectionner une taxonomie"],
+			"Display Type": ["Type d\u2019affichage"],
+			"Select (Dropdown)": ["S\u00e9lection (liste d\u00e9roulante)"],
+			"Radio (Single Choice)": ["Radio (choix unique)"],
+			"Checkbox (Multiple Choice)": ["Case \u00e0 cocher (choix multiple)"],
+			"Layout Direction": ["Direction de la mise en page"],
+			"Vertical": ["Vertical"],
+			"Horizontal": ["Horizontal"],
+			"Label": ["\u00c9tiquette"],
+			"If empty then no label will be shown": [
+				"Si vide, aucune \u00e9tiquette ne sera affich\u00e9e"
+			],
+			"Show Label": ["Afficher l\u2019\u00e9tiquette"],
+			"Empty Choice Label": ["\u00c9tiquette du choix vide"]
+		}
+	}
+}
