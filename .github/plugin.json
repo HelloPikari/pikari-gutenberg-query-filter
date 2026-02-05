@@ -1,0 +1,5 @@
+{
+	"plugin-slug": "pikari-gutenberg-query",
+	"composer-name": "pikari-inc/pikari-gutenberg-query-filter",
+	"composer-description": "Filter controls for the query loop block, using the interactivity API"
+}
