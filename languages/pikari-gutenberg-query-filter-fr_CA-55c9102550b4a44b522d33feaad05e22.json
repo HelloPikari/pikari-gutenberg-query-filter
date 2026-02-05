@@ -1,0 +1,28 @@
+{
+	"translation-revision-date": "2026-02-05T16:12:00+00:00",
+	"generator": "WP-CLI/2.12.0",
+	"source": "src/blocks/query-filter/variations.js",
+	"domain": "messages",
+	"locale_data": {
+		"messages": {
+			"": {
+				"domain": "messages",
+				"lang": "fr_CA",
+				"plural-forms": "nplurals=2; plural=(n > 1);"
+			},
+			"Content Type": ["Type de contenu"],
+			"Filter by": ["Filtrer par"],
+			"Author": ["Auteur"],
+			"Post Type Filter": ["Filtre par type de publication"],
+			"Filter posts by post type": [
+				"Filtrer les publications par type de publication"
+			],
+			"Taxonomy Filter": ["Filtre par taxonomie"],
+			"Filter posts by taxonomy terms": [
+				"Filtrer les publications par termes de taxonomie"
+			],
+			"Author Filter": ["Filtre par auteur"],
+			"Filter posts by author": ["Filtrer les publications par auteur"]
+		}
+	}
+}

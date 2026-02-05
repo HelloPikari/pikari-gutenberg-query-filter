@@ -184,6 +184,32 @@ composer test         # Run PHP tests
 
 # WordPress Playground
 npm run playground    # Start local WordPress environment
+
+# Translations (requires wp-env to be running)
+npm run i18n:pot     # Generate .pot template from source files
+npm run i18n:mo      # Compile all .po files to .mo
+npm run i18n:json    # Generate JSON files for JS translations
+npm run i18n         # Run all i18n steps (pot + mo + json)
+```
+
+### Translations
+
+Translation files live in the `languages/` directory. The plugin ships with French Canadian (fr_CA) translations.
+
+To update translations after changing translatable strings:
+
+1. Start wp-env: `npm run wp-env`
+2. Regenerate the `.pot` template: `npm run i18n:pot`
+3. Update existing `.po` files with new strings: `msgmerge --update languages/pikari-gutenberg-query-filter-fr_CA.po languages/pikari-gutenberg-query-filter.pot`
+4. Translate any new `msgid` entries in the `.po` file
+5. Compile all translation files: `npm run i18n:mo && npm run i18n:json`
+
+To add a new locale, create a `.po` file from the `.pot` template using `msginit`:
+
+```bash
+msginit --input=languages/pikari-gutenberg-query-filter.pot \
+        --output-file=languages/pikari-gutenberg-query-filter-{locale}.po \
+        --locale={locale} --no-translator
 ```
 
 ### Project Structure

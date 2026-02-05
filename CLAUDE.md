@@ -73,6 +73,39 @@ composer test
 npm run playground
 ```
 
+### Translations
+
+Translation files are in `languages/`. All commands require wp-env to be running (`npm run wp-env`).
+
+```bash
+# Generate .pot template from source files
+npm run i18n:pot
+
+# Compile .po files to .mo (PHP translations)
+npm run i18n:mo
+
+# Generate JSON files for JS editor translations
+npm run i18n:json
+
+# Run all i18n steps in sequence
+npm run i18n
+```
+
+**Workflow for updating translations after code changes:**
+
+1. Run `npm run i18n:pot` to regenerate the `.pot` template
+2. Run `msgmerge --update languages/pikari-gutenberg-query-filter-fr_CA.po languages/pikari-gutenberg-query-filter.pot` to merge new strings into the `.po` file
+3. Translate any new `msgid` entries in the `.po` file
+4. Run `npm run i18n:mo && npm run i18n:json` to compile
+
+**Adding a new locale:**
+
+```bash
+msginit --input=languages/pikari-gutenberg-query-filter.pot \
+        --output-file=languages/pikari-gutenberg-query-filter-{locale}.po \
+        --locale={locale} --no-translator
+```
+
 ## Coding Standards
 
 ### PHP Coding Standards
