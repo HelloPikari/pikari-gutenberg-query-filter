@@ -11,6 +11,42 @@ module.exports = {
 		'tests/e2e/**',
 		'playwright.config.js',
 	],
+	settings: {
+		// Tell eslint-plugin-import that @wordpress/* packages are externals
+		// (provided by WordPress at runtime, not installed as npm dependencies)
+		'import/core-modules': [
+			'@wordpress/block-editor',
+			'@wordpress/blocks',
+			'@wordpress/components',
+			'@wordpress/compose',
+			'@wordpress/data',
+			'@wordpress/element',
+			'@wordpress/escape-html',
+			'@wordpress/hooks',
+			'@wordpress/i18n',
+			'@wordpress/interactivity',
+			'@wordpress/interactivity-router',
+			'@wordpress/rich-text',
+		],
+	},
+	rules: {
+		// Disable import/no-unresolved for @wordpress/* packages
+		// These are externals provided by WordPress at runtime
+		'import/no-unresolved': [
+			'error',
+			{
+				ignore: [ '^@wordpress/' ],
+			},
+		],
+		// Disable import/no-extraneous-dependencies for @wordpress/* packages
+		'import/no-extraneous-dependencies': [
+			'error',
+			{
+				devDependencies: true,
+				peerDependencies: true,
+			},
+		],
+	},
 	overrides: [
 		{
 			files: [ 'tests/**/*.js' ],
