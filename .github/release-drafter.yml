@@ -57,10 +57,10 @@ autolabeler:
       - 'docs/**'
   - label: 'bug'
     branch:
-      - 'fix/*'
+      - '/fix\/.+/'
   - label: 'feature'
     branch:
-      - 'feature/*'
+      - '/feature\/.+/'
   - label: 'dependencies'
     files:
       - 'package*.json'
@@ -73,17 +73,17 @@ change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
 
 template: |
   ## What's Changed
-  
+
   $CHANGES
-  
+
   ## Installation
-  
+
   ### Composer
   ```bash
-  composer require pikari-inc/pikari-query-filter:$RESOLVED_VERSION
+  composer require pikari-inc/pikari-gutenberg-query-filter:$RESOLVED_VERSION
   ```
-  
+
   ### WordPress Plugin
-  Download `pikari-query-filter.zip` from the assets below.
-  
+  Download `pikari-gutenberg-query-v$RESOLVED_VERSION.zip` from the assets below.
+
   **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION

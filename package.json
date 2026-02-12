@@ -10,8 +10,6 @@
 		"plugin"
 	],
 	"scripts": {
-		"start": "rimraf build && wp-scripts start --experimental-modules",
-		"build": "rimraf build && wp-scripts build --experimental-modules",
 		"lint:all": "npm run lint:js && npm run lint:css && npm run lint:php && npm run lint:md:docs",
 		"lint:fix": "npm run lint:js:fix && npm run lint:css:fix && npm run lint:php:fix && npm run lint:md:fix",
 		"lint:js": "wp-scripts lint-js src",
@@ -31,8 +29,10 @@
 		"playground": "npx @wp-now/wp-now start --blueprint=_playground/blueprint-local.json",
 		"playground:demo": "npx @wp-now/wp-now start --blueprint=_playground/blueprint.json",
 		"prepare": "husky",
-		"wp-env": "wp-env start -- --xdebug",
 		"stop-env": "wp-env stop",
+		"start": "rimraf build && wp-scripts start --experimental-modules",
+		"build": "rimraf build && wp-scripts build --experimental-modules",
+		"wp-env": "wp-env start -- --xdebug",
 		"i18n:pot": "npx wp-env run cli --env-cwd=wp-content/plugins/pikari-gutenberg-query-filter -- wp i18n make-pot . languages/pikari-gutenberg-query-filter.pot",
 		"i18n:mo": "npx wp-env run cli --env-cwd=wp-content/plugins/pikari-gutenberg-query-filter/languages -- wp i18n make-mo .",
 		"i18n:json": "npx wp-env run cli --env-cwd=wp-content/plugins/pikari-gutenberg-query-filter/languages -- wp i18n make-json . --no-purge",

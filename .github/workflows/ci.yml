@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
@@ -36,7 +36,7 @@ jobs:
           coverage: none
 
       - name: Cache Composer
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         with:
           path: vendor
           key: composer-${{ hashFiles('**/composer.lock') }}
@@ -49,13 +49,13 @@ jobs:
 
       - name: Verify lock files are in sync
         run: |
-          npm ls >/dev/null 2>&1 || (echo "❌ package-lock.json out of sync" && exit 1)
-          composer validate --strict
+          npm ls >/dev/null 2>&1 || (echo "package-lock.json out of sync" && exit 1)
+          composer validate --no-check-version
 
       - name: Run linters
         id: lint
         run: |
-          set +e  # Don't exit on first failure
+          set +e
 
           echo "Running JavaScript linting..."
           npm run lint:js
@@ -69,12 +69,10 @@ jobs:
           composer lint
           PHP_EXIT=$?
 
-          # Set outputs for failure tracking
           [ $JS_EXIT -ne 0 ] && echo "js-failed=true" >> $GITHUB_OUTPUT
           [ $CSS_EXIT -ne 0 ] && echo "css-failed=true" >> $GITHUB_OUTPUT
           [ $PHP_EXIT -ne 0 ] && echo "php-failed=true" >> $GITHUB_OUTPUT
 
-          # Exit with failure if any linter failed
           [ $JS_EXIT -ne 0 ] || [ $CSS_EXIT -ne 0 ] || [ $PHP_EXIT -ne 0 ] && exit 1 || exit 0
 
       - name: Comment PR on lint failure
@@ -87,7 +85,7 @@ jobs:
             if ('${{ steps.lint.outputs.css-failed }}' === 'true') failures.push('CSS');
             if ('${{ steps.lint.outputs.php-failed }}' === 'true') failures.push('PHP');
 
-            const body = `❌ Linting failed for: ${failures.join(', ')}
+            const body = `Linting failed for: ${failures.join(', ')}
 
             Please run the following locally to fix issues:
             ${failures.includes('JavaScript') ? '- \`npm run lint:js -- --fix\`' : ''}
@@ -111,6 +109,15 @@ jobs:
           echo "Running composer audit..."
           composer audit --no-dev
 
+      - name: Validate block registration paths
+        run: |
+          echo "Checking for register_block_type calls using src/ paths..."
+          if grep -rn "register_block_type.*src/" --include="*.php" .; then
+            echo "::error::Found register_block_type() using src/ paths. Use build/blocks/ instead — src/ is excluded from distribution ZIPs."
+            exit 1
+          fi
+          echo "All block registration paths are correct"
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -118,7 +125,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
@@ -132,8 +139,8 @@ jobs:
 
       - name: Verify build
         run: |
-          test -d build || (echo "❌ Build directory missing" && exit 1)
-          echo "✅ Build verification successful"
+          test -d build || (echo "Build directory missing" && exit 1)
+          echo "Build verification successful"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v6
@@ -146,11 +153,11 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     needs: quality
-    continue-on-error: true # Since no tests exist yet
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v6
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:

@@ -27,7 +27,7 @@ updates:
       # Ignore major version updates for WordPress packages to avoid breaking changes
       - dependency-name: "@wordpress/*"
         update-types: ["version-update:semver-major"]
-  
+
   - package-ecosystem: "composer"
     directory: "/"
     schedule:
@@ -40,7 +40,7 @@ updates:
       # Ignore major PHP version updates
       - dependency-name: "php"
         update-types: ["version-update:semver-major"]
-  
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

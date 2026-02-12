@@ -1,1 +1,15 @@
+# Check if package.json is being committed
+if git diff --cached --name-only | grep -q "package.json"; then
+  echo "📦 package.json changed, updating package-lock.json..."
+  npm install
+  git add package-lock.json
+fi
+
+# Check if composer.json is being committed
+if git diff --cached --name-only | grep -q "composer.json"; then
+  echo "🎼 composer.json changed, updating composer.lock..."
+  composer update --lock
+  git add composer.lock
+fi
+
 npx lint-staged

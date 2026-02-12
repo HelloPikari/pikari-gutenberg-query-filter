@@ -2,7 +2,7 @@ name: Auto-merge Dependabot
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
@@ -13,56 +13,47 @@ jobs:
     name: Auto-merge Dependencies
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]'
-    
+
     steps:
-      - name: Check PR details
-        id: pr-details
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-approve and merge patch/minor updates
+        if: >
+          steps.metadata.outputs.update-type != 'version-update:semver-major'
         uses: actions/github-script@v8
         with:
           script: |
-            const pr = context.payload.pull_request;
-            const title = pr.title.toLowerCase();
-            
-            // Only auto-merge patch and minor updates
-            const isPatch = title.includes('patch') || /bump .+ from \d+\.\d+\.\d+ to \d+\.\d+\.\d+$/.test(title);
-            const isMinor = title.includes('minor') || /bump .+ from \d+\.\d+\.\d+ to \d+\.\d+\.\d+$/.test(title);
-            
-            // Don't auto-merge major updates or WordPress core packages
-            const isMajor = title.includes('major');
-            const isWordPressCore = title.includes('@wordpress/');
-            
-            const shouldAutoMerge = (isPatch || isMinor) && !isMajor && !isWordPressCore;
-            
-            console.log(`Title: ${title}`);
-            console.log(`Should auto-merge: ${shouldAutoMerge}`);
-            
-            return { autoMerge: shouldAutoMerge };
-      
-      - name: Wait for CI
-        if: fromJSON(steps.pr-details.outputs.result).autoMerge
-        uses: lewagon/wait-on-check-action@v1.5.0
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          check-name: 'Code Quality'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 30
-      
-      - name: Enable auto-merge
-        if: fromJSON(steps.pr-details.outputs.result).autoMerge
-        uses: actions/github-script@v8
-        with:
-          script: |
+            const prNumber = context.payload.pull_request.number;
+
+            console.log(`Update type: ${`${{ steps.metadata.outputs.update-type }}`}`);
+            console.log(`Dependency: ${`${{ steps.metadata.outputs.dependency-names }}`}`);
+            console.log(`Auto-approving PR #${prNumber}`);
+
+            // Approve the PR
             await github.rest.pulls.createReview({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
+              pull_number: prNumber,
               event: 'APPROVE',
-              body: '✅ Auto-approving dependency update'
+              body: 'Auto-approving dependency update (${{ steps.metadata.outputs.update-type }})'
             });
-            
-            await github.rest.pulls.merge({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-              merge_method: 'squash'
+
+            // Enable auto-merge — GitHub will merge once all required checks pass
+            await github.graphql(`
+              mutation($pullRequestId: ID!) {
+                enablePullRequestAutoMerge(input: {
+                  pullRequestId: $pullRequestId,
+                  mergeMethod: SQUASH
+                }) {
+                  pullRequest { number }
+                }
+              }
+            `, {
+              pullRequestId: context.payload.pull_request.node_id
             });
+
+            console.log(`Auto-merge enabled for PR #${prNumber}`);
