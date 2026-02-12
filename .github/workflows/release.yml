@@ -33,15 +33,12 @@ jobs:
       - name: Create distribution ZIP
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          # Plugin slug
-          SLUG="pikari-query-filter"
+          SLUG="pikari-gutenberg-query"
 
           echo "Building release for version: $VERSION"
 
-          # Create temp directory for clean distribution
           mkdir -p /tmp/dist/$SLUG
 
-          # Copy production files only (exclude dev files)
           echo "Creating production distribution..."
           rsync -av \
             --exclude='.git*' \

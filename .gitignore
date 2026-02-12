@@ -20,6 +20,7 @@ desktop.ini
 .idea/
 *.sublime-project
 *.sublime-workspace
+.claude/*
 
 # Dependencies
 node_modules/
@@ -85,5 +86,3 @@ pikari-dev-setup-*/
 # package-lock.json
 # yarn.lock
 # composer.lock
-
-.claude/settings.local.json
