@@ -326,11 +326,31 @@ When working with frontend code, always:
 
 ## Testing
 
-- JavaScript tests in `tests/unit/`
-- PHP tests in `tests/` following PHPUnit structure
-- Run all tests before submitting PR
-- Write tests for new features and bug fixes
-- Aim for good test coverage
+See the monorepo root [CLAUDE.md](../CLAUDE.md) for full TDD workflow, commands, and example patterns.
+
+### Plugin-Specific Test Guidance
+
+**PHP classes to prioritize for testing:**
+
+- `AbstractQueryHelper` — Query config generation for inherited vs custom queries
+- `FilterHelper` — Post type filter config, taxonomy filter config, current value sanitization
+- `SortHelper` — Sort query config generation
+- `QueryLoopHandler` — Query modification based on filter parameters
+- `BlockFilters` — Block render filtering
+
+**JavaScript modules to prioritize for testing:**
+
+- `query-filter/view.js` — URL parameter building, checkbox value collection, select handling
+- `sort/view.js` — Sort parameter parsing (`date-desc` → orderby/order)
+
+**Common Brain\Monkey mocks needed:**
+
+- `sanitize_text_field`, `wp_unslash` — Input sanitization
+- `get_post_types`, `get_post_type_object`, `post_type_exists` — Post type helpers
+- `get_terms`, `taxonomy_exists` — Taxonomy helpers
+- `is_wp_error` — Error checking
+
+**Interactivity API note:** This plugin's store name is `'pikari/gutenberg-query-filter'` (with slash). Tests should use `store.getStore('pikari/gutenberg-query-filter')`.
 
 ## Security Considerations
 
