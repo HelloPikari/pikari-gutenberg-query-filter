@@ -24,7 +24,7 @@ jobs:
       - name: Auto-approve and merge patch/minor updates
         if: >
           steps.metadata.outputs.update-type != 'version-update:semver-major'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const prNumber = context.payload.pull_request.number;
