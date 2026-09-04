@@ -17,7 +17,7 @@ A WordPress plugin that adds advanced filtering capabilities to Query Loop block
 ## Requirements
 
 - WordPress 6.8 or higher
-- PHP 8.2 or higher
+- PHP 8.4 or higher
 - Modern browser with JavaScript enabled
 
 ## Installation

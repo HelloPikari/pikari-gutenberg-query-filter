@@ -11,8 +11,8 @@
  * Text Domain: pikari-gutenberg-query-filter
  * Domain Path: /languages
  * Requires at least: 6.8
- * Tested up to: 6.8
- * Requires PHP: 8.2
+ * Tested up to: 7.1
+ * Requires PHP: 8.4
  * Network: false
  *
  * @package pikari-gutenberg-query-filter
@@ -179,10 +179,10 @@ function pikari_gutenberg_query_filter_activate() {
         );
     }
 
-    if ( version_compare(PHP_VERSION, '8.2', '<') ) {
+    if ( version_compare(PHP_VERSION, '8.4', '<') ) {
         deactivate_plugins(plugin_basename(__DIR__ . '/pikari-gutenberg-query-filter.php'));
         wp_die(
-            esc_html__('This plugin requires PHP 8.2 or higher.', 'pikari-gutenberg-query-filter')
+            esc_html__('This plugin requires PHP 8.4 or higher.', 'pikari-gutenberg-query-filter')
         );
     }
 

@@ -243,7 +243,6 @@ export default function Edit( { attributes, setAttributes, context } ) {
 							}
 							isBlock
 							__nextHasNoMarginBottom
-							__next40pxDefaultSize
 						>
 							<ToggleGroupControlOption
 								value="vertical"

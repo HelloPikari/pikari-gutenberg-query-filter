@@ -53,7 +53,6 @@ export default function FilterInspectorControls( { attributes, setAttributes, de
 					}
 					isBlock
 					__nextHasNoMarginBottom
-					__next40pxDefaultSize
 				>
 					<ToggleGroupControlOption
 						value="vertical"
