@@ -306,7 +306,7 @@ When working with frontend code, always:
 ### Dependencies
 
 - WordPress 6.8
-- PHP 8.2
+- PHP 8.4
 - Node.js for build tools
 - Composer for PHP dependencies
 
@@ -446,7 +446,7 @@ When working with frontend code, always:
 - The `build/` folder is gitignored but required for the plugin to function
 - Releases are created from the `build` branch which includes compiled assets
 - Compatible with WordPress 6.0+
-- Requires PHP 8.2+
+- Requires PHP 8.4+
 - Uses `@wordpress/scripts` for build tooling
 - Follow WordPress plugin/theme guidelines for wordpress.org submission
 
