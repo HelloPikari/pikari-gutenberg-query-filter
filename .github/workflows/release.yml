@@ -24,6 +24,42 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Verify version matches release tag
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          HEADER_VERSION="$(sed -n 's/^ \* Version:[[:space:]]*//p' pikari-gutenberg-query-filter.php | head -1 | tr -d '[:space:]')"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+
+          echo "release tag:   $TAG_VERSION"
+          echo "plugin header: $HEADER_VERSION"
+          echo "package.json:  $PKG_VERSION"
+
+          FAILED=0
+          if [ "$HEADER_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error file=pikari-gutenberg-query-filter.php::Plugin header version ($HEADER_VERSION) does not match release tag ($TAG_VERSION)."
+            FAILED=1
+          fi
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error file=package.json::package.json version ($PKG_VERSION) does not match release tag ($TAG_VERSION)."
+            FAILED=1
+          fi
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo "Refusing to build: the ZIP would be named v${TAG_VERSION} while the plugin reports a different version."
+            echo "Fix the version, delete this release and its tag, then re-tag and re-publish."
+            exit 1
+          fi
+
+          echo "Versions agree."
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+
+      - name: Install Composer production dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
       - name: Install dependencies
         run: npm ci
 
@@ -33,7 +69,7 @@ jobs:
       - name: Create distribution ZIP
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          SLUG="pikari-gutenberg-query"
+          SLUG="pikari-gutenberg-query-filter"
 
           echo "Building release for version: $VERSION"
 
@@ -46,7 +82,6 @@ jobs:
             --exclude='node_modules' \
             --exclude='src' \
             --exclude='tests' \
-            --exclude='vendor' \
             --exclude='.*' \
             --exclude='*.log' \
             --exclude='*.lock' \
@@ -60,6 +95,9 @@ jobs:
             --exclude='*.sh' \
             --exclude='phpcs.xml' \
             --exclude='*.config.*' \
+            --exclude='_log' \
+            --exclude='_specs' \
+            --exclude='docs' \
             . /tmp/dist/$SLUG/
 
           if [ ! -d "/tmp/dist/$SLUG/build" ]; then
@@ -92,7 +130,7 @@ jobs:
           ls -lh "${{ env.ZIP_FILE }}"
 
       - name: Upload release assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             ${{ env.ZIP_FILE }}

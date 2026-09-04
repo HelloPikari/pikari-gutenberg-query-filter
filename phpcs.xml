@@ -1,4 +1,8 @@
 <?xml version="1.0"?>
+<!--
+  Synced to all plugins via config-templates. Do not edit in plugin directories —
+  changes should be made in .github/config-templates/plugin/phpcs.xml and synced.
+-->
 <ruleset name="Pikari Gutenberg plugin coding standards">
   <description>Custom coding standards for the Pikari Gutenberg Plugins. Based on WordPress Coding Standards, but uses spaces for indentation.</description>
 
@@ -75,6 +79,11 @@
   <arg value="p"/>
 
   <!-- Exclude vendor, build, and node_modules folders -->
+  <!-- .worktrees/ matters: phpcs scans <file>./</file>, so a git worktree created
+       inside the plugin repo would be linted as a second full copy — duplicate
+       errors, doubled runtime, and in-progress code on a worktree branch failing
+       composer lint on the parent branch. -->
+  <exclude-pattern>.worktrees/</exclude-pattern>
   <exclude-pattern>vendor/</exclude-pattern>
   <exclude-pattern>build/</exclude-pattern>
   <exclude-pattern>node_modules/</exclude-pattern>
