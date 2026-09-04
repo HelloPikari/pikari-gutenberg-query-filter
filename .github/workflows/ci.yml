@@ -120,9 +120,9 @@ jobs:
 
       - name: Verify version locations agree
         run: |
-          HEADER="$(sed -n 's/^ \* Version:[[:space:]]*//p' pikari-gutenberg-query.php | head -1 | tr -d '[:space:]' || true)"
+          HEADER="$(sed -n 's/^ \* Version:[[:space:]]*//p' pikari-gutenberg-query-filter.php | head -1 | tr -d '[:space:]' || true)"
           PKG="$(node -p "require('./package.json').version")"
-          CONST="$(grep -oE "define\( *'PIKARI_[A-Z0-9_]*VERSION', *'[^']*'" pikari-gutenberg-query.php | head -1 | sed "s/.*'\([^']*\)'$/\1/" || true)"
+          CONST="$(grep -oE "define\( *'PIKARI_[A-Z0-9_]*VERSION', *'[^']*'" pikari-gutenberg-query-filter.php | head -1 | sed "s/.*'\([^']*\)'$/\1/" || true)"
 
           echo "header:       $HEADER"
           echo "package.json: $PKG"
