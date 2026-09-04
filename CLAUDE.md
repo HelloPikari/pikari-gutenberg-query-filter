@@ -6,6 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 pikari-gutenberg-query-filter is a WordPress plugin that Filter controls for the query loop block, using the interactivity API.
 
+## Required Agents
+
+Always use these agents proactively:
+
+- **`wordpress-core-expert`** — Review all PHP and JavaScript code changes
+- **`accessibility-expert`** — Review modal functionality, keyboard navigation, focus management, ARIA attributes
+- - **`update-claude-md`** — Update CLAUDE.md to reflect changes since the last git tag or initial commit.
+
 ## Development Commands
 
 ### Build and Development
