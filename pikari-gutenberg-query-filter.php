@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Plugin version.
  */
-define( 'PIKARI_GUTENBERG_QUERY_FILTER_VERSION', '0.1.0' );
+define( 'PIKARI_GUTENBERG_QUERY_FILTER_VERSION', '0.1.13' );
 
 /**
  * Plugin directory path.
