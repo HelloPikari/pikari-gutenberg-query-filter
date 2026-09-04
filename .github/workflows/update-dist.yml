@@ -29,6 +29,44 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Verify version matches release tag
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          TAG_VERSION="${RELEASE_TAG#v}"
+          HEADER_VERSION="$(sed -n 's/^ \* Version:[[:space:]]*//p' pikari-gutenberg-query.php | head -1 | tr -d '[:space:]')"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+
+          echo "release tag:   $TAG_VERSION"
+          echo "plugin header: $HEADER_VERSION"
+          echo "package.json:  $PKG_VERSION"
+
+          FAILED=0
+          if [ "$HEADER_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error file=pikari-gutenberg-query.php::Plugin header version ($HEADER_VERSION) does not match release tag ($TAG_VERSION)."
+            FAILED=1
+          fi
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error file=package.json::package.json version ($PKG_VERSION) does not match release tag ($TAG_VERSION)."
+            FAILED=1
+          fi
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo "Refusing to build the dist branch: it would be tagged v${TAG_VERSION} while the plugin reports a different version."
+            echo "This is the Composer install path — a mismatch here ships silently."
+            exit 1
+          fi
+
+          echo "Versions agree."
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+
+      - name: Install Composer production dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
       - name: Install dependencies
         run: npm ci
 
@@ -81,6 +119,14 @@ jobs:
 
           if [ -d "${{ github.workspace }}/languages" ]; then
             cp -r ${{ github.workspace }}/languages .
+          fi
+
+          if [ -d "${{ github.workspace }}/parts" ]; then
+            cp -r ${{ github.workspace }}/parts .
+          fi
+
+          if [ -d "${{ github.workspace }}/vendor" ]; then
+            cp -r ${{ github.workspace }}/vendor .
           fi
 
           cat > composer.json << INNEREOF
