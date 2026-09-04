@@ -25,6 +25,8 @@ module.exports = {
 			'<rootDir>/tests/unit/__mocks__/@wordpress/interactivity-router.js',
 		'^@wordpress/escape-html$':
 			'<rootDir>/tests/unit/__mocks__/@wordpress/escape-html.js',
+		'^@wordpress/i18n$':
+			'<rootDir>/tests/unit/__mocks__/@wordpress/i18n.js',
 	},
 
 	// Setup files run after test environment is installed (beforeEach available)
