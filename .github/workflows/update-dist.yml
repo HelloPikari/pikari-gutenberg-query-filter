@@ -90,6 +90,11 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
+          # The commit the release tag pointed at when this job started — i.e. the
+          # commit on main that was actually built. Read it before the tag moves.
+          RELEASE_COMMIT="$(git -C "${{ github.workspace }}" rev-parse HEAD)"
+          echo "Release commit: $RELEASE_COMMIT"
+
           echo "Cloning repository to temp directory..."
           git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git /tmp/dist-repo
           cd /tmp/dist-repo
@@ -155,21 +160,43 @@ jobs:
           echo "Committing distribution build..."
           git add -A
 
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Distribution build for $VERSION"
+          # Give the dist commit the release commit on main as a second parent.
+          # The release tag has to stay on dist so Composer installs get build/,
+          # but without this parent the tag shares no recent ancestry with main:
+          # Release Drafter compares refs/tags/vX against main, three-dot, so the
+          # merge base falls back to wherever dist was branched and the changelog
+          # lists the entire history. Contents are unaffected — commit-tree writes
+          # exactly the staged tree.
+          # docs/superpowers/specs/2026-09-07-composer-distribution-design.md
+          #
+          # No "nothing changed" guard: every release must produce a commit to tag,
+          # even when the built tree is identical. Skipping it would leave the tag
+          # on main, where there is no build/ directory, and break Composer installs.
+          DIST_PARENT="$(git rev-parse HEAD)"
+          TREE="$(git write-tree)"
 
-            echo "Pushing to dist branch..."
-            if git ls-remote --heads origin dist | grep -q dist; then
-              git push origin dist
-            else
-              git push -u origin dist
-            fi
+          if [ -n "$RELEASE_COMMIT" ] && [ "$RELEASE_COMMIT" != "$DIST_PARENT" ] &&
+             git merge-base --is-ancestor "$RELEASE_COMMIT" origin/main 2>/dev/null; then
+            echo "Parenting dist commit to release commit $RELEASE_COMMIT on main."
+            DIST_COMMIT="$(git commit-tree "$TREE" -p "$DIST_PARENT" -p "$RELEASE_COMMIT" -m "Distribution build for $VERSION")"
+          else
+            echo "::warning::Release commit $RELEASE_COMMIT is not on main (re-run of an already-moved tag?)."
+            echo "::warning::Building the dist commit without a main parent — the NEXT release's changelog will list the whole history."
+            DIST_COMMIT="$(git commit-tree "$TREE" -p "$DIST_PARENT" -m "Distribution build for $VERSION")"
+          fi
+
+          git update-ref refs/heads/dist "$DIST_COMMIT"
+          git reset --hard dist
+
+          echo "Pushing to dist branch..."
+          if git ls-remote --heads origin dist | grep -q dist; then
+            git push origin dist
+          else
+            git push -u origin dist
           fi
 
           echo "Creating version tag..."
-          git tag -f "$VERSION"
+          git tag -f "$VERSION" "$DIST_COMMIT"
           git push -f origin "$VERSION"
 
           echo "Distribution branch updated successfully!"
