@@ -97,6 +97,8 @@ jobs:
             --exclude='*.config.*' \
             --exclude='_log' \
             --exclude='_specs' \
+            --exclude='_plans' \
+            --exclude='phpunit.xml.dist' \
             --exclude='docs' \
             . /tmp/dist/$SLUG/
 

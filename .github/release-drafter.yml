@@ -55,12 +55,20 @@ autolabeler:
     files:
       - '*.md'
       - 'docs/**'
+  # Branch prefixes mirror the commit types in CLAUDE.md, because both get used
+  # as branch names. Matching only 'feature/' missed 'feat/' branches entirely —
+  # they carried no label, so they resolved as a patch like anything unlabelled.
   - label: 'bug'
     branch:
       - '/fix\/.+/'
+      - '/bugfix\/.+/'
   - label: 'feature'
     branch:
       - '/feature\/.+/'
+      - '/feat\/.+/'
+  - label: 'chore'
+    branch:
+      - '/chore\/.+/'
   - label: 'dependencies'
     files:
       - 'package*.json'
