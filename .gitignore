@@ -86,3 +86,4 @@ pikari-dev-setup-*/
 # package-lock.json
 # yarn.lock
 # composer.lock
+.playwright-mcp/

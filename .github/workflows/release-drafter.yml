@@ -2,8 +2,7 @@ name: Release Drafter
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
     types: [opened, reopened, synchronize]
 
@@ -13,14 +12,35 @@ permissions:
 jobs:
   update_release_draft:
     name: Update Release Draft
+    # Drafting only makes sense once something has landed on main.
+    if: github.event_name == 'push'
     permissions:
       contents: write
-      pull-requests: write
     runs-on: ubuntu-latest
 
     steps:
       - name: Draft Release
         uses: release-drafter/release-drafter@v7
+        with:
+          config-name: release-drafter.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  autolabel:
+    name: Label Pull Request
+    # v7 split the autolabeler out of the main action. Before that split a single
+    # release-drafter step did both, so the v6 -> v7 bump silently stopped all
+    # labelling: PRs merged unlabelled, every one fell through to the resolver's
+    # `default: patch`, and the changelog lost its categories. Nothing errored.
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Apply labels
+        uses: release-drafter/release-drafter/autolabeler@v7
         with:
           config-name: release-drafter.yml
         env:
