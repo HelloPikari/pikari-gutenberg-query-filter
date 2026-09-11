@@ -46,13 +46,14 @@ The plugin provides filter controls that integrate seamlessly with Query Loop bl
 
 == Changelog ==
 
-= 1.0.0 =
-* Initial release
-* Filter controls for Query Loop blocks
-* WordPress Interactivity API integration
-* Enhanced filtering capabilities for Gutenberg editor
+= 0.2.0 =
+* Tested with WordPress 7.1.
+* Raised the minimum PHP version to 8.4.
+* Composer installs now come from the Pikari package index and use the release ZIP, the same build this plugin ships to every other install. Add the repository https://hellopikari.github.io/packages/ and remove any VCS entry for this plugin.
+
+For releases before 0.2.0, see https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases
 
 == Upgrade Notice ==
 
-= 1.0.0 =
-Initial release of the Pikari Gutenberg Query Filter plugin.
+= 0.2.0 =
+Requires PHP 8.4 or later. If you install this plugin with Composer, switch your repositories entry to https://hellopikari.github.io/packages/ and widen the version constraint, since a caret range on a 0.x version will not pick up 0.2.0.
