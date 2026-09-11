@@ -24,7 +24,7 @@ A WordPress plugin that adds advanced filtering capabilities to Query Loop block
 
 ### From WordPress Admin
 
-1. Download the plugin ZIP file from the [releases page](https://github.com/pikariweb/pikari-gutenberg-query-filter/releases)
+1. Download the plugin ZIP file from the [releases page](https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases)
 2. Go to Plugins → Add New → Upload Plugin
 3. Select the ZIP file and click "Install Now"
 4. Activate the plugin
@@ -37,9 +37,24 @@ A WordPress plugin that adds advanced filtering capabilities to Query Loop block
 
 ### Via Composer
 
-```bash
-composer require pikari/gutenberg-query-filter
+This package is not on Packagist, so add the Pikari package index first:
+
+```json
+{
+	"repositories": [
+		{ "type": "composer", "url": "https://hellopikari.github.io/packages/" }
+	]
+}
 ```
+
+```bash
+composer require pikari-inc/pikari-gutenberg-query-filter
+```
+
+The index serves the same release ZIP published on the releases page, so the
+installed plugin already has its `build/` directory compiled. With
+`composer/installers` and an `installer-paths` entry for `type:wordpress-plugin`
+it lands in `wp-content/plugins/pikari-gutenberg-query-filter/`.
 
 ## Usage
 
@@ -149,7 +164,7 @@ Add sort controls to allow users to sort posts by:
 
 ```bash
 # Clone the repository
-git clone https://github.com/pikariweb/pikari-gutenberg-query-filter.git
+git clone https://github.com/HelloPikari/pikari-gutenberg-query-filter.git
 cd pikari-gutenberg-query-filter
 
 # Install dependencies
@@ -289,7 +304,7 @@ GPL-2.0-or-later - see [LICENSE](LICENSE) file for details.
 
 - Website: <https://pikari.io>
 - Email: development@pikari.io
-- GitHub: <https://github.com/pikariweb>
+- GitHub: <https://github.com/HelloPikari>
 
 ## Changelog
 
@@ -298,5 +313,5 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 ## Support
 
 - **Documentation**: See [docs/](docs/) folder for detailed guides
-- **Issues**: Report bugs on [GitHub Issues](https://github.com/pikariweb/pikari-gutenberg-query-filter/issues)
-- **Discussions**: Join the conversation in [GitHub Discussions](https://github.com/pikariweb/pikari-gutenberg-query-filter/discussions)
+- **Issues**: Report bugs on [GitHub Issues](https://github.com/HelloPikari/pikari-gutenberg-query-filter/issues)
+- **Discussions**: Join the conversation in [GitHub Discussions](https://github.com/HelloPikari/pikari-gutenberg-query-filter/discussions)

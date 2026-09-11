@@ -444,7 +444,7 @@ When working with frontend code, always:
 - This project uses Husky for pre-commit hooks
 - All PRs must pass CI checks (linting, tests, build)
 - The `build/` folder is gitignored but required for the plugin to function
-- Releases are created from the `build` branch which includes compiled assets
+- Releases are built by `release.yml` from the tag on `main`; the ZIP asset it uploads is what both Composer and manual installs consume
 - Compatible with WordPress 6.0+
 - Requires PHP 8.4+
 - Uses `@wordpress/scripts` for build tooling
