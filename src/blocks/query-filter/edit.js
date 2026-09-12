@@ -14,6 +14,7 @@ import {
 } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import FilterInput from '../../components/FilterInput';
+import getOptionClassName from '../../utils/option-class-name';
 
 export default function Edit( { attributes, setAttributes, context } ) {
 	const {
@@ -154,6 +155,9 @@ export default function Edit( { attributes, setAttributes, context } ) {
 				return null;
 		}
 	};
+
+	// Matches FilterHelper::get_option_classes(): taxonomy name, or filter type.
+	const optionKey = filterType === 'taxonomy' ? taxonomy : filterType;
 
 	const blockProps = useBlockProps( {
 		className: classNames( 'wp-block-pikari-gutenberg-query-filter', {
@@ -336,7 +340,12 @@ export default function Edit( { attributes, setAttributes, context } ) {
 							}
 						) }
 					>
-						<FilterInput type="radio" disabled checked>
+						<FilterInput
+							type="radio"
+							disabled
+							checked
+							className={ getOptionClassName( optionKey, 'all' ) }
+						>
 							{ emptyLabel ||
 								__( 'All', 'pikari-gutenberg-query-filter' ) }
 						</FilterInput>
@@ -346,6 +355,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 									key={ postType.slug }
 									type="radio"
 									disabled
+									className={ getOptionClassName( optionKey, postType.slug ) }
 								>
 									{ postType.name }
 								</FilterInput>
@@ -356,6 +366,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 									key={ term.id }
 									type="radio"
 									disabled
+									className={ getOptionClassName( optionKey, term.slug ) }
 								>
 									{ term.name }
 								</FilterInput>
@@ -366,6 +377,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 									key={ author.id }
 									type="radio"
 									disabled
+									className={ getOptionClassName( optionKey, author.slug ) }
 								>
 									{ author.name }
 								</FilterInput>
@@ -389,6 +401,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 									key={ postType.slug }
 									type="checkbox"
 									disabled
+									className={ getOptionClassName( optionKey, postType.slug ) }
 								>
 									{ postType.name }
 								</FilterInput>
@@ -399,6 +412,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 									key={ term.id }
 									type="checkbox"
 									disabled
+									className={ getOptionClassName( optionKey, term.slug ) }
 								>
 									{ term.name }
 								</FilterInput>
@@ -409,6 +423,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 									key={ author.id }
 									type="checkbox"
 									disabled
+									className={ getOptionClassName( optionKey, author.slug ) }
 								>
 									{ author.name }
 								</FilterInput>

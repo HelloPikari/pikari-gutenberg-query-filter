@@ -10,6 +10,11 @@
 		}
 	],
 	"homepage": "https://pikari.io",
+	"autoload": {
+		"psr-4": {
+			"Pikari\\GutenbergQueryFilter\\": "includes/"
+		}
+	},
 	"require": {
 		"php": ">=8.4"
 	},

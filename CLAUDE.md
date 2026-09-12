@@ -310,6 +310,33 @@ When working with frontend code, always:
 - Node.js for build tools
 - Composer for PHP dependencies
 
+## Frontend Rendering & Extensibility
+
+`docs/hooks.md` is the public contract for theme authors: markup, classes, and PHP filters. Read it before changing anything the Query Filter block outputs, and update it in the same change.
+
+### Query Filter render flow
+
+1. `src/blocks/query-filter/render.php` resolves the query variable and loads raw items for the `filterType`: `FilterHelper::get_filter_post_types()`, `FilterHelper::get_taxonomy_filter_terms()`, or `AuthorHelper::get_filter_authors()`.
+2. `FilterHelper::get_filter_options( $items, $attributes )` normalizes items into `value` / `label` / `slug` / `item` arrays and applies `pikari_gutenberg_query_filter_options`.
+3. For each radio or checkbox option, `FilterHelper::get_option_classes()` builds the `<label>` classes, including the unique `{key}_{slug}` class, and applies `pikari_gutenberg_query_filter_option_classes`.
+4. `FilterHelper::get_option_label_html()` builds the markup after the `<input>`, applies `pikari_gutenberg_query_filter_option_label`, and sanitizes it with `wp_kses_post()`.
+5. `src/blocks/query-filter/view.js` reads `input.value` on change and navigates with `@wordpress/interactivity-router`.
+
+### Extension rules
+
+- Option logic lives in `FilterHelper`, not `render.php`. `render.php` is not unit-tested; keep it a loop over helper output. Do not reintroduce per-filter-type `switch` blocks there.
+- New hooks use the `pikari_gutenberg_query_filter_` prefix and ship with a PHPDoc block at the `apply_filters()` call, a Brain\Monkey test (`Filters\expectApplied`), and a section in `docs/hooks.md`.
+- Keep the `<input>` outside filterable markup. `view.js` depends on its `type`, `value`, `name`, and `data-wp-on--change` attributes.
+- Unique option classes (`category_news`, `post-type_page`, `author_jane-doe`, `category_all`) are deliberately **unprefixed** — a product decision (2026-09-12) and the one exception to the CSS Class Name Standards below. Do not add the plugin prefix to them.
+- The `{key}_{slug}` format is implemented twice: `FilterHelper::get_option_classes()` for the frontend and `src/utils/option-class-name.js` for the editor preview. Change both together, with their tests.
+- Existing BEM classes (`__radio-item`, `__checkbox-item`, `__radio-text`, `__checkbox-text`, `__*-group`, `__select`, `__label`) are public. Do not rename them.
+- The Sort block has no radios or checkboxes, and none of these filters apply to it.
+
+### Tests for this area
+
+- `tests/php/FilterHelperTest.php` — Brain\Monkey. Plugin classes load through the composer `autoload.psr-4` entry for `includes/`; run `composer dump-autoload` after adding a class.
+- `tests/unit/utils/option-class-name.test.js` — Jest.
+
 ## Git Workflow
 
 - Main branch: `main`

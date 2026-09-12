@@ -36,7 +36,9 @@ WordPress 6.8 or higher is required to use the Interactivity API features.
 
 = Can I customize the filter controls? =
 
-The plugin provides filter controls that integrate seamlessly with Query Loop blocks for enhanced content filtering.
+Yes. Each radio and checkbox option's label gets a unique class your theme can style: `{taxonomy}_{term-slug}` (for example `category_news`), `post-type_{name}`, or `author_{nicename}`. The "All" choice gets `{key}_all`.
+
+Developers can change the option list, the label classes, and the markup inside each label with the `pikari_gutenberg_query_filter_options`, `pikari_gutenberg_query_filter_option_classes`, and `pikari_gutenberg_query_filter_option_label` filters. See docs/hooks.md in the GitHub repository for parameters and examples.
 
 == Screenshots ==
 

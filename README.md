@@ -13,6 +13,7 @@ A WordPress plugin that adds advanced filtering capabilities to Query Loop block
 - **Client-Side Filtering**: Fast, AJAX-free filtering using WordPress Interactivity API
 - **Context-Aware**: Automatic detection of inherited vs custom queries
 - **URL-Based State**: Filter state persists in URLs for sharing and bookmarking
+- **Theme-Friendly Markup**: Unique classes on every radio and checkbox option, plus PHP filters for the option list, option classes, and label markup
 
 ## Requirements
 
@@ -74,6 +75,8 @@ The Query Filter block provides multiple filter types:
 - **Taxonomy Filter**: Select taxonomies (categories, tags, custom taxonomies) to filter by
 - **Author Filter**: Enable author filtering with cached author lists
 
+Each filter has a **Display Type** — Select (dropdown), Radio (single choice), or Checkbox (multiple choice) — and radio and checkbox groups can be laid out vertically or horizontally.
+
 ### Search Block Integration
 
 Simply add a WordPress core Search block inside a Query Loop block - it will automatically:
@@ -89,51 +92,86 @@ Add sort controls to allow users to sort posts by:
 
 - Date (newest/oldest)
 - Title (A-Z/Z-A)
-- Custom fields (when configured)
 
 ## Examples
 
-### Basic Blog with Filters
+### Blog with Filters
+
+Both blocks are dynamic, so they serialize as self-closing comments. Each Query Filter block handles one filter type; add one block per filter.
 
 ```html
-<!-- wp:query -->
+<!-- wp:query {"queryId":1,"query":{"perPage":10,"postType":"post","inherit":false}} -->
 <div class="wp-block-query">
-	<!-- wp:pikari/query-filter {"filterType":"post_type,category,author"} -->
-	<!-- /wp:pikari/query-filter -->
+	<!-- wp:pikari-gutenberg-query-filter/query-filter {"filterType":"taxonomy","taxonomy":"category","displayType":"checkbox","layoutDirection":"horizontal"} /-->
 
-	<!-- wp:pikari/sort -->
-	<!-- /wp:pikari/sort -->
+	<!-- wp:pikari-gutenberg-query-filter/query-filter {"filterType":"author"} /-->
 
-	<!-- wp:search -->
-	<form class="wp-block-search">
-		<input type="search" placeholder="Search posts..." />
-	</form>
-	<!-- /wp:search -->
+	<!-- wp:pikari-gutenberg-query-filter/sort /-->
+
+	<!-- wp:search {"label":"Search","buttonText":"Search"} /-->
 
 	<!-- wp:post-template -->
-	<!-- Your post template blocks here -->
+	<!-- wp:post-title {"isLink":true} /-->
 	<!-- /wp:post-template -->
 </div>
 <!-- /wp:query -->
 ```
 
-### Portfolio with Custom Post Types
+### Block Attributes
+
+**Query Filter** (`pikari-gutenberg-query-filter/query-filter`):
+
+| Attribute         | Default     | Values                                                   |
+| ----------------- | ----------- | -------------------------------------------------------- |
+| `filterType`      | `post-type` | `post-type`, `taxonomy`, `author`                        |
+| `taxonomy`        | —           | Taxonomy name. Required when `filterType` is `taxonomy`. |
+| `displayType`     | `select`    | `select`, `radio`, `checkbox`                            |
+| `layoutDirection` | `vertical`  | `vertical`, `horizontal` (radio and checkbox only)       |
+| `label`           | Per type    | Label text; defaults to the filter type's name           |
+| `showLabel`       | `true`      | `false` keeps the label for screen readers only          |
+| `emptyLabel`      | `All`       | Text for the "All" choice                                |
+
+**Sort** (`pikari-gutenberg-query-filter/sort`): `label`, `showLabel`, `emptyLabel`.
+
+## Theming
+
+Radio and checkbox options render as:
 
 ```html
-<!-- wp:query {"query":{"postType":"portfolio"}} -->
-<div class="wp-block-query">
-	<!-- wp:pikari/query-filter {"filterType":"portfolio_category,portfolio_tag"} -->
-	<!-- /wp:pikari/query-filter -->
-
-	<!-- wp:pikari/sort {"options":[{"label":"Latest","value":"date-desc"},{"label":"Title","value":"title-asc"}]} -->
-	<!-- /wp:pikari/sort -->
-
-	<!-- wp:post-template -->
-	<!-- Portfolio item template -->
-	<!-- /wp:post-template -->
-</div>
-<!-- /wp:query -->
+<label
+	class="wp-block-pikari-gutenberg-query-filter__checkbox-item category_news"
+>
+	<input type="checkbox" value="news" />
+	<span class="wp-block-pikari-gutenberg-query-filter__checkbox-text"
+		>News</span
+	>
+</label>
 ```
+
+Each option label gets a unique `{key}_{slug}` class, so themes can style individual options:
+
+| Filter type | Example class                              |
+| ----------- | ------------------------------------------ |
+| Taxonomy    | `category_news` (`{taxonomy}_{term-slug}`) |
+| Post type   | `post-type_page` (`post-type_{name}`)      |
+| Author      | `author_jane-doe` (`author_{nicename}`)    |
+| "All" radio | `category_all` (`{key}_all`)               |
+
+```css
+.wp-block-pikari-gutenberg-query-filter .category_news {
+	color: #b00020;
+}
+```
+
+Developers can change what is rendered with these PHP filters:
+
+| Filter                                         | Changes                                                  |
+| ---------------------------------------------- | -------------------------------------------------------- |
+| `pikari_gutenberg_query_filter_options`        | The option list: add, remove, reorder, or relabel        |
+| `pikari_gutenberg_query_filter_option_classes` | Classes on each option `<label>`                         |
+| `pikari_gutenberg_query_filter_option_label`   | Markup inside each option `<label>`, after the `<input>` |
+
+See [docs/hooks.md](docs/hooks.md) for the full markup, parameters, caveats, and examples.
 
 ## Architecture
 
@@ -229,7 +267,7 @@ msginit --input=languages/pikari-gutenberg-query-filter.pot \
 
 ### Project Structure
 
-```
+```text
 pikari-gutenberg-query-filter/
 ├── includes/                 # PHP classes
 │   ├── Core/                # Core functionality
@@ -239,6 +277,9 @@ pikari-gutenberg-query-filter/
 │   ├── blocks/              # Block definitions
 │   │   ├── query-filter/    # Main filter block
 │   │   └── sort/            # Sort control block
+│   ├── components/          # Shared editor components
+│   └── utils/               # Shared JS helpers
+├── docs/                    # Theming/hooks reference, release guide
 ├── build/                   # Compiled assets (gitignored)
 ├── tests/                   # Test files
 └── _playground/             # WordPress Playground config
