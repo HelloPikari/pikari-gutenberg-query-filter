@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-12
+
 ### Added
 
 - Unique class on each radio and checkbox option label: `{taxonomy}_{term-slug}`, `post-type_{name}`, or `author_{nicename}`, plus `{key}_all` on the "All" radio. Also applied in the editor preview.
@@ -14,20 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `pikari_gutenberg_query_filter_option_classes` filter for option label classes.
 - `pikari_gutenberg_query_filter_option_label` filter for the markup inside option labels.
 - `docs/hooks.md` theming and hooks reference.
+- Update notices in the WordPress admin for sites installed from a ZIP. The plugin now checks GitHub releases for new versions.
 
 ### Changed
 
 - The Query Filter block is not rendered when the option list is empty after filtering.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Changing a filter now updates the results on Query Loops without enhanced pagination. Previously the URL changed but the post list did not, because the Query block's router region was not marked interactive.
-
-### Security
 
 ## [0.2.0] - 2026-09-12
 
@@ -46,6 +43,7 @@ Releases between 0.1.0 and 0.2.0 are listed on [GitHub Releases](https://github.
 - Initial release of pikari-gutenberg-query-filter
 - [Add initial features here]
 
-[Unreleased]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v0.3.0
 [0.2.0]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v0.2.0
 [0.1.0]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v0.1.0

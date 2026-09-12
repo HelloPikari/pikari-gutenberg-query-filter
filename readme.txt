@@ -48,6 +48,12 @@ Developers can change the option list, the label classes, and the markup inside 
 
 == Changelog ==
 
+= 0.3.0 =
+* Fixed: changing a filter now updates the results on Query Loops without enhanced pagination. Previously the URL changed but the posts did not.
+* New: each radio and checkbox option label gets a unique class your theme can style, for example `category_news`, `post-type_page`, or `author_jane-doe`.
+* New: `pikari_gutenberg_query_filter_options`, `pikari_gutenberg_query_filter_option_classes`, and `pikari_gutenberg_query_filter_option_label` filters for changing the option list, label classes, and label markup.
+* New: sites installed from a ZIP now see update notices in the WordPress admin. The plugin checks GitHub releases for new versions.
+
 = 0.2.0 =
 * Tested with WordPress 7.1.
 * Raised the minimum PHP version to 8.4.
@@ -56,6 +62,9 @@ Developers can change the option list, the label classes, and the markup inside 
 For releases before 0.2.0, see https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases
 
 == Upgrade Notice ==
+
+= 0.3.0 =
+Fixes filters not updating the results on Query Loops without enhanced pagination. After this update, sites installed from a ZIP get update notices in the admin. If you install with Composer, widen a `^0.2` constraint, since a caret range on a 0.x version will not pick up 0.3.0.
 
 = 0.2.0 =
 Requires PHP 8.4 or later. If you install this plugin with Composer, switch your repositories entry to https://hellopikari.github.io/packages/ and widen the version constraint, since a caret range on a 0.x version will not pick up 0.2.0.
