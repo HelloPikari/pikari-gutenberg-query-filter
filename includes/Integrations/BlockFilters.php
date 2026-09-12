@@ -262,6 +262,12 @@ class BlockFilters {
         $query_id = absint( $block['attrs']['queryId'] ?? 0 );
         $processor->set_attribute( 'data-wp-router-region', 'query-' . $query_id );
 
+        // The router only updates regions on interactive elements. Enhanced pagination
+        // already marks the Query block as core/query; otherwise use this plugin's store.
+        if ( null === $processor->get_attribute( 'data-wp-interactive' ) ) {
+            $processor->set_attribute( 'data-wp-interactive', 'pikari/gutenberg-query-filter' );
+        }
+
         return $processor->get_updated_html();
     }
 }

@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Changing a filter now updates the results on Query Loops without enhanced pagination. Previously the URL changed but the post list did not, because the Query block's router region was not marked interactive.
+
 ### Security
 
 ## [0.2.0] - 2026-09-12

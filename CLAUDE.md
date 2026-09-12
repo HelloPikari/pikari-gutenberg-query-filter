@@ -320,7 +320,7 @@ When working with frontend code, always:
 2. `FilterHelper::get_filter_options( $items, $attributes )` normalizes items into `value` / `label` / `slug` / `item` arrays and applies `pikari_gutenberg_query_filter_options`.
 3. Radio groups prepend `FilterHelper::get_all_option()`, the "All" choice, which stays outside the options filter. For each radio or checkbox option, `FilterHelper::get_option_classes()` builds the `<label>` classes, including the unique `{key}_{slug}` class, and applies `pikari_gutenberg_query_filter_option_classes`.
 4. `FilterHelper::get_option_label_html()` builds the markup after the `<input>`, applies `pikari_gutenberg_query_filter_option_label`, and sanitizes it with `wp_kses_post()`.
-5. `src/blocks/query-filter/view.js` reads `input.value` on change and navigates with `@wordpress/interactivity-router`.
+5. `src/blocks/query-filter/view.js` reads `input.value` on change and navigates with `@wordpress/interactivity-router`. The router only swaps in the new results because `BlockFilters::render_block_query()` gives the core/query wrapper both `data-wp-router-region` and `data-wp-interactive`. Without the interactive attribute the router fetches the filtered page and silently discards it — the URL changes, the results do not.
 
 ### Extension rules
 
