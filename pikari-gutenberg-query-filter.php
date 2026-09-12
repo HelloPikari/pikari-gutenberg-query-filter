@@ -59,6 +59,38 @@ spl_autoload_register(
 );
 
 /**
+ * Check for plugin updates via GitHub releases.
+ *
+ * The Composer autoloader is loaded here rather than at the top of the file, and
+ * guarded. Unlike pikari-team, this plugin has no runtime Composer dependencies
+ * apart from the update checker, so a developer who has run `npm install` but not
+ * `composer install` would otherwise get a fatal error on a file that is only
+ * needed to check for updates. The release ZIP always ships vendor/, so in a real
+ * install the guard never fires.
+ */
+if ( file_exists( PIKARI_GUTENBERG_QUERY_FILTER_DIR . 'vendor/autoload.php' ) ) {
+    require_once PIKARI_GUTENBERG_QUERY_FILTER_DIR . 'vendor/autoload.php';
+
+    $pikari_gutenberg_query_filter_update_checker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+        'https://github.com/HelloPikari/pikari-gutenberg-query-filter/',
+        __FILE__,
+        'pikari-gutenberg-query-filter'
+    );
+
+    $pikari_gutenberg_query_filter_vcs_api = $pikari_gutenberg_query_filter_update_checker->getVcsApi();
+    $pikari_gutenberg_query_filter_vcs_api->enableReleaseAssets(
+        '/pikari-gutenberg-query-filter.*\.zip/',
+        // PUC's VCS classes live under a MINOR-version namespace — v5p7 today,
+        // v5p6 before — and only PucFactory is aliased to v5. Hardcoding the
+        // class would fatal on the next point release, so the constant is read
+        // off the concrete instance. REQUIRE_RELEASE_ASSETS is mandatory: the
+        // default PREFER_RELEASE_ASSETS falls back to GitHub's generated source
+        // archive when a release has no ZIP, and that archive has no build/.
+        constant( get_class( $pikari_gutenberg_query_filter_vcs_api ) . '::REQUIRE_RELEASE_ASSETS' )
+    );
+}
+
+/**
  * Initialize the plugin on WordPress init.
  */
 function pikari_gutenberg_query_filter_init() {
