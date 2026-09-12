@@ -64,6 +64,12 @@ switch ( $filter_type ) {
         return;
 }
 
+// Normalize items into options. Filterable via pikari_gutenberg_query_filter_options.
+$options = FilterHelper::get_filter_options( $items, $attributes );
+if ( empty( $options ) ) {
+    return;
+}
+
 // Get current selection
 $current_value = FilterHelper::get_current_filter_value( $query_var );
 
@@ -100,55 +106,19 @@ echo wp_json_encode(
     <?php if ( $display_type === 'select' ) : ?>
         <select class="wp-block-pikari-gutenberg-query-filter__select" id="<?php echo esc_attr( $id ); ?>" data-wp-on--change="actions.handleSelect">
             <option value=""><?php echo esc_html( $empty_label ); ?></option>
-        <?php foreach ( $items as $item ) : ?>
-            <?php
-            switch ( $filter_type ) {
-                case 'post-type':
-                    $option_label = $item->labels->name;
-                    $option_value = $item->name;
-                    break;
-                case 'taxonomy':
-                    $option_label = $item->name;
-                    $option_value = $item->slug;
-                    break;
-                case 'author':
-                    $option_label = $item->display_name;
-                    $option_value = (string) $item->ID;
-                    break;
-            }
-            ?>
-            <option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( $current_value, $option_value ); ?>>
-            <?php echo esc_html( $option_label ); ?>
+        <?php foreach ( $options as $option ) : ?>
+            <option value="<?php echo esc_attr( $option['value'] ); ?>" <?php selected( $current_value, $option['value'] ); ?>>
+            <?php echo esc_html( $option['label'] ); ?>
             </option>
         <?php endforeach; ?>
         </select>
 
     <?php elseif ( $display_type === 'radio' ) : ?>
         <div class="wp-block-pikari-gutenberg-query-filter__radio-group<?php echo esc_attr( $layout_class ); ?>">
-            <label class="wp-block-pikari-gutenberg-query-filter__radio-item">
-                <input type="radio" name="<?php echo esc_attr( $id ); ?>" value="" <?php checked( empty( $current_value ) ); ?> data-wp-on--change="actions.handleSelect">
-                <span class="wp-block-pikari-gutenberg-query-filter__radio-text"><?php echo esc_html( $empty_label ); ?></span>
-            </label>
-        <?php foreach ( $items as $item ) : ?>
-            <?php
-            switch ( $filter_type ) {
-                case 'post-type':
-                    $option_label = $item->labels->name;
-                    $option_value = $item->name;
-                    break;
-                case 'taxonomy':
-                    $option_label = $item->name;
-                    $option_value = $item->slug;
-                    break;
-                case 'author':
-                    $option_label = $item->display_name;
-                    $option_value = (string) $item->ID;
-                    break;
-            }
-            ?>
-            <label class="wp-block-pikari-gutenberg-query-filter__radio-item">
-                <input type="radio" name="<?php echo esc_attr( $id ); ?>" value="<?php echo esc_attr( $option_value ); ?>" <?php checked( $current_value, $option_value ); ?> data-wp-on--change="actions.handleSelect">
-                <span class="wp-block-pikari-gutenberg-query-filter__radio-text"><?php echo esc_html( $option_label ); ?></span>
+        <?php foreach ( array_merge( array( FilterHelper::get_all_option( $empty_label ) ), $options ) as $option ) : ?>
+            <label class="<?php echo esc_attr( implode( ' ', FilterHelper::get_option_classes( $option, $attributes ) ) ); ?>">
+                <input type="radio" name="<?php echo esc_attr( $id ); ?>" value="<?php echo esc_attr( $option['value'] ); ?>" <?php checked( $current_value, $option['value'] ); ?> data-wp-on--change="actions.handleSelect">
+            <?php echo FilterHelper::get_option_label_html( $option, $attributes ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitized with wp_kses_post() in get_option_label_html(). ?>
             </label>
         <?php endforeach; ?>
         </div>
@@ -157,27 +127,12 @@ echo wp_json_encode(
         <div class="wp-block-pikari-gutenberg-query-filter__checkbox-group<?php echo esc_attr( $layout_class ); ?>">
         <?php
         $selected_values = ! empty( $current_value ) ? explode( ',', $current_value ) : array();
-        foreach ( $items as $item ) :
-            switch ( $filter_type ) {
-                case 'post-type':
-                    $option_label = $item->labels->name;
-                    $option_value = $item->name;
-                    break;
-                case 'taxonomy':
-                    $option_label = $item->name;
-                    $option_value = $item->slug;
-                    break;
-                case 'author':
-                    $option_label = $item->display_name;
-                    $option_value = (string) $item->ID;
-                    break;
-            }
-
-            $is_checked = in_array( $option_value, $selected_values, true );
+        foreach ( $options as $option ) :
+            $is_checked = in_array( (string) $option['value'], $selected_values, true );
             ?>
-            <label class="wp-block-pikari-gutenberg-query-filter__checkbox-item">
-                <input type="checkbox" value="<?php echo esc_attr( $option_value ); ?>" <?php checked( $is_checked ); ?> data-wp-on--change="actions.updateFilters">
-                <span class="wp-block-pikari-gutenberg-query-filter__checkbox-text"><?php echo esc_html( $option_label ); ?></span>
+            <label class="<?php echo esc_attr( implode( ' ', FilterHelper::get_option_classes( $option, $attributes ) ) ); ?>">
+                <input type="checkbox" value="<?php echo esc_attr( $option['value'] ); ?>" <?php checked( $is_checked ); ?> data-wp-on--change="actions.updateFilters">
+            <?php echo FilterHelper::get_option_label_html( $option, $attributes ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitized with wp_kses_post() in get_option_label_html(). ?>
             </label>
         <?php endforeach; ?>
         </div>
