@@ -17,8 +17,7 @@ class FilterHelperTest extends TestCase {
     protected function setUp(): void {
         parent::setUp();
 
-        Functions\when( 'esc_html' )->alias( 'htmlspecialchars' );
-        Functions\when( 'esc_attr' )->alias( 'htmlspecialchars' );
+        Functions\stubEscapeFunctions();
 
         // Mirrors WordPress core's sanitize_html_class() with no fallback.
         Functions\when( 'sanitize_html_class' )->alias(
@@ -26,6 +25,22 @@ class FilterHelperTest extends TestCase {
                 $sanitized = preg_replace( '|%[a-fA-F0-9][a-fA-F0-9]|', '', $classname );
                 return preg_replace( '/[^A-Za-z0-9_-]/', '', $sanitized );
             }
+        );
+    }
+
+    /*
+     * get_all_option()
+     */
+
+    public function test_get_all_option_returns_empty_value_option_with_all_slug(): void {
+        $this->assertSame(
+            array(
+                'value' => '',
+                'label' => 'Everything',
+                'slug'  => 'all',
+                'item'  => null,
+            ),
+            FilterHelper::get_all_option( 'Everything' )
         );
     }
 
@@ -230,6 +245,21 @@ class FilterHelperTest extends TestCase {
 
     public function test_get_option_label_html_renders_default_text_span(): void {
         Functions\when( 'wp_kses_post' )->returnArg();
+
+        $this->assertSame(
+            '<span class="wp-block-pikari-gutenberg-query-filter__radio-text">News</span>',
+            FilterHelper::get_option_label_html(
+                array(
+                    'value' => 'news',
+                    'label' => 'News',
+                ),
+                array( 'displayType' => 'radio' )
+            )
+        );
+    }
+
+    public function test_get_option_label_html_skips_wp_kses_post_for_unfiltered_markup(): void {
+        Functions\expect( 'wp_kses_post' )->never();
 
         $this->assertSame(
             '<span class="wp-block-pikari-gutenberg-query-filter__radio-text">News</span>',

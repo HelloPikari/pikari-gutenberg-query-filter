@@ -127,7 +127,7 @@ class FilterHelper extends AbstractQueryHelper {
     /**
      * Normalize filter items into render-ready options.
      *
-     * The "All" choice is not included; render.php prepends it for radio groups.
+     * The "All" choice is not included; see get_all_option().
      *
      * @param array $items      WP_Post_Type, WP_Term, or WP_User objects, depending on the filter type.
      * @param array $attributes Block attributes.
@@ -185,6 +185,23 @@ class FilterHelper extends AbstractQueryHelper {
     }
 
     /**
+     * Get the "All" choice that clears the filter in radio groups.
+     *
+     * It is not part of the filterable options list.
+     *
+     * @param string $label Label for the choice, from the block's Empty Choice Label.
+     * @return array Option with an empty value and the `all` slug.
+     */
+    public static function get_all_option( string $label ): array {
+        return array(
+            'value' => '',
+            'label' => $label,
+            'slug'  => 'all',
+            'item'  => null,
+        );
+    }
+
+    /**
      * Get the classes for a radio or checkbox option's <label>.
      *
      * Adds a unique `{key}_{slug}` class, where key is the taxonomy name for
@@ -200,8 +217,9 @@ class FilterHelper extends AbstractQueryHelper {
 
         $slug = sanitize_html_class( (string) ( $option['slug'] ?? $option['value'] ?? '' ) );
         if ( '' !== $slug ) {
-            $key       = 'taxonomy' === ( $attributes['filterType'] ?? '' ) ? $attributes['taxonomy'] : ( $attributes['filterType'] ?? 'post-type' );
-            $classes[] = sanitize_html_class( $key ) . '_' . $slug;
+            $filter_type = $attributes['filterType'] ?? 'post-type';
+            $key         = 'taxonomy' === $filter_type ? $attributes['taxonomy'] : $filter_type;
+            $classes[]   = sanitize_html_class( $key ) . '_' . $slug;
         }
 
         /**
@@ -219,14 +237,12 @@ class FilterHelper extends AbstractQueryHelper {
      *
      * @param array $option     Option from get_filter_options().
      * @param array $attributes Block attributes.
-     * @return string Markup, sanitized with wp_kses_post().
+     * @return string Markup; filtered markup is sanitized with wp_kses_post().
      */
     public static function get_option_label_html( array $option, array $attributes ): string {
-        $display_type = sanitize_html_class( $attributes['displayType'] ?? 'checkbox' );
-
-        $html = sprintf(
+        $default_html = sprintf(
             '<span class="wp-block-pikari-gutenberg-query-filter__%s-text">%s</span>',
-            esc_attr( $display_type ),
+            sanitize_html_class( $attributes['displayType'] ?? 'checkbox' ),
             esc_html( $option['label'] ?? '' )
         );
 
@@ -237,8 +253,9 @@ class FilterHelper extends AbstractQueryHelper {
          * @param array  $option     Option with value, label, slug, and item keys.
          * @param array  $attributes Block attributes.
          */
-        $html = apply_filters( 'pikari_gutenberg_query_filter_option_label', $html, $option, $attributes );
+        $html = apply_filters( 'pikari_gutenberg_query_filter_option_label', $default_html, $option, $attributes );
 
-        return wp_kses_post( $html );
+        // The default markup is escaped already; only markup a filter changed needs sanitizing.
+        return $html === $default_html ? $html : wp_kses_post( $html );
     }
 }

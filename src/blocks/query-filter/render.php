@@ -115,17 +115,7 @@ echo wp_json_encode(
 
     <?php elseif ( $display_type === 'radio' ) : ?>
         <div class="wp-block-pikari-gutenberg-query-filter__radio-group<?php echo esc_attr( $layout_class ); ?>">
-        <?php
-        // The "All" choice clears the filter. It is not part of the filterable options list.
-        $all_option = array(
-            'value' => '',
-            'label' => $empty_label,
-            'slug'  => 'all',
-            'item'  => null,
-        );
-
-        foreach ( array_merge( array( $all_option ), $options ) as $option ) :
-            ?>
+        <?php foreach ( array_merge( array( FilterHelper::get_all_option( $empty_label ) ), $options ) as $option ) : ?>
             <label class="<?php echo esc_attr( implode( ' ', FilterHelper::get_option_classes( $option, $attributes ) ) ); ?>">
                 <input type="radio" name="<?php echo esc_attr( $id ); ?>" value="<?php echo esc_attr( $option['value'] ); ?>" <?php checked( $current_value, $option['value'] ); ?> data-wp-on--change="actions.handleSelect">
             <?php echo FilterHelper::get_option_label_html( $option, $attributes ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitized with wp_kses_post() in get_option_label_html(). ?>

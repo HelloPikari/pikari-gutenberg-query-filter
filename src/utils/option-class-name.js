@@ -15,16 +15,20 @@ const sanitizeHtmlClass = ( value ) =>
  * Mirrors FilterHelper::get_option_classes() so theme CSS applies in the
  * editor preview as well as the frontend.
  *
- * @param {string} key  Taxonomy name, or `post-type` / `author`.
- * @param {string} slug Term slug, post type name, or user nicename.
- * @return {string} `{key}_{slug}`, or an empty string when the slug has no valid characters.
+ * @param {Object} attributes            Block attributes.
+ * @param {string} attributes.filterType `post-type`, `taxonomy`, or `author`.
+ * @param {string} attributes.taxonomy   Taxonomy name, for taxonomy filters.
+ * @param {string} slug                  Term slug, post type name, user nicename, or `all`.
+ * @return {string} `{key}_{slug}` with the taxonomy name or filter type as key, or an empty string when the slug has no valid characters.
  */
-export default function getOptionClassName( key, slug ) {
+export default function getOptionClassName( { filterType, taxonomy }, slug ) {
 	const segment = sanitizeHtmlClass( slug );
 
 	if ( ! segment ) {
 		return '';
 	}
+
+	const key = filterType === 'taxonomy' ? taxonomy : filterType;
 
 	return `${ sanitizeHtmlClass( key ) }_${ segment }`;
 }

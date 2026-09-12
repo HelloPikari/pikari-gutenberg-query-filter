@@ -116,7 +116,7 @@ Each filter also receives the block's `$attributes`:
 | Key               | Type      | Values                                                   |
 | ----------------- | --------- | -------------------------------------------------------- |
 | `filterType`      | `string`  | `post-type`, `taxonomy`, or `author`                     |
-| `taxonomy`        | `string`  | Taxonomy name. Set only when `filterType` is `taxonomy`. |
+| `taxonomy`        | `string`  | Taxonomy name. Required when `filterType` is `taxonomy`. |
 | `displayType`     | `string`  | `select`, `radio`, or `checkbox`                         |
 | `layoutDirection` | `string`  | `vertical` or `horizontal`                               |
 | `label`           | `string`  | Block label text, if set in the editor                   |
@@ -321,18 +321,3 @@ function my_theme_option_label_swatch( string $html, array $option, array $attri
 
 add_filter( 'pikari_gutenberg_query_filter_option_label', 'my_theme_option_label_swatch', 10, 3 );
 ```
-
----
-
-## For Contributors
-
-| What                                  | Where                                                                          |
-| ------------------------------------- | ------------------------------------------------------------------------------ |
-| Option normalization + options filter | `FilterHelper::get_filter_options()` in `includes/Helpers/FilterHelper.php`    |
-| Label classes + classes filter        | `FilterHelper::get_option_classes()`                                           |
-| Label markup + label filter           | `FilterHelper::get_option_label_html()`                                        |
-| Template                              | `src/blocks/query-filter/render.php`                                           |
-| Editor preview class (mirrors PHP)    | `src/utils/option-class-name.js`                                               |
-| Tests                                 | `tests/php/FilterHelperTest.php`, `tests/unit/utils/option-class-name.test.js` |
-
-The `{key}_{slug}` format is implemented twice, in PHP and in JS. Change both together.

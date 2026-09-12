@@ -130,34 +130,28 @@ export default function Edit( { attributes, setAttributes, context } ) {
 		}
 	};
 
-	// Render preview content based on filter type
-	const renderPreviewContent = () => {
-		switch ( filterType ) {
-			case 'post-type':
-				return postTypes.map( ( postType ) => (
-					<option key={ postType.slug } value={ postType.slug }>
-						{ postType.name }
-					</option>
-				) );
-			case 'taxonomy':
-				return terms.map( ( term ) => (
-					<option key={ term.id } value={ term.slug }>
-						{ term.name }
-					</option>
-				) );
-			case 'author':
-				return authors.map( ( author ) => (
-					<option key={ author.id } value={ author.id }>
-						{ author.name }
-					</option>
-				) );
-			default:
-				return null;
-		}
-	};
-
-	// Matches FilterHelper::get_option_classes(): taxonomy name, or filter type.
-	const optionKey = filterType === 'taxonomy' ? taxonomy : filterType;
+	// Normalize preview items, like FilterHelper::get_filter_options().
+	const previewOptions =
+		{
+			'post-type': postTypes.map( ( postType ) => ( {
+				key: postType.slug,
+				value: postType.slug,
+				label: postType.name,
+				slug: postType.slug,
+			} ) ),
+			taxonomy: terms.map( ( term ) => ( {
+				key: term.id,
+				value: term.slug,
+				label: term.name,
+				slug: term.slug,
+			} ) ),
+			author: authors.map( ( author ) => ( {
+				key: author.id,
+				value: author.id,
+				label: author.name,
+				slug: author.slug,
+			} ) ),
+		}[ filterType ] || [];
 
 	const blockProps = useBlockProps( {
 		className: classNames( 'wp-block-pikari-gutenberg-query-filter', {
@@ -326,108 +320,51 @@ export default function Edit( { attributes, setAttributes, context } ) {
 							{ emptyLabel ||
 								__( 'All', 'pikari-gutenberg-query-filter' ) }
 						</option>
-						{ renderPreviewContent() }
+						{ previewOptions.map( ( option ) => (
+							<option key={ option.key } value={ option.value }>
+								{ option.label }
+							</option>
+						) ) }
 					</select>
 				) }
 
-				{ displayType === 'radio' && (
+				{ ( displayType === 'radio' || displayType === 'checkbox' ) && (
 					<div
 						className={ classNames(
-							'wp-block-pikari-gutenberg-query-filter__radio-group',
+							`wp-block-pikari-gutenberg-query-filter__${ displayType }-group`,
 							{
 								'has-layout-horizontal':
 									layoutDirection === 'horizontal',
 							}
 						) }
 					>
-						<FilterInput
-							type="radio"
-							disabled
-							checked
-							className={ getOptionClassName( optionKey, 'all' ) }
-						>
-							{ emptyLabel ||
-								__( 'All', 'pikari-gutenberg-query-filter' ) }
-						</FilterInput>
-						{ filterType === 'post-type' &&
-							postTypes.slice( 0, 3 ).map( ( postType ) => (
-								<FilterInput
-									key={ postType.slug }
-									type="radio"
-									disabled
-									className={ getOptionClassName( optionKey, postType.slug ) }
-								>
-									{ postType.name }
-								</FilterInput>
-							) ) }
-						{ filterType === 'taxonomy' &&
-							terms.slice( 0, 3 ).map( ( term ) => (
-								<FilterInput
-									key={ term.id }
-									type="radio"
-									disabled
-									className={ getOptionClassName( optionKey, term.slug ) }
-								>
-									{ term.name }
-								</FilterInput>
-							) ) }
-						{ filterType === 'author' &&
-							authors.slice( 0, 3 ).map( ( author ) => (
-								<FilterInput
-									key={ author.id }
-									type="radio"
-									disabled
-									className={ getOptionClassName( optionKey, author.slug ) }
-								>
-									{ author.name }
-								</FilterInput>
-							) ) }
-					</div>
-				) }
-
-				{ displayType === 'checkbox' && (
-					<div
-						className={ classNames(
-							'wp-block-pikari-gutenberg-query-filter__checkbox-group',
-							{
-								'has-layout-horizontal':
-									layoutDirection === 'horizontal',
-							}
+						{ displayType === 'radio' && (
+							<FilterInput
+								type="radio"
+								disabled
+								checked
+								className={ getOptionClassName(
+									attributes,
+									'all'
+								) }
+							>
+								{ emptyLabel ||
+									__( 'All', 'pikari-gutenberg-query-filter' ) }
+							</FilterInput>
 						) }
-					>
-						{ filterType === 'post-type' &&
-							postTypes.slice( 0, 3 ).map( ( postType ) => (
-								<FilterInput
-									key={ postType.slug }
-									type="checkbox"
-									disabled
-									className={ getOptionClassName( optionKey, postType.slug ) }
-								>
-									{ postType.name }
-								</FilterInput>
-							) ) }
-						{ filterType === 'taxonomy' &&
-							terms.slice( 0, 3 ).map( ( term ) => (
-								<FilterInput
-									key={ term.id }
-									type="checkbox"
-									disabled
-									className={ getOptionClassName( optionKey, term.slug ) }
-								>
-									{ term.name }
-								</FilterInput>
-							) ) }
-						{ filterType === 'author' &&
-							authors.slice( 0, 3 ).map( ( author ) => (
-								<FilterInput
-									key={ author.id }
-									type="checkbox"
-									disabled
-									className={ getOptionClassName( optionKey, author.slug ) }
-								>
-									{ author.name }
-								</FilterInput>
-							) ) }
+						{ previewOptions.slice( 0, 3 ).map( ( option ) => (
+							<FilterInput
+								key={ option.key }
+								type={ displayType }
+								disabled
+								className={ getOptionClassName(
+									attributes,
+									option.slug
+								) }
+							>
+								{ option.label }
+							</FilterInput>
+						) ) }
 					</div>
 				) }
 			</div>

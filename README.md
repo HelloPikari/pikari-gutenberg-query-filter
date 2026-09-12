@@ -148,30 +148,9 @@ Radio and checkbox options render as:
 </label>
 ```
 
-Each option label gets a unique `{key}_{slug}` class, so themes can style individual options:
+Each option label gets a unique `{key}_{slug}` class — `category_news`, `post-type_page`, `author_jane-doe`, and `category_all` for the "All" radio — so themes can style individual options. Developers can change the option list, label classes, and label markup with the `pikari_gutenberg_query_filter_options`, `pikari_gutenberg_query_filter_option_classes`, and `pikari_gutenberg_query_filter_option_label` filters.
 
-| Filter type | Example class                              |
-| ----------- | ------------------------------------------ |
-| Taxonomy    | `category_news` (`{taxonomy}_{term-slug}`) |
-| Post type   | `post-type_page` (`post-type_{name}`)      |
-| Author      | `author_jane-doe` (`author_{nicename}`)    |
-| "All" radio | `category_all` (`{key}_all`)               |
-
-```css
-.wp-block-pikari-gutenberg-query-filter .category_news {
-	color: #b00020;
-}
-```
-
-Developers can change what is rendered with these PHP filters:
-
-| Filter                                         | Changes                                                  |
-| ---------------------------------------------- | -------------------------------------------------------- |
-| `pikari_gutenberg_query_filter_options`        | The option list: add, remove, reorder, or relabel        |
-| `pikari_gutenberg_query_filter_option_classes` | Classes on each option `<label>`                         |
-| `pikari_gutenberg_query_filter_option_label`   | Markup inside each option `<label>`, after the `<input>` |
-
-See [docs/hooks.md](docs/hooks.md) for the full markup, parameters, caveats, and examples.
+See [docs/hooks.md](docs/hooks.md) for the full markup, class rules, filter parameters, and examples.
 
 ## Architecture
 

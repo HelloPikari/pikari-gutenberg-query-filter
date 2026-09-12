@@ -318,7 +318,7 @@ When working with frontend code, always:
 
 1. `src/blocks/query-filter/render.php` resolves the query variable and loads raw items for the `filterType`: `FilterHelper::get_filter_post_types()`, `FilterHelper::get_taxonomy_filter_terms()`, or `AuthorHelper::get_filter_authors()`.
 2. `FilterHelper::get_filter_options( $items, $attributes )` normalizes items into `value` / `label` / `slug` / `item` arrays and applies `pikari_gutenberg_query_filter_options`.
-3. For each radio or checkbox option, `FilterHelper::get_option_classes()` builds the `<label>` classes, including the unique `{key}_{slug}` class, and applies `pikari_gutenberg_query_filter_option_classes`.
+3. Radio groups prepend `FilterHelper::get_all_option()`, the "All" choice, which stays outside the options filter. For each radio or checkbox option, `FilterHelper::get_option_classes()` builds the `<label>` classes, including the unique `{key}_{slug}` class, and applies `pikari_gutenberg_query_filter_option_classes`.
 4. `FilterHelper::get_option_label_html()` builds the markup after the `<input>`, applies `pikari_gutenberg_query_filter_option_label`, and sanitizes it with `wp_kses_post()`.
 5. `src/blocks/query-filter/view.js` reads `input.value` on change and navigates with `@wordpress/interactivity-router`.
 
