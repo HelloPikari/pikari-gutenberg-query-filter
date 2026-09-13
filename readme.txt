@@ -48,6 +48,11 @@ Developers can change the option list, the label classes, and the markup inside 
 
 == Changelog ==
 
+= 0.3.1 =
+* Fixed: content after a Query Loop no longer loses its styling when a filter changes the number of results. Block style variation and element classes after the loop now keep the same numbers, which are higher than before, for example `is-style-eyebrow--2010`.
+* Fixed: styles that other plugins add with JavaScript, such as the WPForms honeypot CSS, stay enabled after filtering and after using the browser's back and forward buttons.
+* Docs: the README explains why a Query Loop offset can hide a term's posts once a filter is applied.
+
 = 0.3.0 =
 * Fixed: changing a filter now updates the results on Query Loops without enhanced pagination. Previously the URL changed but the posts did not.
 * New: each radio and checkbox option label gets a unique class your theme can style, for example `category_news`, `post-type_page`, or `author_jane-doe`.
@@ -62,6 +67,9 @@ Developers can change the option list, the label classes, and the markup inside 
 For releases before 0.2.0, see https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases
 
 == Upgrade Notice ==
+
+= 0.3.1 =
+Fixes styling after a Query Loop breaking when a filter changes the results, including form fields that other plugins hide with JavaScript.
 
 = 0.3.0 =
 Fixes filters not updating the results on Query Loops without enhanced pagination. After this update, sites installed from a ZIP get update notices in the admin. If you install with Composer, widen a `^0.2` constraint, since a caret range on a 0.x version will not pick up 0.3.0.

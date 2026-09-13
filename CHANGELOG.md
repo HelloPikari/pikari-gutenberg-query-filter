@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-13
+
 ### Added
 
 - README troubleshooting entry on Query Loop offsets, which apply after a filter and can hide a term's posts.
