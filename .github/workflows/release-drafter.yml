@@ -19,12 +19,67 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Draft Release
+        id: draft
         uses: release-drafter/release-drafter@v7
         with:
           config-name: release-drafter.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Publishing before the bump makes release.yml refuse to build, so the
+      # release ships with no ZIP. Flag it on the draft, where releases get planned.
+      # No cleanup step: Drafter rewrites the name and body on every push to main,
+      # so the first push after the bump leaves a clean draft.
+      - name: Flag a draft that needs a version bump
+        if: steps.draft.outputs.id != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRAFT_ID: ${{ steps.draft.outputs.id }}
+          DRAFT_TAG: ${{ steps.draft.outputs.tag_name }}
+          DRAFT_BODY: ${{ steps.draft.outputs.body }}
+        run: |
+          DRAFT_VERSION="${DRAFT_TAG#v}"
+          HEADER_VERSION="$(sed -n 's/^ \* Version:[[:space:]]*//p' pikari-gutenberg-query-filter.php | head -1 | tr -d '[:space:]')"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+
+          echo "draft tag:     $DRAFT_VERSION"
+          echo "plugin header: $HEADER_VERSION"
+          echo "package.json:  $PKG_VERSION"
+
+          if [ "$HEADER_VERSION" = "$DRAFT_VERSION" ] && [ "$PKG_VERSION" = "$DRAFT_VERSION" ]; then
+            echo "Versions agree."
+            exit 0
+          fi
+
+          if [ "$HEADER_VERSION" = "$PKG_VERSION" ]; then
+            CURRENT="\`$HEADER_VERSION\`"
+          else
+            CURRENT="\`$HEADER_VERSION\` in the plugin header and \`$PKG_VERSION\` in package.json"
+          fi
+
+          echo "::warning::Draft $DRAFT_TAG needs a version bump: plugin header is $HEADER_VERSION, package.json is $PKG_VERSION."
+
+          NOTICE="$(cat <<EOF
+          > [!WARNING]
+          > **Bump the version before publishing.** This draft will tag \`$DRAFT_TAG\`, but the plugin files on \`main\` report $CURRENT. Published as it is, \`release.yml\` refuses to build and the release ships with no ZIP.
+          >
+          > Merge a PR that runs this from the monorepo root first:
+          >
+          > \`\`\`bash
+          > node .github/bump-version.js pikari-gutenberg-query-filter $DRAFT_VERSION
+          > \`\`\`
+          >
+          > This notice clears itself on the next push to \`main\` once the versions agree.
+          EOF
+          )"
+
+          gh api --silent -X PATCH "repos/$GITHUB_REPOSITORY/releases/$DRAFT_ID" \
+            -f name="$DRAFT_TAG — bump version before publishing" \
+            -f body="$(printf '%s\n\n%s' "$NOTICE" "$DRAFT_BODY")"
 
   autolabel:
     name: Label Pull Request
