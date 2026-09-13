@@ -77,7 +77,10 @@ jobs:
           EOF
           )"
 
+          # Resend tag_name: a PATCH that omits it detaches the draft from its tag,
+          # and GitHub shows it as untagged-<hash>.
           gh api --silent -X PATCH "repos/$GITHUB_REPOSITORY/releases/$DRAFT_ID" \
+            -f tag_name="$DRAFT_TAG" \
             -f name="$DRAFT_TAG — bump version before publishing" \
             -f body="$(printf '%s\n\n%s' "$NOTICE" "$DRAFT_BODY")"
 
