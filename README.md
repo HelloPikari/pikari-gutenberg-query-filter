@@ -308,6 +308,14 @@ pikari-gutenberg-query-filter/
 - Ensure the Query Loop block has compatible query settings
 - Review browser console for any JavaScript errors
 
+### A Filter Shows No Results, or Too Few
+
+The Query Loop's own settings still apply once a filter is chosen, and an **offset** is applied _after_ the filter. An offset of 1 skips the newest post in the selected term, not the newest post overall.
+
+A common way to hit this: a Query Loop uses an offset of 1 to skip the featured post shown above it. Filter it to a category with one post and it shows nothing; filter it to any other category and it silently drops that category's newest post.
+
+To keep a post from appearing twice, exclude it by ID instead of using an offset, for example by adding `post__not_in` in a `query_loop_block_query_vars` filter.
+
 ### Performance Issues
 
 - Review the number of posts being queried (use pagination)

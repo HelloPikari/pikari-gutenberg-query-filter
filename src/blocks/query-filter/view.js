@@ -1,5 +1,38 @@
 import { store, getContext, getElement } from '@wordpress/interactivity';
 
+/*
+ * The router disables every stylesheet that is not in the fetched page's HTML,
+ * including styles other scripts inject at runtime, such as WPForms' honeypot CSS.
+ * WordPress gives every stylesheet it prints an id, so id-less styles present
+ * before the router first loads are treated as injected and re-enabled after
+ * each navigation.
+ */
+let injectedStyles = null;
+
+const enableInjectedStyles = () => {
+	injectedStyles?.forEach( ( { sheet } ) => {
+		if ( sheet ) {
+			sheet.disabled = false;
+		}
+	} );
+};
+
+// On back/forward the router re-renders the cached page in a microtask, so run after it.
+window.addEventListener( 'popstate', () => setTimeout( enableInjectedStyles ) );
+
+function* navigate( url ) {
+	injectedStyles ??= Array.from(
+		document.querySelectorAll(
+			'style:not([id]), link[rel="stylesheet"]:not([id])'
+		)
+	);
+
+	const { actions } = yield import( '@wordpress/interactivity-router' );
+	yield actions.navigate( url );
+
+	enableInjectedStyles();
+}
+
 store( 'pikari/gutenberg-query-filter', {
 	actions: {
 		*updateFilters( event ) {
@@ -30,8 +63,7 @@ store( 'pikari/gutenberg-query-filter', {
 			}
 
 			// Navigate to new URL
-			const { actions } = yield import( '@wordpress/interactivity-router' );
-			yield actions.navigate( url.toString() );
+			yield* navigate( url.toString() );
 		},
 
 		*handleSelect( event ) {
@@ -57,8 +89,7 @@ store( 'pikari/gutenberg-query-filter', {
 			}
 
 			// Navigate to new URL
-			const { actions } = yield import( '@wordpress/interactivity-router' );
-			yield actions.navigate( url.toString() );
+			yield* navigate( url.toString() );
 		},
 
 		*handleSort( event ) {
@@ -89,8 +120,7 @@ store( 'pikari/gutenberg-query-filter', {
 			}
 
 			// Navigate to new URL
-			const { actions } = yield import( '@wordpress/interactivity-router' );
-			yield actions.navigate( url.toString() );
+			yield* navigate( url.toString() );
 		},
 
 		*search( event ) {
@@ -135,8 +165,7 @@ store( 'pikari/gutenberg-query-filter', {
 			}
 
 			// Navigate to new URL
-			const { actions } = yield import( '@wordpress/interactivity-router' );
-			yield actions.navigate( url.toString() );
+			yield* navigate( url.toString() );
 		},
 	},
 } );

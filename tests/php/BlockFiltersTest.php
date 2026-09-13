@@ -70,6 +70,88 @@ class BlockFiltersTest extends TestCase {
         $this->assertSame( 'query-3', $processor->get_attribute( 'data-wp-router-region' ) );
     }
 
+    /*
+     * Unique ID reservation
+     */
+
+    public function test_constructor_registers_unique_id_reservation(): void {
+        $filters = new BlockFilters();
+
+        $this->assertNotFalse( has_filter( 'render_block_data', array( $filters, 'reserve_unique_ids' ) ) );
+    }
+
+    /**
+     * Blocks after a router region must get the same unique IDs whatever the
+     * region rendered, or their classes stop matching the navigated page's CSS.
+     *
+     * @dataProvider provide_ids_used_inside_query
+     *
+     * @param int $ids_used_inside_query IDs consumed by the query's inner blocks.
+     */
+    public function test_ids_after_query_do_not_depend_on_its_results( int $ids_used_inside_query ): void {
+        $this->stub_unique_id_counters();
+        $filters = new BlockFilters();
+
+        $block = $filters->reserve_unique_ids(
+            array(
+                'blockName' => 'core/query',
+                'attrs'     => array( 'queryId' => 3 ),
+            )
+        );
+
+        for ( $i = 0; $i < $ids_used_inside_query; $i++ ) {
+            wp_unique_id( 'is-style-eyebrow--' );
+            wp_unique_prefixed_id( 'wp-elements-' );
+        }
+
+        $filters->render_block_query( '<div class="wp-block-query"></div>', $block );
+
+        $this->assertSame( 'is-style-eyebrow--1002', wp_unique_id( 'is-style-eyebrow--' ) );
+        $this->assertSame( 'wp-elements-1002', wp_unique_prefixed_id( 'wp-elements-' ) );
+    }
+
+    /**
+     * @return array<string, array{int}>
+     */
+    public static function provide_ids_used_inside_query(): array {
+        return array(
+            'one result'  => array( 1 ),
+            'six results' => array( 6 ),
+        );
+    }
+
+    public function test_reserve_unique_ids_ignores_other_blocks(): void {
+        $this->stub_unique_id_counters();
+        $block = array(
+            'blockName' => 'core/group',
+            'attrs'     => array(),
+        );
+
+        $this->assertSame( $block, ( new BlockFilters() )->reserve_unique_ids( $block ) );
+        $this->assertSame( '1', wp_unique_id() );
+    }
+
+    /**
+     * Replace core's static unique ID counters with per-test ones.
+     */
+    private function stub_unique_id_counters(): void {
+        $id_counter        = 0;
+        $prefixed_counters = array();
+
+        Functions\when( 'wp_unique_id' )->alias(
+            function ( $prefix = '' ) use ( &$id_counter ) {
+                return $prefix . ++$id_counter;
+            }
+        );
+        Functions\when( 'wp_unique_prefixed_id' )->alias(
+            function ( $prefix = '' ) use ( &$prefixed_counters ) {
+                $prefixed_counters[ $prefix ] = ( $prefixed_counters[ $prefix ] ?? 0 ) + 1;
+
+                return $prefix . $prefixed_counters[ $prefix ];
+            }
+        );
+    }
+
     /**
      * Load the real WP_HTML_Tag_Processor from a WordPress core checkout.
      *

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- README troubleshooting entry on Query Loop offsets, which apply after a filter and can hide a term's posts.
+
+### Fixed
+
+- Content after a Query Loop no longer loses its styling when a filter changes the number of results. Block style variation (`is-style-{name}--{n}`) and element (`wp-elements-{n}`) classes are numbered in render order, so markup after the loop kept numbers that no longer matched the new page's CSS. Each Query Loop now reserves 1,000 of these numbers, so later classes carry higher numbers than before, for example `is-style-eyebrow--2010`.
+- Styles that other scripts add at runtime, such as the WPForms honeypot CSS, stay enabled after filtering and after back/forward navigation. The Interactivity API router disables any stylesheet that is not in the fetched page's HTML.
+
 ## [0.3.0] - 2026-09-12
 
 ### Added
