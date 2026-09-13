@@ -99,11 +99,10 @@ echo wp_json_encode(
 );
 ?>
 '>
-    <label class="wp-block-pikari-gutenberg-query-filter__label<?php echo esc_attr( $label_class ); ?>" for="<?php echo esc_attr( $id ); ?>">
-        <?php echo esc_html( $label_text ); ?>
-    </label>
-
     <?php if ( $display_type === 'select' ) : ?>
+        <label class="wp-block-pikari-gutenberg-query-filter__label<?php echo esc_attr( $label_class ); ?>" for="<?php echo esc_attr( $id ); ?>">
+        <?php echo esc_html( $label_text ); ?>
+        </label>
         <select class="wp-block-pikari-gutenberg-query-filter__select" id="<?php echo esc_attr( $id ); ?>" data-wp-on--change="actions.handleSelect">
             <option value=""><?php echo esc_html( $empty_label ); ?></option>
         <?php foreach ( $options as $option ) : ?>
@@ -114,6 +113,8 @@ echo wp_json_encode(
         </select>
 
     <?php elseif ( $display_type === 'radio' ) : ?>
+        <fieldset class="wp-block-pikari-gutenberg-query-filter__fieldset">
+        <legend class="wp-block-pikari-gutenberg-query-filter__label<?php echo esc_attr( $label_class ); ?>"><?php echo esc_html( $label_text ); ?></legend>
         <div class="wp-block-pikari-gutenberg-query-filter__radio-group<?php echo esc_attr( $layout_class ); ?>">
         <?php foreach ( array_merge( array( FilterHelper::get_all_option( $empty_label ) ), $options ) as $option ) : ?>
             <label class="<?php echo esc_attr( implode( ' ', FilterHelper::get_option_classes( $option, $attributes ) ) ); ?>">
@@ -122,8 +123,11 @@ echo wp_json_encode(
             </label>
         <?php endforeach; ?>
         </div>
+        </fieldset>
 
     <?php elseif ( $display_type === 'checkbox' ) : ?>
+        <fieldset class="wp-block-pikari-gutenberg-query-filter__fieldset">
+        <legend class="wp-block-pikari-gutenberg-query-filter__label<?php echo esc_attr( $label_class ); ?>"><?php echo esc_html( $label_text ); ?></legend>
         <div class="wp-block-pikari-gutenberg-query-filter__checkbox-group<?php echo esc_attr( $layout_class ); ?>">
         <?php
         $selected_values = ! empty( $current_value ) ? explode( ',', $current_value ) : array();
@@ -136,5 +140,6 @@ echo wp_json_encode(
             </label>
         <?php endforeach; ?>
         </div>
+        </fieldset>
     <?php endif; ?>
 </div>

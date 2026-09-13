@@ -8,6 +8,18 @@
 	justify-content: stretch;
 }
 
+/* Radio and checkbox groups are a fieldset; keep its default chrome out of the layout */
+.wp-block-pikari-gutenberg-query-filter__fieldset {
+	border: 0;
+	margin: 0;
+	min-inline-size: 0;
+	padding: 0;
+}
+.wp-block-pikari-gutenberg-query-filter__fieldset
+	> .wp-block-pikari-gutenberg-query-filter__label {
+	padding: 0;
+}
+
 /* Radio group styles */
 .wp-block-pikari-gutenberg-query-filter__radio-group,
 .wp-block-pikari-gutenberg-query-filter__checkbox-group {

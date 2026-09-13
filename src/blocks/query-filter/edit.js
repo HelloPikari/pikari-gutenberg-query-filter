@@ -159,6 +159,14 @@ export default function Edit( { attributes, setAttributes, context } ) {
 		} ),
 	} );
 
+	const labelClassName = classNames(
+		'wp-block-pikari-gutenberg-query-filter__label',
+		{
+			'screen-reader-text': ! showLabel,
+		}
+	);
+	const labelText = label || getDefaultLabel();
+
 	return (
 		<>
 			<InspectorControls>
@@ -298,74 +306,70 @@ export default function Edit( { attributes, setAttributes, context } ) {
 			</InspectorControls>
 
 			<div { ...blockProps }>
-				<label
-					className={ classNames(
-						'wp-block-pikari-gutenberg-query-filter__label',
-						{
-							'screen-reader-text': ! showLabel,
-						}
-					) }
-					htmlFor={ id }
-				>
-					{ label || getDefaultLabel() }
-				</label>
-
 				{ displayType === 'select' && (
-					<select
-						className="wp-block-pikari-gutenberg-query-filter__select"
-						id={ id }
-						disabled
-					>
-						<option value="">
-							{ emptyLabel ||
-								__( 'All', 'pikari-gutenberg-query-filter' ) }
-						</option>
-						{ previewOptions.map( ( option ) => (
-							<option key={ option.key } value={ option.value }>
-								{ option.label }
+					<>
+						<label className={ labelClassName } htmlFor={ id }>
+							{ labelText }
+						</label>
+						<select
+							className="wp-block-pikari-gutenberg-query-filter__select"
+							id={ id }
+							disabled
+						>
+							<option value="">
+								{ emptyLabel ||
+									__( 'All', 'pikari-gutenberg-query-filter' ) }
 							</option>
-						) ) }
-					</select>
+							{ previewOptions.map( ( option ) => (
+								<option key={ option.key } value={ option.value }>
+									{ option.label }
+								</option>
+							) ) }
+						</select>
+					</>
 				) }
 
 				{ ( displayType === 'radio' || displayType === 'checkbox' ) && (
-					<div
-						className={ classNames(
-							`wp-block-pikari-gutenberg-query-filter__${ displayType }-group`,
-							{
-								'has-layout-horizontal':
-									layoutDirection === 'horizontal',
-							}
-						) }
-					>
-						{ displayType === 'radio' && (
-							<FilterInput
-								type="radio"
-								disabled
-								checked
-								className={ getOptionClassName(
-									attributes,
-									'all'
-								) }
-							>
-								{ emptyLabel ||
-									__( 'All', 'pikari-gutenberg-query-filter' ) }
-							</FilterInput>
-						) }
-						{ previewOptions.slice( 0, 3 ).map( ( option ) => (
-							<FilterInput
-								key={ option.key }
-								type={ displayType }
-								disabled
-								className={ getOptionClassName(
-									attributes,
-									option.slug
-								) }
-							>
-								{ option.label }
-							</FilterInput>
-						) ) }
-					</div>
+					<fieldset className="wp-block-pikari-gutenberg-query-filter__fieldset">
+						<legend className={ labelClassName }>{ labelText }</legend>
+						<div
+							className={ classNames(
+								`wp-block-pikari-gutenberg-query-filter__${ displayType }-group`,
+								{
+									'has-layout-horizontal':
+										layoutDirection === 'horizontal',
+								}
+							) }
+						>
+							{ displayType === 'radio' && (
+								<FilterInput
+									type="radio"
+									disabled
+									checked
+									className={ getOptionClassName(
+										attributes,
+										'all'
+									) }
+								>
+									{ emptyLabel ||
+										__( 'All', 'pikari-gutenberg-query-filter' ) }
+								</FilterInput>
+							) }
+							{ previewOptions.slice( 0, 3 ).map( ( option ) => (
+								<FilterInput
+									key={ option.key }
+									type={ displayType }
+									disabled
+									className={ getOptionClassName(
+										attributes,
+										option.slug
+									) }
+								>
+									{ option.label }
+								</FilterInput>
+							) ) }
+						</div>
+					</fieldset>
 				) }
 			</div>
 		</>
