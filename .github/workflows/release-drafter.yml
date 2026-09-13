@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
     types: [opened, reopened, synchronize]
+  # Re-run the draft and the version bump by hand, e.g. right after adding
+  # the RELEASE_BUMP_TOKEN secret.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -13,14 +16,24 @@ jobs:
   update_release_draft:
     name: Update Release Draft
     # Drafting only makes sense once something has landed on main.
-    if: github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     permissions:
       contents: write
+    # Queue rather than cancel: a run stopped between pushing the bump branch
+    # and updating its PR would leave the two out of step.
+    concurrency:
+      group: release-drafter
+      cancel-in-progress: false
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          # The bump branch is pushed with this token. Pushes and PRs made with
+          # GITHUB_TOKEN trigger no workflows, so a bump PR opened with it would
+          # never get the required CI checks and auto-merge would never fire.
+          token: ${{ secrets.RELEASE_BUMP_TOKEN || github.token }}
 
       - name: Draft Release
         id: draft
@@ -30,59 +43,99 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Publishing before the bump makes release.yml refuse to build, so the
-      # release ships with no ZIP. Flag it on the draft, where releases get planned.
-      # No cleanup step: Drafter rewrites the name and body on every push to main,
-      # so the first push after the bump leaves a clean draft.
-      - name: Flag a draft that needs a version bump
+      # Release Drafter picks the next version but never writes it into the
+      # code, and PUC reads the Version header at the release tag, so the bump
+      # has to land on main before the draft is published. This opens a PR for
+      # it that merges itself once CI passes. Drafter rewrites the draft's name
+      # and body on every push to main, so once the bump merges the draft is
+      # clean and ready to publish.
+      - name: Keep the plugin version in step with the draft
         if: steps.draft.outputs.id != ''
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUMP_TOKEN: ${{ secrets.RELEASE_BUMP_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DRAFT_ID: ${{ steps.draft.outputs.id }}
           DRAFT_TAG: ${{ steps.draft.outputs.tag_name }}
           DRAFT_BODY: ${{ steps.draft.outputs.body }}
         run: |
+          BRANCH=release/bump-version
           DRAFT_VERSION="${DRAFT_TAG#v}"
           HEADER_VERSION="$(sed -n 's/^ \* Version:[[:space:]]*//p' pikari-gutenberg-query-filter.php | head -1 | tr -d '[:space:]')"
           PKG_VERSION="$(node -p "require('./package.json').version")"
+          export GH_TOKEN="${BUMP_TOKEN:-$GITHUB_TOKEN}"
 
           echo "draft tag:     $DRAFT_VERSION"
           echo "plugin header: $HEADER_VERSION"
           echo "package.json:  $PKG_VERSION"
 
+          # Resend tag_name: a PATCH that omits it detaches the draft from its
+          # tag, and GitHub shows it as untagged-<hash>.
+          flag_draft() {
+            gh api --silent -X PATCH "repos/$GITHUB_REPOSITORY/releases/$DRAFT_ID" \
+              -f tag_name="$DRAFT_TAG" \
+              -f name="$DRAFT_TAG — not ready to publish" \
+              -f body="$(printf '%s\n\n---\n\n%s\n' "$DRAFT_BODY" "$1")"
+          }
+
+          open_bump_pr() {
+            gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty'
+          }
+
           if [ "$HEADER_VERSION" = "$DRAFT_VERSION" ] && [ "$PKG_VERSION" = "$DRAFT_VERSION" ]; then
             echo "Versions agree."
+            # A bump PR can outlive its purpose if the version was bumped by hand.
+            if [ -n "$BUMP_TOKEN" ] && OPEN_PR="$(open_bump_pr)" && [ -n "$OPEN_PR" ]; then
+              gh pr close "$OPEN_PR" --comment "main already reports $DRAFT_VERSION."
+            fi
             exit 0
           fi
 
-          if [ "$HEADER_VERSION" = "$PKG_VERSION" ]; then
-            CURRENT="\`$HEADER_VERSION\`"
-          else
-            CURRENT="\`$HEADER_VERSION\` in the plugin header and \`$PKG_VERSION\` in package.json"
+          # Never downgrade. Plugin files ahead of the draft mean a manual bump
+          # got ahead of the PR labels.
+          if [ "$(printf '%s\n%s\n' "$HEADER_VERSION" "$DRAFT_VERSION" | sort -V | tail -1)" != "$DRAFT_VERSION" ]; then
+            echo "::warning::The plugin files ($HEADER_VERSION) are ahead of draft $DRAFT_TAG, so no bump PR was opened."
+            flag_draft "Not ready: the plugin files already report \`$HEADER_VERSION\`, ahead of this draft. Check the merged PRs' labels."
+            exit 0
           fi
 
-          echo "::warning::Draft $DRAFT_TAG needs a version bump: plugin header is $HEADER_VERSION, package.json is $PKG_VERSION."
+          if [ -z "$BUMP_TOKEN" ]; then
+            echo "::warning::RELEASE_BUMP_TOKEN is not set, so $DRAFT_TAG can't be bumped automatically."
+            flag_draft "Not ready: the plugin files report \`$HEADER_VERSION\`. The RELEASE_BUMP_TOKEN secret isn't set, so bump by hand first, from the monorepo root: \`node .github/bump-version.js pikari-gutenberg-query-filter $DRAFT_VERSION\`"
+            exit 0
+          fi
 
-          NOTICE="$(cat <<EOF
-          > [!WARNING]
-          > **Bump the version before publishing.** This draft will tag \`$DRAFT_TAG\`, but the plugin files on \`main\` report $CURRENT. Published as it is, \`release.yml\` refuses to build and the release ships with no ZIP.
-          >
-          > Merge a PR that runs this from the monorepo root first:
-          >
-          > \`\`\`bash
-          > node .github/bump-version.js pikari-gutenberg-query-filter $DRAFT_VERSION
-          > \`\`\`
-          >
-          > This notice clears itself on the next push to \`main\` once the versions agree.
-          EOF
-          )"
+          # Commit as the token's account so the ruleset counts the change as attributed.
+          git config user.name HelloPikari
+          git config user.email 87791563+HelloPikari@users.noreply.github.com
+          git checkout -B "$BRANCH"
+          perl -pi -e "s/^( \* Version:\s*)\S+/\${1}$DRAFT_VERSION/" pikari-gutenberg-query-filter.php
+          perl -pi -e "s/(define\(\s*'PIKARI_[A-Z0-9_]*VERSION',\s*')[^']*/\${1}$DRAFT_VERSION/" pikari-gutenberg-query-filter.php
+          npm version "$DRAFT_VERSION" --no-git-tag-version --ignore-scripts --allow-same-version > /dev/null
+          # A numeric Stable tag tracks the header; "trunk" is left alone.
+          if [ -f readme.txt ]; then
+            perl -pi -e "s/^(Stable tag:\s*)\d\S*/\${1}$DRAFT_VERSION/" readme.txt
+          fi
+          git commit -qam "chore: Bump version to $DRAFT_VERSION"
+          git push --force origin "$BRANCH"
 
-          # Resend tag_name: a PATCH that omits it detaches the draft from its tag,
-          # and GitHub shows it as untagged-<hash>.
-          gh api --silent -X PATCH "repos/$GITHUB_REPOSITORY/releases/$DRAFT_ID" \
-            -f tag_name="$DRAFT_TAG" \
-            -f name="$DRAFT_TAG — bump version before publishing" \
-            -f body="$(printf '%s\n\n%s' "$NOTICE" "$DRAFT_BODY")"
+          TITLE="chore: Bump version to $DRAFT_VERSION"
+          PR_BODY="Release Drafter's next release is \`$DRAFT_TAG\`, but the plugin files report \`$HEADER_VERSION\`. This sets the plugin header, the \`PIKARI_*_VERSION\` const, package.json and its lock file, and a numeric Stable tag, to \`$DRAFT_VERSION\`.
+
+          Opened by the Release Drafter workflow. It merges itself once CI passes, and the draft is ready to publish after that. The branch is rebuilt from main on every push, so don't add commits to it."
+
+          OPEN_PR="$(open_bump_pr)"
+          if [ -z "$OPEN_PR" ]; then
+            OPEN_PR="$(gh pr create --base main --head "$BRANCH" --title "$TITLE" --label skip-changelog --body "$PR_BODY")"
+            OPEN_PR="${OPEN_PR##*/}"
+          else
+            gh pr edit "$OPEN_PR" --title "$TITLE" --body "$PR_BODY"
+          fi
+
+          if [ "$(gh pr view "$OPEN_PR" --json autoMergeRequest --jq '.autoMergeRequest != null')" != true ]; then
+            gh pr merge "$OPEN_PR" --auto --squash
+          fi
+
+          flag_draft "Not ready: #$OPEN_PR bumps the plugin files from \`$HEADER_VERSION\` to \`$DRAFT_VERSION\` and merges itself once CI passes. This note disappears when it lands."
 
   autolabel:
     name: Label Pull Request
