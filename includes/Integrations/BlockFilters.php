@@ -18,6 +18,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 class BlockFilters {
 
     /**
+     * Unique IDs reserved for each Query block's inner blocks. See reserve_unique_ids().
+     */
+    private const UNIQUE_ID_RESERVE = 1000;
+
+    /**
+     * Parsed block key holding the unique ID counters recorded by reserve_unique_ids().
+     */
+    private const UNIQUE_ID_START_KEY = 'pikariGutenbergQueryFilterUniqueIdStart';
+
+    /**
      * Initialize the block filters.
      */
     public function __construct() {
@@ -38,6 +48,9 @@ class BlockFilters {
 
         // Modify query block rendering to add data attributes.
         add_filter( 'render_block_core/query', array( $this, 'render_block_query' ), 20, 3 );
+
+        // Keep unique IDs after a Query block stable across filtered results.
+        add_filter( 'render_block_data', array( $this, 'reserve_unique_ids' ) );
     }
 
     /**
@@ -268,6 +281,66 @@ class BlockFilters {
             $processor->set_attribute( 'data-wp-interactive', 'pikari/gutenberg-query-filter' );
         }
 
+        if ( isset( $block[ self::UNIQUE_ID_START_KEY ] ) ) {
+            $start = $block[ self::UNIQUE_ID_START_KEY ];
+            self::advance_unique_id( 'wp_unique_id', '', $start['id'] + self::UNIQUE_ID_RESERVE );
+            self::advance_unique_id( 'wp_unique_prefixed_id', 'wp-elements-', $start['elements'] + self::UNIQUE_ID_RESERVE );
+        }
+
         return $processor->get_updated_html();
+    }
+
+    /**
+     * Record core's unique ID counters as a Query block starts rendering.
+     *
+     * Block style variations (`is-style-{name}--{n}`) and element styles
+     * (`wp-elements-{n}`) number their classes with render-order counters. On
+     * navigation the router swaps in the Query block's new markup and the new
+     * page's stylesheets, but keeps the markup after the Query block. If the new
+     * results used a different number of IDs, those classes stop matching the CSS.
+     * render_block_query() advances both counters to a fixed distance from this
+     * start, so blocks after the Query block get the same IDs whatever it rendered.
+     *
+     * @param array $parsed_block Parsed block.
+     * @return array Parsed block, with the counters recorded for Query blocks.
+     */
+    public function reserve_unique_ids( array $parsed_block ): array {
+        if ( 'core/query' !== ( $parsed_block['blockName'] ?? '' ) ) {
+            return $parsed_block;
+        }
+
+        $parsed_block[ self::UNIQUE_ID_START_KEY ] = array(
+            'id'       => self::next_unique_id( 'wp_unique_id', '' ),
+            'elements' => self::next_unique_id( 'wp_unique_prefixed_id', 'wp-elements-' ),
+        );
+
+        return $parsed_block;
+    }
+
+    /**
+     * Take the next number from a core unique ID counter.
+     *
+     * @param callable $generator `wp_unique_id` or `wp_unique_prefixed_id`.
+     * @param string   $prefix    Counter prefix.
+     * @return int The number, without its prefix.
+     */
+    private static function next_unique_id( callable $generator, string $prefix ): int {
+        return (int) substr( $generator( $prefix ), strlen( $prefix ) );
+    }
+
+    /**
+     * Advance a core unique ID counter to the target.
+     *
+     * A Query block that used more than UNIQUE_ID_RESERVE IDs is already past the
+     * target, so the counter moves by one and later IDs are not stabilized.
+     *
+     * @param callable $generator `wp_unique_id` or `wp_unique_prefixed_id`.
+     * @param string   $prefix    Counter prefix.
+     * @param int      $target    Number the counter should reach.
+     */
+    private static function advance_unique_id( callable $generator, string $prefix, int $target ): void {
+        do {
+            $id = self::next_unique_id( $generator, $prefix );
+        } while ( $id < $target );
     }
 }
