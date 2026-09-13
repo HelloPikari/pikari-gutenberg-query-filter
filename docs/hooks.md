@@ -14,34 +14,41 @@ A taxonomy filter (`category`) with the **Checkbox** display type renders:
 	data-wp-interactive="pikari/gutenberg-query-filter"
 	data-wp-context="{…}"
 >
-	<label class="wp-block-pikari-gutenberg-query-filter__label" for="…"
-		>Categories</label
-	>
-	<div class="wp-block-pikari-gutenberg-query-filter__checkbox-group">
-		<label
-			class="wp-block-pikari-gutenberg-query-filter__checkbox-item category_news"
-		>
-			<input
-				type="checkbox"
-				value="news"
-				data-wp-on--change="actions.updateFilters"
-			/>
-			<span class="wp-block-pikari-gutenberg-query-filter__checkbox-text"
-				>News</span
+	<fieldset class="wp-block-pikari-gutenberg-query-filter__fieldset">
+		<legend class="wp-block-pikari-gutenberg-query-filter__label">
+			Categories
+		</legend>
+		<div class="wp-block-pikari-gutenberg-query-filter__checkbox-group">
+			<label
+				class="wp-block-pikari-gutenberg-query-filter__checkbox-item category_news"
 			>
-		</label>
-		<!-- …one <label> per term… -->
-	</div>
+				<input
+					type="checkbox"
+					value="news"
+					data-wp-on--change="actions.updateFilters"
+				/>
+				<span class="wp-block-pikari-gutenberg-query-filter__checkbox-text"
+					>News</span
+				>
+			</label>
+			<!-- …one <label> per term… -->
+		</div>
+	</fieldset>
 </div>
 ```
 
+The `<fieldset>` and its `<legend>` name the group of options for screen readers. The plugin's stylesheet removes the fieldset's default border, margin and padding.
+
 The **Radio** display type is the same shape with `radio` in place of `checkbox` (`__radio-group`, `__radio-item`, `__radio-text`). Its first option is the "All" choice, which has `value=""` and clears the filter. The **Horizontal** layout adds `has-layout-horizontal` to the group element.
 
-The **Select** display type renders a plain `<select class="wp-block-pikari-gutenberg-query-filter__select">`. Its `<option>` elements get no per-option classes and cannot contain HTML, so the class and label filters below do not apply to it.
+The **Select** display type has no fieldset. It renders `<label class="wp-block-pikari-gutenberg-query-filter__label" for="…">` followed by a plain `<select class="wp-block-pikari-gutenberg-query-filter__select">`. Its `<option>` elements get no per-option classes and cannot contain HTML, so the class and label filters below do not apply to it.
+
+The block label is a `<legend>` for radio and checkbox filters and a `<label>` for select filters, so target it by class, not by element.
 
 | Element                  | Class                                                            |
 | ------------------------ | ---------------------------------------------------------------- |
 | Block wrapper            | `wp-block-pikari-gutenberg-query-filter`                         |
+| Option fieldset          | `wp-block-pikari-gutenberg-query-filter__fieldset`               |
 | Block label              | `wp-block-pikari-gutenberg-query-filter__label`                  |
 | Option group             | `wp-block-pikari-gutenberg-query-filter__{radio,checkbox}-group` |
 | Option `<label>`         | `wp-block-pikari-gutenberg-query-filter__{radio,checkbox}-item`  |
