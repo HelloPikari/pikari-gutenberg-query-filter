@@ -4,8 +4,10 @@
  */
 
 let actions;
+let callbacks;
 let getContext;
 let navigate;
+let routerState;
 
 const event = {
 	preventDefault: () => {},
@@ -50,7 +52,10 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			actions: { navigate },
 		} = require( '@wordpress/interactivity-router' ) );
 		require( '../../../../src/blocks/query-filter/view' );
-		( { actions } = store.getStore( 'pikari/gutenberg-query-filter' ) );
+		( { actions, callbacks } = store.getStore(
+			'pikari/gutenberg-query-filter'
+		) );
+		( { state: routerState } = store( 'core/router' ) );
 
 		getContext.mockReturnValue( {
 			queryVar: 'query-3-category',
@@ -108,5 +113,30 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 		await new Promise( ( resolve ) => setTimeout( resolve ) );
 
 		expect( injected.sheet.disabled ).toBe( false );
+	} );
+
+	it( 'should re-enable script-injected styles after navigation this plugin did not start', () => {
+		const injected = addStyle();
+		// The watch runs once on hydration, before any navigation.
+		callbacks.restoreInjectedStyles();
+
+		// Core's Query pagination navigates with the router directly.
+		routerState.url = 'http://localhost/?query-3-page=2';
+		injected.sheet.disabled = true;
+		callbacks.restoreInjectedStyles();
+
+		expect( injected.sheet.disabled ).toBe( false );
+	} );
+
+	it( 'should leave styles the router prefetched after hydration to the router', () => {
+		callbacks.restoreInjectedStyles();
+		// Hovering a pagination link prefetches the page and adds its styles.
+		const fromFetchedPage = addStyle();
+
+		routerState.url = 'http://localhost/?query-3-page=2';
+		fromFetchedPage.sheet.disabled = true;
+		callbacks.restoreInjectedStyles();
+
+		expect( fromFetchedPage.sheet.disabled ).toBe( true );
 	} );
 } );

@@ -25,8 +25,18 @@
  */
 
 const store = jest.fn( ( storeName, storeDefinition ) => {
-	return storeDefinition;
+	return storeDefinition ?? readStore( storeName );
 } );
+
+// Stores read by namespace alone, such as store( 'core/router' ).
+const readStores = new Map();
+
+function readStore( storeName ) {
+	if ( ! readStores.has( storeName ) ) {
+		readStores.set( storeName, { state: {} } );
+	}
+	return readStores.get( storeName );
+}
 
 // Retrieve the last registered store definition.
 store.getLastStore = () => {
