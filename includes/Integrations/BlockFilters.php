@@ -281,6 +281,13 @@ class BlockFilters {
             $processor->set_attribute( 'data-wp-interactive', 'pikari/gutenberg-query-filter' );
         }
 
+        // Re-enable script-injected styles the router disables on any navigation,
+        // including enhanced pagination, which bypasses this plugin's actions.
+        $processor->set_attribute(
+            'data-wp-watch---pikari-gutenberg-query-filter',
+            'pikari/gutenberg-query-filter::callbacks.restoreInjectedStyles'
+        );
+
         if ( isset( $block[ self::UNIQUE_ID_START_KEY ] ) ) {
             $start = $block[ self::UNIQUE_ID_START_KEY ];
             self::advance_unique_id( 'wp_unique_id', '', $start['id'] + self::UNIQUE_ID_RESERVE );

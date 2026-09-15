@@ -70,6 +70,26 @@ class BlockFiltersTest extends TestCase {
         $this->assertSame( 'query-3', $processor->get_attribute( 'data-wp-router-region' ) );
     }
 
+    public function test_render_block_query_watches_router_navigation_to_restore_injected_styles(): void {
+        $html = ( new BlockFilters() )->render_block_query(
+            '<div data-wp-interactive="core/query" data-wp-router-region="query-3" class="wp-block-query"></div>',
+            array(
+                'attrs' => array(
+                    'queryId'            => 3,
+                    'enhancedPagination' => true,
+                ),
+            )
+        );
+
+        $processor = new \WP_HTML_Tag_Processor( $html );
+        $processor->next_tag();
+
+        $this->assertSame(
+            'pikari/gutenberg-query-filter::callbacks.restoreInjectedStyles',
+            $processor->get_attribute( 'data-wp-watch---pikari-gutenberg-query-filter' )
+        );
+    }
+
     /*
      * Unique ID reservation
      */

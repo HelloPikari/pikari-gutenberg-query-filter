@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Radio and checkbox filters now wrap their options in a `<fieldset>` whose `<legend>` names the group for screen readers. The block label used to be a `<label for>` pointing at an id that no element had. The legend keeps the `wp-block-pikari-gutenberg-query-filter__label` class, but theme CSS written as `label.wp-block-pikari-gutenberg-query-filter__label` no longer matches it. Select filters are unchanged.
+- Styles that other scripts add at runtime, such as the WPForms honeypot CSS, now also stay enabled after Query Loop enhanced pagination. Core's pagination links navigate with the Interactivity API router without going through this plugin, so the page's forms showed their hidden spam-trap fields after clicking to another page. The styles are now restored after every router navigation.
 
 ## [0.3.1] - 2026-09-13
 

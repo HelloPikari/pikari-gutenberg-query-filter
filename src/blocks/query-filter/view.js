@@ -4,10 +4,19 @@ import { store, getContext, getElement } from '@wordpress/interactivity';
  * The router disables every stylesheet that is not in the fetched page's HTML,
  * including styles other scripts inject at runtime, such as WPForms' honeypot CSS.
  * WordPress gives every stylesheet it prints an id, so id-less styles present
- * before the router first loads are treated as injected and re-enabled after
- * each navigation.
+ * when the page hydrates are treated as injected and re-enabled after each
+ * navigation. Capture them before the router can prefetch a page, which adds
+ * that page's styles.
  */
 let injectedStyles = null;
+
+const captureInjectedStyles = () => {
+	injectedStyles ??= Array.from(
+		document.querySelectorAll(
+			'style:not([id]), link[rel="stylesheet"]:not([id])'
+		)
+	);
+};
 
 const enableInjectedStyles = () => {
 	injectedStyles?.forEach( ( { sheet } ) => {
@@ -21,11 +30,7 @@ const enableInjectedStyles = () => {
 window.addEventListener( 'popstate', () => setTimeout( enableInjectedStyles ) );
 
 function* navigate( url ) {
-	injectedStyles ??= Array.from(
-		document.querySelectorAll(
-			'style:not([id]), link[rel="stylesheet"]:not([id])'
-		)
-	);
+	captureInjectedStyles();
 
 	const { actions } = yield import( '@wordpress/interactivity-router' );
 	yield actions.navigate( url );
@@ -34,6 +39,20 @@ function* navigate( url ) {
 }
 
 store( 'pikari/gutenberg-query-filter', {
+	callbacks: {
+		/*
+		 * Watched from the Query block. Reading the router's URL re-runs it after
+		 * every navigation, including core's enhanced pagination, which never
+		 * calls this store's actions.
+		 */
+		restoreInjectedStyles() {
+			captureInjectedStyles();
+
+			if ( store( 'core/router' ).state.url ) {
+				enableInjectedStyles();
+			}
+		},
+	},
 	actions: {
 		*updateFilters( event ) {
 			event.preventDefault();
