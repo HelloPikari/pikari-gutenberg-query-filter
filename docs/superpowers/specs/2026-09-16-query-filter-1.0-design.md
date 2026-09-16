@@ -1,6 +1,6 @@
 # Query Filter 1.0 — URL Contract, Inherited Queries, and Form-Based Filters
 
-- **Status:** Revision 2, awaiting Steve's review.
+- **Status:** Revision 2, approved by Steve on 2026-09-16.
   - Revision 1 was approved in conversation on 2026-09-16.
   - Three independent reviews followed: server side, frontend, and process. Their findings were verified against WP 7.1 core, the CCLF site and browser tests before being applied here.
   - Revision 2 changes the design in seven places; §11 lists them.
