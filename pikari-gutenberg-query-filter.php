@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Pikari Gutenberg Query Filter
- * Plugin URI:  https://github.com/pikariweb/pikari-gutenberg-query-filter
+ * Plugin URI:  https://github.com/HelloPikari/pikari-gutenberg-query-filter
  * Description: Advanced filtering for Query Loop blocks with search, post types, taxonomies, authors, and sorting. Integrates seamlessly with WordPress core blocks using the Interactivity API.
  * Version:     0.3.3
  * Author:      Pikari Inc.
@@ -108,9 +108,6 @@ function pikari_gutenberg_query_filter_init() {
 
     // Note: Block filters are initialized early outside init hook to catch core block registration.
     // See pikari_gutenberg_query_filter_safe_init_block_filters() call above.
-
-    // Hook frontend script enqueuing.
-    add_action( 'wp_enqueue_scripts', 'pikari_gutenberg_query_filter_enqueue_scripts' );
 }
 add_action( 'init', 'pikari_gutenberg_query_filter_init' );
 
@@ -133,16 +130,6 @@ function pikari_gutenberg_query_filter_register_blocks() {
     foreach ( $block_json_files as $block_json_file ) {
         register_block_type( dirname( $block_json_file ) );
     }
-}
-
-/**
- * Enqueue plugin scripts and styles.
- */
-function pikari_gutenberg_query_filter_enqueue_scripts() {
-    // Enqueue your scripts and styles here.
-    // Example:
-    // wp_enqueue_style( 'pikari-query-filter', PIKARI_QUERY_FILTER_URL . 'assets/css/style.css', array(), PIKARI_QUERY_FILTER_VERSION );
-    // wp_enqueue_script( 'pikari-query-filter', PIKARI_QUERY_FILTER_URL . 'assets/js/script.js', array( 'jquery' ), PIKARI_QUERY_FILTER_VERSION, true );
 }
 
 /**
@@ -217,16 +204,5 @@ function pikari_gutenberg_query_filter_activate() {
             esc_html__('This plugin requires PHP 8.4 or higher.', 'pikari-gutenberg-query-filter')
         );
     }
-
-    flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'pikari_gutenberg_query_filter_activate' );
-
-/**
- * Deactivation hook.
- */
-function pikari_gutenberg_query_filter_deactivate() {
-    // Code to run on plugin deactivation.
-    flush_rewrite_rules();
-}
-register_deactivation_hook( __FILE__, 'pikari_gutenberg_query_filter_deactivate' );

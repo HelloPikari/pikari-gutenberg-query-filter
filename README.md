@@ -8,10 +8,10 @@ A WordPress plugin that adds advanced filtering capabilities to Query Loop block
 - **Post Type Filtering**: Filter posts by one or multiple post types
 - **Taxonomy Filtering**: Filter by categories, tags, and custom taxonomies
 - **Author Filtering**: Filter posts by author with cached author lists
-- **Sort Controls**: Sort by date, title, and other post fields
+- **Sort Controls**: Sort by date or title
 - **Advanced Query Loop Support**: Works with both core Query Loop blocks and Advanced Query Loop by Ryan Welcher
-- **Client-Side Filtering**: Fast, AJAX-free filtering using WordPress Interactivity API
-- **Context-Aware**: Automatic detection of inherited vs custom queries
+- **In-Place Updates**: Results update through the Interactivity API router, without a full page reload
+- **Custom Query Loops**: Filters and sort apply to Query Loops with their own query settings. In loops that inherit the template's query (archive and search templates), only the Search block works for now
 - **URL-Based State**: Filter state persists in URLs for sharing and bookmarking
 - **Theme-Friendly Markup**: Unique classes on every radio and checkbox option, plus PHP filters for the option list, option classes, and label markup
 
@@ -62,7 +62,7 @@ it lands in `wp-content/plugins/pikari-gutenberg-query-filter/`.
 ### Basic Setup
 
 1. Create a Query Loop block in the WordPress block editor
-2. Add your desired filter blocks inside or near the Query Loop:
+2. Add your desired filter blocks inside the Query Loop:
    - **Query Filter Block**: For post types, taxonomies, and authors
    - **Sort Block**: For sorting options
    - **WordPress Search Block**: For search functionality (automatically detected)
@@ -280,7 +280,7 @@ pikari-gutenberg-query-filter/
 
 - **Core Query Loop**: Full support for WordPress core Query Loop blocks
 - **Advanced Query Loop**: Compatible with Advanced Query Loop by Ryan Welcher
-- **Custom Queries**: Supports both inherited and custom query configurations
+- **Query Settings**: Filters and sort apply to custom queries. Inherited queries support search only
 
 ### Themes
 
@@ -291,8 +291,7 @@ pikari-gutenberg-query-filter/
 ### Browsers
 
 - **Modern Browsers**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-- **JavaScript**: Requires JavaScript enabled for interactive features
-- **Progressive Enhancement**: Graceful degradation when JavaScript is disabled
+- **JavaScript**: Filters and sort need JavaScript. Without it, only the Search block submits
 
 ## Troubleshooting
 
@@ -342,4 +341,3 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
 - **Documentation**: See [docs/](docs/) folder for detailed guides
 - **Issues**: Report bugs on [GitHub Issues](https://github.com/HelloPikari/pikari-gutenberg-query-filter/issues)
-- **Discussions**: Join the conversation in [GitHub Discussions](https://github.com/HelloPikari/pikari-gutenberg-query-filter/discussions)

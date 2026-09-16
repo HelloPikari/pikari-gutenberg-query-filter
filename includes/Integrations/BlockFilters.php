@@ -43,6 +43,9 @@ class BlockFilters {
         add_filter( 'block_type_metadata', array( $this, 'modify_block_metadata' ), 10, 2);
         add_filter( 'block_type_metadata_settings', array( $this, 'modify_block_metadata' ), 10, 2 );
 
+        // Version this plugin's block assets with the plugin release.
+        add_filter( 'block_type_metadata', array( $this, 'set_plugin_block_version' ) );
+
         // Modify search block rendering to add query context.
         add_filter( 'render_block_core/search', array( $this, 'render_block_search' ), 20, 3 );
 
@@ -162,6 +165,23 @@ class BlockFilters {
         return $settings;
     }
 
+
+    /**
+     * Set this plugin's block versions to the plugin version.
+     *
+     * Core appends block.json's version to block stylesheet URLs, so a fixed
+     * version would keep serving cached CSS after an update.
+     *
+     * @param array $metadata Block metadata.
+     * @return array Metadata, with the plugin version for this plugin's blocks.
+     */
+    public function set_plugin_block_version( array $metadata ): array {
+        if ( str_starts_with( $metadata['name'] ?? '', 'pikari-gutenberg-query-filter/' ) ) {
+            $metadata['version'] = PIKARI_GUTENBERG_QUERY_FILTER_VERSION;
+        }
+
+        return $metadata;
+    }
 
     /**
      * Render the core/search block with query context.

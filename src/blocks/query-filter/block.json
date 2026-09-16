@@ -2,7 +2,6 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "pikari-gutenberg-query-filter/query-filter",
-	"version": "0.1.0",
 	"title": "Query Filter",
 	"category": "theme",
 	"icon": "filter",
@@ -72,7 +71,6 @@
 	"textdomain": "pikari-gutenberg-query-filter",
 	"editorScript": "file:./index.js",
 	"style": "file:./style-index.css",
-	"editorStyle": "file:./index.css",
 	"viewScriptModule": "file:./view.js",
 	"render": "file:./render.php"
 }
