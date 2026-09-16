@@ -2,7 +2,6 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "pikari-gutenberg-query-filter/sort",
-	"version": "0.1.0",
 	"title": "Sort Filter",
 	"category": "theme",
 	"icon": "sort",
@@ -62,8 +61,7 @@
 	},
 	"textdomain": "pikari-gutenberg-query-filter",
 	"editorScript": "file:./index.js",
-	"style": "file:./style.scss",
-	"editorStyle": "file:./editor.scss",
-	"viewScriptModule": "pikari-gutenberg-query-filter-taxonomy-view-script-module",
+	"style": "file:./style-index.css",
+	"viewScriptModule": "pikari-gutenberg-query-filter-query-filter-view-script-module",
 	"render": "file:./render.php"
 }

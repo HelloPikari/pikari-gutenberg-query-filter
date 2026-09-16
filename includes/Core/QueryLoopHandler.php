@@ -104,18 +104,6 @@ class QueryLoopHandler {
             $query_args['order'] = $parameters['order'];
         }
 
-        // Apply default sorting if no sort parameters are present.
-        if ( $inherit_query ) {
-            $orderby_param = 'query-orderby';
-            $order_param   = 'query-order';
-        } else {
-            // Validate query_id is numeric for sprintf safety.
-            $query_id = absint( $query_id );
-            $orderby_param = sprintf( 'query-%d-orderby', $query_id );
-            $order_param   = sprintf( 'query-%d-order', $query_id );
-        }
-        $has_sort_params = isset( $_GET[ $orderby_param ] ) || isset( $_GET[ $order_param ] );
-
         return $query_args;
     }
 

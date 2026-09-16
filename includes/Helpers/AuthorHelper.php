@@ -114,39 +114,4 @@ class AuthorHelper extends AbstractQueryHelper {
             )
         );
     }
-
-    /**
-     * Invalidate specific author cache entry.
-     *
-     * @param array $args Arguments used to generate the cache key.
-     */
-    public static function invalidate_specific_author_cache( $args = array() ) {
-        $defaults = array(
-            'who'                   => 'authors',
-            'orderby'               => 'display_name',
-            'order'                 => 'ASC',
-            'has_published_posts'   => true,
-            'number'                => 100,
-        );
-        $args = wp_parse_args( $args, $defaults );
-
-        $cache_key = self::CACHE_KEY . '_' . md5( serialize( $args ) );
-        delete_transient( $cache_key );
-    }
-
-    /**
-     * Get authors with post counts (for future features).
-     *
-     * @param array $args Arguments for get_users().
-     * @return array Array of user objects with post_count property.
-     */
-    public static function get_authors_with_post_count( $args = array() ) {
-        $authors = self::get_filter_authors( $args );
-
-        foreach ( $authors as $author ) {
-            $author->post_count = count_user_posts( $author->ID, 'post', true );
-        }
-
-        return $authors;
-    }
 }

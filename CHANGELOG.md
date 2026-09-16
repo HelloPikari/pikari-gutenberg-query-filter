@@ -9,8 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Radio and checkbox filters now wrap their options in a `<fieldset>` whose `<legend>` names the group for screen readers. The block label used to be a `<label for>` pointing at an id that no element had. The legend keeps the `wp-block-pikari-gutenberg-query-filter__label` class, but theme CSS written as `label.wp-block-pikari-gutenberg-query-filter__label` no longer matches it. Select filters are unchanged.
+- A Sort block now works on its own. It loaded a script from a block that no longer exists, so without a Query Filter or Search block on the same page, choosing a sort did nothing. Its stylesheet also pointed at a file the build doesn't produce.
+- Block stylesheets are now versioned with the plugin version. They were stuck at `?ver=0.1.0`, so where a stylesheet isn't inlined, browsers and CDNs could keep serving CSS from an earlier release.
+
+### Changed
+
+- The blocks' stylesheets no longer contain `@view-transition { navigation: auto; }`. It turned on animated transitions for every full page load on any page where a filter block appeared, and it had no effect on filtering itself. Themes that want cross-document view transitions should opt in themselves.
+
+### Removed
+
+- `AuthorHelper::get_authors_with_post_count()` and `AuthorHelper::invalidate_specific_author_cache()`, which nothing called. The second built a different cache key from the one it was meant to clear.
+- The plugin no longer flushes rewrite rules on activation and deactivation. It adds no rewrite rules.
+
+## [0.3.3] - 2026-09-15
+
+### Fixed
+
 - Styles that other scripts add at runtime, such as the WPForms honeypot CSS, now also stay enabled after Query Loop enhanced pagination. Core's pagination links navigate with the Interactivity API router without going through this plugin, so the page's forms showed their hidden spam-trap fields after clicking to another page. The styles are now restored after every router navigation.
+
+## [0.3.2] - 2026-09-13
+
+### Fixed
+
+- Radio and checkbox filters now wrap their options in a `<fieldset>` whose `<legend>` names the group for screen readers. The block label used to be a `<label for>` pointing at an id that no element had. The legend keeps the `wp-block-pikari-gutenberg-query-filter__label` class, but theme CSS written as `label.wp-block-pikari-gutenberg-query-filter__label` no longer matches it. Select filters are unchanged.
 
 ## [0.3.1] - 2026-09-13
 
@@ -59,7 +80,10 @@ Releases between 0.1.0 and 0.2.0 are listed on [GitHub Releases](https://github.
 - Initial release of pikari-gutenberg-query-filter
 - [Add initial features here]
 
-[Unreleased]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v0.3.3
+[0.3.2]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v0.3.2
+[0.3.1]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v0.3.1
 [0.3.0]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v0.3.0
 [0.2.0]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v0.2.0
 [0.1.0]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v0.1.0

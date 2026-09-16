@@ -91,6 +91,57 @@ class BlockFiltersTest extends TestCase {
     }
 
     /*
+     * Plugin block versions
+     */
+
+    public function test_constructor_registers_plugin_block_version(): void {
+        $filters = new BlockFilters();
+
+        $this->assertNotFalse( has_filter( 'block_type_metadata', array( $filters, 'set_plugin_block_version' ) ) );
+    }
+
+    /**
+     * Core versions block stylesheets with block.json's version, so it must follow releases.
+     *
+     * @dataProvider provide_plugin_block_names
+     *
+     * @param string $block_name Plugin block name.
+     */
+    public function test_set_plugin_block_version_uses_plugin_version( string $block_name ): void {
+        if ( ! defined( 'PIKARI_GUTENBERG_QUERY_FILTER_VERSION' ) ) {
+            define( 'PIKARI_GUTENBERG_QUERY_FILTER_VERSION', '9.8.7' );
+        }
+
+        $metadata = ( new BlockFilters() )->set_plugin_block_version(
+            array(
+                'name'    => $block_name,
+                'version' => '0.1.0',
+            )
+        );
+
+        $this->assertSame( PIKARI_GUTENBERG_QUERY_FILTER_VERSION, $metadata['version'] );
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function provide_plugin_block_names(): array {
+        return array(
+            'query filter' => array( 'pikari-gutenberg-query-filter/query-filter' ),
+            'sort'         => array( 'pikari-gutenberg-query-filter/sort' ),
+        );
+    }
+
+    public function test_set_plugin_block_version_leaves_other_blocks_alone(): void {
+        $metadata = array(
+            'name'    => 'core/query',
+            'version' => '1.2.3',
+        );
+
+        $this->assertSame( $metadata, ( new BlockFilters() )->set_plugin_block_version( $metadata ) );
+    }
+
+    /*
      * Unique ID reservation
      */
 
