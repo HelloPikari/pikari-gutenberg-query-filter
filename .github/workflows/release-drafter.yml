@@ -81,6 +81,18 @@ jobs:
             gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty'
           }
 
+          # Release Drafter resolves a version even when the draft has no
+          # changes: its resolver falls back to patch, and no config turns that
+          # off. So a push that merges only skip-changelog PRs, like a session
+          # wrap, still moves the draft to the next patch. Bumping for it would
+          # leave main on a version with nothing in it and a draft that looks
+          # ready to publish. "* No changes" is the default no-changes-template.
+          if printf '%s\n' "$DRAFT_BODY" | grep -qxF '* No changes'; then
+            echo "The draft has no changes, so there is nothing to bump."
+            flag_draft "Not ready: nothing to release. No PR merged since the last release is in the changelog, so the plugin version was left alone."
+            exit 0
+          fi
+
           if [ "$HEADER_VERSION" = "$DRAFT_VERSION" ] && [ "$PKG_VERSION" = "$DRAFT_VERSION" ]; then
             echo "Versions agree."
             # A bump PR can outlive its purpose if the version was bumped by hand.
