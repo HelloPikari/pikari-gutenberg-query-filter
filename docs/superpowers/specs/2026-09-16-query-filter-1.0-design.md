@@ -66,7 +66,9 @@ A custom loop with no `queryId`, which includes every loop in Twenty Twenty-Five
 - **Taxonomy values** are term slugs, cleaned with `sanitize_title_for_query()`. A slug that matches no term returns no results for that taxonomy.
 - **Post type values** must satisfy `is_post_type_viewable()`. `attachment` is also rejected unless attachment pages are enabled, the same rule the option list uses.
 - **Author values:**
-  - They resolve in one `get_users()` call, limited to members of the current site: `nicename__in` for every value, plus `include` for all-digit values.
+  - They resolve in at most two `get_users()` calls, limited to members of the current site. `WP_User_Query` ANDs `nicename__in` with `include`, so the two can't share a call.
+    1. `nicename__in` for every value, with `fields => array( 'ID', 'user_nicename' )`.
+    2. `include` for the all-digit values that didn't match a nicename.
   - A nicename match wins over an ID match.
   - If the parameter is present but resolves to no user, the filter returns no results (`author__in => array( 0 )`). This matches unknown term slugs and avoids revealing whether a user exists.
 - **Sort values** must be a key in `pikari_gutenberg_query_filter_sort_options` (§4.3). An empty value, or an unknown key, means the loop's default order.
@@ -202,13 +204,16 @@ apply_filters( 'pikari_gutenberg_query_filter_sort_options', array(
 
   REST requests never reach the main query, so there's no separate check for them.
 
-- **Before any change,** record `post_type`, `orderby` and `order`, and call `$query->get_queried_object()` so the queried object is fixed first.
+- **Before any change,** record `post_type`, `orderby` and `order`.
 - **Post types:** `set( 'post_type' )`, except on a post type archive (§3.4).
 - **Taxonomies:** never touch the `tax_query` query var.
   - That var is parsed before the archive's own term, and core takes the first terms it finds per taxonomy as the queried terms. The archive's title, template and `cat` / `term` vars would then follow the filter (`class-wp-query.php:1177-1181`, `class-wp-tax-query.php:168-174`, `class-wp-query.php:2346-2380`; reproduced on CCLF).
-  - Instead, build `new WP_Tax_Query( $clauses )`, call `get_sql( $wpdb->posts, 'ID' )`, and append its `join` and `where` in a `posts_clauses` callback that only acts on this query object and removes itself afterwards.
-  - When a join is added, set `groupby` to `{$wpdb->posts}.ID` so posts matching several terms aren't duplicated.
-  - Core's slug resolution, child terms and "unknown terms match nothing" all apply.
+  - Don't use `WP_Tax_Query::get_sql()` either. A new instance's first `IN` clause joins `term_relationships` with no alias (`class-wp-tax-query.php:418-426`). Core's own archive clause joins the same table, and two un-aliased joins on one table are a MySQL error.
+  - Instead:
+    1. Resolve each taxonomy's slugs to `term_taxonomy_id`s. For hierarchical taxonomies, include child terms, matching core's `include_children` default.
+    2. In a `posts_where` callback that acts only on this query object and removes itself afterwards, append one `AND {$wpdb->posts}.ID IN ( SELECT object_id FROM {$wpdb->term_relationships} WHERE term_taxonomy_id IN ( … ) )` per taxonomy, with the IDs cast to integers.
+    3. A taxonomy whose slugs resolve to nothing appends `AND 0 = 1`.
+  - This adds no join, so no `GROUP BY` is needed and the archive's queried object never changes.
 - **Authors:** set `author__in`, intersected on author archives (§3.4). Core adds the archive's `author` var to `author__in` on plain permalinks (`class-wp-query.php:2398-2408`), so compute the intersection first.
 - **Sort:** set `orderby`, `order` and `meta_key`.
 - **Sticky posts:** when anything above applied, `set( 'ignore_sticky_posts', true )`.
@@ -268,7 +273,10 @@ Every control gets a `name`, and `form="pikari-gutenberg-query-filter-form-{id}"
 `BlockFilters::render_block_query()` runs after the loop and all its inner blocks have rendered.
 
 - **When it injects the form:** only if the Query HTML contains an element whose `form` attribute exactly equals this loop's form ID. The comparison is by attribute value, never by substring, because `…-form-3` must not match `…-form-30`.
-- **Where:** as the **last child** of the Query wrapper, using a `WP_HTML_Tag_Processor` subclass with bookmarks, following core's `WP_Interactivity_API_Directives_Processor`.
+- **Where:** as the **last child** of the Query wrapper.
+  - Core's `WP_Interactivity_API_Directives_Processor` is `final`, so it can't be reused.
+  - `render_block_core/query` receives only this block's HTML, so the wrapper is its first tag. Read the wrapper's tag name with `WP_HTML_Tag_Processor::get_tag()`, which can be `div`, `main`, `section` or `aside`.
+  - Insert the form before the last case-insensitive `</{tag}>` in the string.
   - As the last child it doesn't shift flow-layout block gaps.
   - Rendering order, blocks hidden after rendering (core block visibility, the Block Visibility plugin) and fragment caches don't matter.
 
@@ -292,12 +300,13 @@ Every control gets a `name`, and `form="pikari-gutenberg-query-filter-form-{id}"
 ```
 
 - **`hidden` plus inline `display:none`:** keeps the form out of layout even if a theme overrides `[hidden]`. Controls outside a hidden form still submit with it.
+- **`data-query-page-key`:** `query-{id}-page`, or `query-page`, for custom loops, and `paged` for inherited loops.
 - **`novalidate`:** core Search's input is `required`, which would otherwise block every submit while it's empty (`blocks/search.php:64`).
 - **`action`:**
   - it's the request path, with the pagination segment stripped for inherited loops only;
   - it carries no query string or fragment, since a GET submit replaces them.
 - **Hidden inputs:**
-  - Built from `$_SERVER['QUERY_STRING']` pairs, not `$_GET`, which rewrites names and drops repeated keys.
+  - Built from `$_SERVER['QUERY_STRING']` pairs, not `$_GET`, which rewrites names and drops repeated keys. If `QUERY_STRING` isn't set, as in tests and CLI, fall back to `$_GET`.
   - A pair is dropped when its base name (before any `[`) is one of the loop's owned names: its page key, `paged` for inherited loops, or a control `name` found in the Query HTML with this loop's `form` attribute.
   - `cst` is also dropped; core's pagination-numbers block adds it.
   - Names and values are decoded, then escaped with `esc_attr()`.
@@ -328,7 +337,7 @@ buildUrl( href, { entries, ownedNames, pageKey, inherit, paginationBase } ) => s
 ```
 
 1. `const url = new URL( href ); url.hash = '';`
-2. Delete `pageKey` and every name in `ownedNames`. If `inherit`, also delete `paged` and remove a trailing `/{paginationBase}/{n}` (with or without a slash) from `pathname`.
+2. Delete `pageKey` and every name in `ownedNames`. If `inherit`, also remove a trailing `/{paginationBase}/{n}` (with or without a slash) from `pathname`. An inherited loop's `pageKey` is `paged`.
 3. For each entry whose bare name (trailing `[]` removed) is in `ownedNames`:
 
    - skip empty values;
@@ -396,7 +405,7 @@ The Sort block's `block.json` points `viewScriptModule` at the shared view modul
   - The mock's `withScope` must run generator functions, as core's does.
 - **CI facts:**
   - `BlockFiltersTest` already runs on CI (#95), and CI provides only `WP_HTML_Tag_Processor`, not `WP_HTML_Processor`.
-  - Playwright doesn't run on CI. A new roadmap item covers that.
+  - Playwright doesn't run on CI. Roadmap #28 covers that.
   - Until it does, the inherited-loop SQL, no-JS and browser behaviour are verified locally only. The PR descriptions say so.
 
 ### 8.2 PHP (Brain\Monkey)
@@ -416,7 +425,7 @@ The Sort block's `block.json` points `viewScriptModule` at the shared view modul
    - `FilterState`: string and array input, de-duplication and the cap, every validation rule, author resolution including "nothing resolves", memoization.
    - `QueryArgs`: every rule in §4.2, including nesting and sticky posts.
    - `SortOptions`: normalization, dropped options, case-insensitive `match()`.
-   - `MainQueryFilter`: the gate matrix (singular, 404, feed, admin, home, archive, search, `query-page` only); post type and author archive rules; recorded originals; the `posts_clauses` callback only acting on its own query; `pre_handle_404` conditions.
+   - `MainQueryFilter`: the gate matrix (singular, 404, feed, admin, home, archive, search, `query-page` only); post type and author archive rules; recorded originals; the `posts_where` callback only acting on its own query, with an unknown slug giving `0 = 1`; `pre_handle_404` conditions.
    - `LoopForm`: hidden inputs from a raw query string, owned-name dropping, `cst`, array-style names.
 3. **`BlockFiltersTest`** (real Tag Processor):
    - form injection position;
@@ -424,7 +433,7 @@ The Sort block's `block.json` points `viewScriptModule` at the shared view modul
    - nested loops;
    - Search input attributes without touching core's form attributes.
 4. **Filters:** every new filter has a `Filters\expectApplied` test.
-5. **SQL behaviour of `WP_Tax_Query` in the main query** can't run under Brain\Monkey. It's covered by Playwright (§8.4).
+5. **SQL behaviour in the main query** can't run under Brain\Monkey, including the `posts_where` subqueries alongside an archive's own join. It's covered by Playwright (§8.4).
 
 ### 8.3 Jest
 
@@ -534,7 +543,7 @@ Each PR has an implementation plan, is written test-first, and gets a hands-on b
 ### 10.2 Release sequencing
 
 1. **Sub-project A** (cleanup) merges and is **published as 0.3.4** before B0. B depends on A's Sort script handle fix and on A having already removed dead code.
-2. **When B1 merges,** the automatic bump PR moves `main` to 1.0.0, and the draft title shows a clean `v1.0.0` once the bump lands. **Don't publish until sub-project E is done.** A todo records this.
+2. **When B1 merges,** the automatic bump PR moves `main` to 1.0.0, and the draft title shows a clean `v1.0.0` once the bump lands. **Don't publish until sub-project E is done.** Todo #529 records this.
 3. **An urgent 0.3.x fix** during this window is released from a branch cut from the latest 0.3.x tag.
 
 ### 10.3 Upgrade notes for real sites
@@ -547,7 +556,7 @@ Each PR has an implementation plan, is written test-first, and gets a hands-on b
 
 ## 11. Revision 2 changes
 
-1. **Inherited taxonomy filters** go through `posts_clauses` instead of the `tax_query` var. The gate is limited to home, archive and search requests, with rules for post type and author archives and `pre_handle_404` for date archives.
+1. **Inherited taxonomy filters** are added as `posts_where` subqueries, not through the `tax_query` var or `WP_Tax_Query` SQL. The gate is limited to home, archive and search requests, with rules for post type and author archives and `pre_handle_404` for date archives.
 2. **A loop owns** its pagination plus the controls in its form, not every parameter with its prefix.
 3. **The form is injected** as the Query wrapper's last child after rendering, with `novalidate`. Revision 1 had the first filter block print it as its first child.
 4. **Core Search keeps its own interactivity attributes.** Plugin directive values are namespaced, and the search value stays bound to context.
