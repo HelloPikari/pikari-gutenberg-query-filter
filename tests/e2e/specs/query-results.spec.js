@@ -74,7 +74,11 @@ test('old numeric author links still work', async ({ page, request }) => {
 });
 
 test('an unknown author returns nothing', async ({ page }) => {
-	await page.goto(`${path}?${authorParam}=nobody`);
+	const response = await page.goto(`${path}?${authorParam}=nobody`);
 
+	expect(response.status()).toBe(200);
+	await expect(
+		page.locator('.wp-block-pikari-gutenberg-query-filter').first()
+	).toBeVisible();
 	await expect.poll(() => resultTitles(page)).toEqual([]);
 });
