@@ -3,7 +3,7 @@
  *
  * The Interactivity API uses generator functions (function*) with yield
  * instead of async/await. This mock provides testable versions of store(),
- * getContext(), getElement(), withScope(), and withSyncEvent().
+ * getContext(), getElement(), getConfig(), withScope(), and withSyncEvent().
  *
  * Usage in tests:
  *
@@ -62,6 +62,8 @@ const getElement = jest.fn( () => ( {
 	ref: document.createElement( 'div' ),
 } ) );
 
+const getConfig = jest.fn( () => ( {} ) );
+
 const withScope = jest.fn( ( callback ) => callback );
 
 const withSyncEvent = jest.fn( ( handler ) => handler );
@@ -70,6 +72,7 @@ module.exports = {
 	store,
 	getContext,
 	getElement,
+	getConfig,
 	withScope,
 	withSyncEvent,
 };

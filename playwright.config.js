@@ -1,0 +1,31 @@
+/**
+ * Playwright configuration for end-to-end tests.
+ *
+ * Extends the @wordpress/scripts defaults. `npm run test:e2e` sets WP_BASE_URL
+ * to the wp-env tests instance from .wp-env.json (port 5885).
+ */
+const path = require('path');
+const baseConfig = require('@wordpress/scripts/config/playwright.config.js');
+
+// Playwright rejects `port` and `url` together, so drop the inherited port.
+const { port, ...webServer } = baseConfig.webServer;
+
+module.exports = {
+	...baseConfig,
+	testDir: './tests/e2e/specs',
+	// Authenticate as admin first, then rebuild the fixture content.
+	globalSetup: [
+		require.resolve('@wordpress/scripts/config/playwright/global-setup.js'),
+		path.resolve(__dirname, 'tests/e2e/setup/fixtures.js'),
+	],
+	webServer: {
+		...webServer,
+		// The package's own `wp-env` script adds --xdebug and can't take `start`.
+		// Keep the process alive after wp-env start exits; Playwright fails if
+		// the webServer process exits before the URL is ready, and kills it at teardown.
+		command: 'npx wp-env start && tail -f /dev/null',
+		// /wp-json/ 404s until pretty permalinks and .htaccess exist, so readiness waits for afterStart.
+		url: new URL('wp-json/', baseConfig.use.baseURL).href,
+		timeout: 300_000,
+	},
+};
