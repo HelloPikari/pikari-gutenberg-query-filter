@@ -7,6 +7,8 @@
 
 namespace Pikari\GutenbergQueryFilter\Integrations;
 
+use Pikari\GutenbergQueryFilter\Url\QueryParams;
+
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -196,17 +198,9 @@ class BlockFilters {
         unset( $block );
         // Check if we have query context from a Query Loop block.
         $context = $instance->context ?? array();
-        $query_id = $context['queryId'] ?? null;
-        $query = $context['query'] ?? null;
 
         // If no query context, this search block is not in a Query Loop.
-        if ( empty( $query_id ) || empty( $query ) ) {
-            return $block_content;
-        }
-
-        // Validate and sanitize query_id.
-        $query_id = absint( $query_id );
-        if ( 0 === $query_id && ! ( $query['inherit'] ?? false ) ) {
+        if ( ! isset( $context['query'] ) ) {
             return $block_content;
         }
 
@@ -214,16 +208,9 @@ class BlockFilters {
         wp_enqueue_script_module( 'pikari-gutenberg-query-filter-query-filter-view-script-module' );
 
         // Determine the search query variable based on query context.
-        $inherit = $query['inherit'] ?? false;
-        if ( $inherit ) {
-            // Inherited queries use the main 's' parameter.
-            $query_var = 's';
-            $page_var = 'paged';
-        } else {
-            // Non-inherited queries use query-specific parameters.
-            $query_var = sprintf( 'query-%d-s', $query_id );
-            $page_var = sprintf( 'query-%d-page', $query_id );
-        }
+        $params    = QueryParams::from_block( $instance );
+        $query_var = $params->key( 's' );
+        $page_var  = $params->page_key();
 
         // Build the form action URL, removing pagination.
         $current_page = get_query_var( 'paged', 1 );
