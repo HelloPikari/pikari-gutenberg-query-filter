@@ -50,6 +50,8 @@ test('writes checked categories as one comma-separated parameter', async ({
 	await page.getByRole('checkbox', { name: 'News' }).check();
 	await waitForParam(page, categoryParam, 'news');
 
+	await expect.poll(() => resultTitles(page)).toEqual(newestTitles(isNews));
+
 	await page.getByRole('checkbox', { name: 'Events' }).check();
 	await waitForParam(page, categoryParam, 'events,news');
 

@@ -18,10 +18,12 @@ test('keeps injected styles after filtering', async ({ page }) => {
 	await page.goto(path);
 	const injected = page.locator('.e2e-injected');
 	await expect(injected).toHaveCSS('color', INJECTED_COLOR);
+	await markDocument(page);
 
 	await page.getByRole('checkbox', { name: 'News' }).check();
 	await waitForParam(page, `query-${queryId}-category`, 'news');
 
+	expect(await isSameDocument(page)).toBe(true);
 	await expect(injected).toHaveCSS('color', INJECTED_COLOR);
 });
 
