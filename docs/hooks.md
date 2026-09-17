@@ -4,6 +4,37 @@ How the Query Filter block renders on the frontend, the classes themes can targe
 
 ---
 
+## URL Parameters
+
+Query Filter, Sort and Search read and write plain URL query parameters. What follows is the contract for a **custom Query Loop** — one with a `queryId`, which is any Query Loop that isn't set to inherit the main query. Inherited Query Loops (used on archive, search and home templates) only read core's own `s` search parameter today; filtering them by taxonomy, post type, author or sort is planned for a later release, so don't rely on those parameters there yet.
+
+### Parameter names
+
+Names come from the loop's `queryId`, following the same `query-{id}-{key}` scheme the block editor already uses for pagination:
+
+| Filter    | Parameter                        |
+| --------- | -------------------------------- |
+| Post type | `query-3-post_type=post,page`    |
+| Taxonomy  | `query-3-{taxonomy}=news,events` |
+| Author    | `query-3-author=jane-doe,sam`    |
+| Sort      | `query-3-sort=title-asc`         |
+| Search    | `query-3-s=term`                 |
+| Page      | `query-3-page=2` (core)          |
+
+A Query Loop with no `queryId` — every Query Loop in Twenty Twenty-Five, for example — uses the prefix `query-0-`. Its page parameter is the one exception: it stays `query-page`, because that's what core itself uses for a loop with no ID.
+
+### Values
+
+- **Multiple values** are a comma-separated list, for example `query-3-category=news,events`. Values are de-duplicated and capped at 50 per parameter; anything past the 50th is ignored. They're written in the order their controls appear on the page (DOM order), not the order they were selected — checking "News" then "Events" writes `events,news` if Events is listed first in the block.
+- **Empty values** are ignored.
+- **Taxonomy keys** must name a taxonomy that's publicly viewable (`is_taxonomy_viewable()`) — the same test the editor uses to offer it as a filter.
+- **Taxonomy values** are term slugs. A slug that matches no term returns no results for that taxonomy; it never falls back to showing everything.
+- **Post type values** must be viewable (`is_post_type_viewable()`). `attachment` is accepted only when attachment pages are enabled.
+- **Author values** are the user's nicename, for example `query-3-author=jane-doe`. A plain numeric value is still accepted and resolved by user ID, but a nicename match always wins over an ID match for the same value. An author value that matches no user returns no results — the same as an unknown taxonomy slug — rather than showing every author's posts.
+- **Sort values** must be a key from [`pikari_gutenberg_query_filter_sort_options`](#pikari_gutenberg_query_filter_sort_options). An empty or unrecognized value means the loop's own default order.
+
+---
+
 ## Frontend Markup
 
 A taxonomy filter (`category`) with the **Checkbox** display type renders:
@@ -109,12 +140,12 @@ Every radio and checkbox `<label>` gets a unique class built as `{key}_{slug}`:
 
 All three filters receive options as associative arrays:
 
-| Key     | Type                                         | Description                                                                                      |
-| ------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `value` | `string`                                     | Written to the URL query variable when selected: term slug, post type name, or user ID.          |
-| `label` | `string`                                     | Human-readable label. **Not escaped** — escape it when you output it.                            |
-| `slug`  | `string`                                     | Used to build the unique class. Optional; falls back to `value`.                                 |
-| `item`  | `WP_Term`, `WP_Post_Type`, `WP_User`, `null` | The source object. `null` for the "All" radio. May be missing on options added through a filter. |
+| Key     | Type                                         | Description                                                                                                 |
+| ------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `value` | `string`                                     | Written to the URL query variable when selected: term slug, post type name, or (for authors) user nicename. |
+| `label` | `string`                                     | Human-readable label. **Not escaped** — escape it when you output it.                                       |
+| `slug`  | `string`                                     | Used to build the unique class. Optional; falls back to `value`.                                            |
+| `item`  | `WP_Term`, `WP_Post_Type`, `WP_User`, `null` | The source object. `null` for the "All" radio. May be missing on options added through a filter.            |
 
 ## The Block Attributes Array
 
@@ -149,7 +180,7 @@ The "All" choice is not in this list; editors control its text with the block's 
 
 **Return:** `array[]` — The options to render. Return an empty array to hide the block.
 
-An option's `value` is applied to the query as a term slug, post type name, or author ID, depending on the filter type. Options you add must use a value of that kind.
+An option's `value` is applied to the query as a term slug, post type name, or (for authors) user nicename, depending on the filter type. Options you add must use a value of that kind.
 
 #### Example: Hide the Uncategorized term
 
@@ -328,3 +359,57 @@ function my_theme_option_label_swatch( string $html, array $option, array $attri
 
 add_filter( 'pikari_gutenberg_query_filter_option_label', 'my_theme_option_label_swatch', 10, 3 );
 ```
+
+---
+
+### `pikari_gutenberg_query_filter_sort_options`
+
+Filters the list of options offered by every Sort block, everywhere on the site. The same list also validates the `sort` URL parameter, so no block attributes are passed to this filter: an option that renders must also be an option the query accepts, and the two can't drift apart.
+
+**Parameters:**
+
+| Parameter  | Type      | Description                               |
+| ---------- | --------- | ----------------------------------------- |
+| `$options` | `array[]` | Sort options. See the option array below. |
+
+**Return:** `array[]` — The options to render and accept.
+
+| Key        | Type     | Description                                                         |
+| ---------- | -------- | ------------------------------------------------------------------- |
+| `key`      | `string` | Written to and read from the URL. Sanitized with `sanitize_key()`.  |
+| `label`    | `string` | Human-readable label shown in the Sort block's `<select>`.          |
+| `orderby`  | `string` | A `WP_Query` `orderby` value.                                       |
+| `order`    | `string` | `ASC` or `DESC`. Any case is accepted and uppercased automatically. |
+| `meta_key` | `string` | Required when `orderby` is `meta_value` or `meta_value_num`.        |
+
+An option missing `key`, `label` or `orderby` is dropped, as is a `meta_value` / `meta_value_num` option with no `meta_key`.
+
+#### Example: Add a "Menu Order" option
+
+```php
+/**
+ * Add a Menu Order option to every Sort block.
+ *
+ * @param array[] $options Sort options.
+ * @return array[]
+ */
+function my_theme_add_menu_order_sort( array $options ): array {
+    $options[] = array(
+        'key'     => 'menu-order-asc',
+        'label'   => __( 'Menu Order', 'my-theme' ),
+        'orderby' => 'menu_order',
+        'order'   => 'ASC',
+    );
+
+    return $options;
+}
+
+add_filter( 'pikari_gutenberg_query_filter_sort_options', 'my_theme_add_menu_order_sort' );
+```
+
+**Things to know:**
+
+- The same list renders every Sort block on the site and validates every sort request. Remove an option here and it also stops being accepted in the URL; there's no way to offer it in one place but not the other.
+- A `meta_value` or `meta_value_num` option needs a `meta_key`. Without one, the option is silently dropped.
+- A meta-key sort hides posts that don't have that meta key at all — this is WordPress's own query behaviour, not something this filter adds or can work around.
+- The block editor's Sort block preview does not call this filter. It always shows the same four built-in options in the editor canvas; only the frontend render and the URL validation follow what you return here.
