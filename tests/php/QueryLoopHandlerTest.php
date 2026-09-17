@@ -46,18 +46,28 @@ class QueryLoopHandlerTest extends TestCase {
                 return in_array( $post_type, self::VIEWABLE_POST_TYPES, true );
             }
         );
-        Functions\when( 'get_taxonomies' )->justReturn(
-            array(
-                'category' => 'category',
-                'post_tag' => 'post_tag',
-            )
-        );
         Functions\when( 'taxonomy_exists' )->justReturn( true );
     }
 
     protected function tearDown(): void {
         $_GET = array();
         parent::tearDown();
+    }
+
+    /**
+     * Stub get_taxonomies() to return the public taxonomies most tests need.
+     *
+     * Kept out of setUp() so test_parameters_for_non_public_taxonomies_are_ignored
+     * can register its own Functions\expect() instead: Brain\Monkey's expect()
+     * does not override a when() stub already registered for the same function.
+     */
+    private function stub_public_taxonomies(): void {
+        Functions\when( 'get_taxonomies' )->justReturn(
+            array(
+                'category' => 'category',
+                'post_tag' => 'post_tag',
+            )
+        );
     }
 
     /**
@@ -84,11 +94,18 @@ class QueryLoopHandlerTest extends TestCase {
     /**
      * Run the handler for a custom loop with the given URL parameters.
      *
-     * @param array $get        URL parameters.
-     * @param array $query_args Query arguments core built for the loop.
+     * @param array $get              URL parameters.
+     * @param array $query_args       Query arguments core built for the loop.
+     * @param bool  $stub_taxonomies  Whether to stub get_taxonomies() with the
+     *                                default public list. False when a test
+     *                                registers its own Functions\expect().
      * @return array Filtered query arguments.
      */
-    private function filter( array $get, array $query_args = array() ): array {
+    private function filter( array $get, array $query_args = array(), bool $stub_taxonomies = true ): array {
+        if ( $stub_taxonomies ) {
+            $this->stub_public_taxonomies();
+        }
+
         $_GET = $get;
 
         return ( new QueryLoopHandler() )->modify_query( $query_args, $this->block(), 1 );
@@ -213,9 +230,23 @@ class QueryLoopHandlerTest extends TestCase {
     }
 
     public function test_parameters_for_non_public_taxonomies_are_ignored(): void {
+        Functions\expect( 'get_taxonomies' )
+            ->once()
+            ->with( array( 'public' => true ), 'names' )
+            ->andReturn( array( 'category' => 'category', 'post_tag' => 'post_tag' ) );
+
         $query_args = array( 'post_type' => 'post' );
 
-        $this->assertSame( $query_args, $this->filter( array( 'query-3-language' => 'fr' ), $query_args ) );
+        $this->assertSame( $query_args, $this->filter( array( 'query-3-language' => 'fr' ), $query_args, false ) );
+    }
+
+    /**
+     * Known bug B1 fixes: filters other than post type leave ignore_sticky_posts
+     * unset, so core adds sticky posts that don't match the filter
+     * (spec §1, §3.6, §4.2).
+     */
+    public function test_taxonomy_filter_leaves_ignore_sticky_posts_unset(): void {
+        $this->assertArrayNotHasKey( 'ignore_sticky_posts', $this->filter( array( 'query-3-category' => 'news' ) ) );
     }
 
     /**
@@ -246,18 +277,19 @@ class QueryLoopHandlerTest extends TestCase {
      * Authors
      */
 
-    public function test_author_parameter_sets_author__in_to_positive_integer_ids(): void {
-        $result = $this->filter( array( 'query-3-author' => '7,abc,0,12' ) );
+    public function test_author_parameter_sets_author__in_to_nonzero_integer_ids(): void {
+        $result = $this->filter( array( 'query-3-author' => '7,abc,0,-5,12' ) );
 
-        $this->assertSame( array( 7, 12 ), array_values( $result['author__in'] ) );
+        $this->assertSame( array( 7, -5, 12 ), array_values( $result['author__in'] ) );
     }
 
     /**
-     * Known behaviour B1 changes: unresolvable authors return no results
-     * instead of being ignored (spec §3.2, §3.6).
+     * Known behaviour B1 changes: authors resolve by nicename, and an
+     * unresolvable value returns no results instead of being ignored
+     * (spec §3.2, §3.6).
      */
     public function test_author_parameter_without_valid_ids_is_ignored(): void {
-        $this->assertArrayNotHasKey( 'author__in', $this->filter( array( 'query-3-author' => 'jane-doe' ) ) );
+        $this->assertArrayNotHasKey( 'author__in', $this->filter( array( 'query-3-author' => 'nobody' ) ) );
     }
 
     /*
@@ -274,6 +306,11 @@ class QueryLoopHandlerTest extends TestCase {
 
     /*
      * Sorting
+     *
+     * Known behaviour B1 changes: 1.0 no longer reads query-{id}-orderby or
+     * query-{id}-order. A single query-{id}-sort key is looked up in an
+     * allowlist instead (spec §3.1, §3.2, §3.6). Every test in this section
+     * pins 0.3.4 only.
      */
 
     /**
@@ -297,6 +334,7 @@ class QueryLoopHandlerTest extends TestCase {
      */
 
     public function test_loop_without_query_id_reads_query_0_parameters(): void {
+        $this->stub_public_taxonomies();
         $_GET = array( 'query-0-category' => 'news' );
 
         $result = ( new QueryLoopHandler() )->modify_query( array(), $this->block( array( 'inherit' => false ), null ), 1 );
@@ -309,6 +347,7 @@ class QueryLoopHandlerTest extends TestCase {
      * branch only runs when another plugin applies the filter itself.
      */
     public function test_inherited_loop_reads_unnumbered_parameters_and_core_search(): void {
+        $this->stub_public_taxonomies();
         $_GET = array(
             'query-category' => 'news',
             's'              => 'mango',
