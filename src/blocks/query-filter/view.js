@@ -114,7 +114,7 @@ store( 'pikari/gutenberg-query-filter', {
 		*handleSort( event ) {
 			event.preventDefault();
 			const context = getContext();
-			const { orderbyVar, orderVar, pageVar } = context;
+			const { sortVar, pageVar } = context;
 			const value = event.target.value;
 
 			// Build new URL with all current parameters
@@ -126,16 +126,11 @@ store( 'pikari/gutenberg-query-filter', {
 				url.searchParams.delete( 'page' );
 			}
 
-			// Handle sort parameters
+			// Update the sort parameter
 			if ( value ) {
-				// Parse the value like 'date-desc' into orderby and order
-				const [ orderby, order ] = value.split( '-' );
-				url.searchParams.set( orderbyVar, orderby );
-				url.searchParams.set( orderVar, order );
+				url.searchParams.set( sortVar, value );
 			} else {
-				// Remove both sort parameters when empty
-				url.searchParams.delete( orderbyVar );
-				url.searchParams.delete( orderVar );
+				url.searchParams.delete( sortVar );
 			}
 
 			// Navigate to new URL
