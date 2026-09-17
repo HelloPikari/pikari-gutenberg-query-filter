@@ -90,7 +90,11 @@ class FilterHelperTest extends TestCase {
         );
     }
 
-    public function test_get_filter_options_normalizes_authors_with_string_id_value_and_nicename_slug(): void {
+    /**
+     * Change from 0.3.4, which used the numeric ID as the option value.
+     * Author filter URLs now identify users by nicename (spec §3.2, §3.6).
+     */
+    public function test_get_filter_options_normalizes_authors_with_nicename_value_and_slug(): void {
         $author = (object) array(
             'ID'            => 7,
             'display_name'  => 'Jane Doe',
@@ -100,7 +104,7 @@ class FilterHelperTest extends TestCase {
         $this->assertSame(
             array(
                 array(
-                    'value' => '7',
+                    'value' => 'jane-doe',
                     'label' => 'Jane Doe',
                     'slug'  => 'jane-doe',
                     'item'  => $author,

@@ -122,7 +122,7 @@ class FilterHelper {
                     break;
                 case 'author':
                     $options[] = array(
-                        'value' => (string) $item->ID,
+                        'value' => $item->user_nicename,
                         'label' => $item->display_name,
                         'slug'  => $item->user_nicename,
                         'item'  => $item,
