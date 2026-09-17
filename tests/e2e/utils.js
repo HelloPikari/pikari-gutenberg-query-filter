@@ -47,12 +47,17 @@ const param = (page, name) => new URL(page.url()).searchParams.get(name);
 /**
  * Wait until a URL parameter has a value, or is absent when value is null.
  *
+ * Times out after 10s rather than the full test timeout, so a missed
+ * navigation fails fast instead of waiting out the whole test.
+ *
  * @param {import('@playwright/test').Page} page  Page.
  * @param {string}                          name  Parameter name.
  * @param {string|null}                     value Expected value.
  */
 const waitForParam = (page, name, value) =>
-	page.waitForURL((url) => new URL(url).searchParams.get(name) === value);
+	page.waitForURL((url) => new URL(url).searchParams.get(name) === value, {
+		timeout: 10_000,
+	});
 
 module.exports = {
 	isSameDocument,

@@ -21,7 +21,9 @@ module.exports = {
 	webServer: {
 		...webServer,
 		// The package's own `wp-env` script adds --xdebug and can't take `start`.
-		command: 'npx wp-env start',
+		// Keep the process alive after wp-env start exits; Playwright fails if
+		// the webServer process exits before the URL is ready, and kills it at teardown.
+		command: 'npx wp-env start && tail -f /dev/null',
 		// /wp-json/ 404s until pretty permalinks and .htaccess exist, so readiness waits for afterStart.
 		url: new URL('wp-json/', baseConfig.use.baseURL).href,
 		timeout: 300_000,
