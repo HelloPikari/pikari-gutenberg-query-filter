@@ -87,3 +87,6 @@ pikari-dev-setup-*/
 # yarn.lock
 # composer.lock
 .playwright-mcp/
+
+# Playwright artifacts (test results, storage state)
+artifacts/

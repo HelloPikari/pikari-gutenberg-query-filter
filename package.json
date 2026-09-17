@@ -22,7 +22,7 @@
 		"lint:md:fix": "wp-scripts lint-md-docs --fix",
 		"lint:pkg-json": "wp-scripts lint-pkg-json",
 		"test": "wp-scripts test-unit-js",
-		"test:e2e": "wp-scripts test-e2e",
+		"test:e2e": "wp-scripts test-playwright",
 		"test:unit": "wp-scripts test-unit-js",
 		"packages-update": "wp-scripts packages-update",
 		"plugin-zip": "wp-scripts plugin-zip",
@@ -42,6 +42,8 @@
 		"classnames": "^2.5.1"
 	},
 	"devDependencies": {
+		"@playwright/test": "^1.63.0",
+		"@wordpress/e2e-test-utils-playwright": "^1.54.0",
 		"@wordpress/env": "^10.39.0",
 		"@wordpress/scripts": "latest",
 		"husky": "latest",
