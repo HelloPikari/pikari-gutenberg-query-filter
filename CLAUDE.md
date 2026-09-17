@@ -64,7 +64,15 @@ npm test
 
 # Run PHP tests
 composer test
+
+# Run end-to-end tests (Playwright, wp-env tests instance on port 5885)
+npm run build          # E2E tests use build/, so build first
+npx wp-env start       # afterStart sets pretty permalinks on the tests instance
+npm run test:e2e       # all specs
+npm run test:e2e -- tests/e2e/specs/filters.spec.js   # one spec
 ```
+
+The E2E global setup (`tests/e2e/setup/fixtures.js`) deletes and recreates all posts, pages, non-admin users and categories on the tests instance each run. Fixture data and expected results live in `tests/e2e/fixtures/content.js`. CI doesn't run E2E yet (roadmap #28).
 
 ### WordPress Playground
 
