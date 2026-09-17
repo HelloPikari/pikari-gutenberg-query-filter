@@ -51,7 +51,7 @@ export default function Edit( { attributes, setAttributes } ) {
 					inert
 				>
 					<option>
-						{ emptyLabel || __( 'Date', 'pikari-gutenberg-query-filter' ) }
+						{ emptyLabel || __( 'Default', 'pikari-gutenberg-query-filter' ) }
 					</option>
 					{ sortOptions.map( ( option ) => (
 						<option key={ option.value }>{ option.label }</option>
