@@ -7,6 +7,9 @@
 const path = require('path');
 const baseConfig = require('@wordpress/scripts/config/playwright.config.js');
 
+// Playwright rejects `port` and `url` together, so drop the inherited port.
+const { port, ...webServer } = baseConfig.webServer;
+
 module.exports = {
 	...baseConfig,
 	testDir: './tests/e2e/specs',
@@ -16,8 +19,11 @@ module.exports = {
 		path.resolve(__dirname, 'tests/e2e/setup/fixtures.js'),
 	],
 	webServer: {
-		...baseConfig.webServer,
+		...webServer,
 		// The package's own `wp-env` script adds --xdebug and can't take `start`.
 		command: 'npx wp-env start',
+		// /wp-json/ 404s until pretty permalinks and .htaccess exist, so readiness waits for afterStart.
+		url: new URL('wp-json/', baseConfig.use.baseURL).href,
+		timeout: 300_000,
 	},
 };
