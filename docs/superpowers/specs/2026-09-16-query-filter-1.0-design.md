@@ -60,6 +60,7 @@ A custom loop with no `queryId`, which includes every loop in Twenty Twenty-Five
 - **Multiple values:**
   - A comma-separated list is canonical, and JavaScript always writes it.
   - Without JavaScript, a form submit sends the repeated `key[]=value` form. The server reads both the same way.
+  - Values are written in the order their controls appear in the form (DOM order, which for taxonomy filters is the term list order), not the order they were selected. Example: checking News then Events writes `events,news`.
   - Values are de-duplicated and capped at 50 per key; anything after the 50th is ignored.
 - **Empty values** are ignored.
 - **Taxonomy keys** must name a taxonomy for which `is_taxonomy_viewable()` is true. That matches what the editor offers (`visibility.publicly_queryable`) and what core's Query block uses.
@@ -402,7 +403,7 @@ The Sort block's `block.json` points `viewScriptModule` at the shared view modul
 
 - **Jest mock drift.** `tests/unit/__mocks__/@wordpress/interactivity.js` has drifted from the shared template. It adds `readStore`, and it isn't in `skip-sync`, so a sync would break `view.test.js`.
   - Move that change into the monorepo template, or add the file to `skip-sync`.
-  - The mock's `withScope` must run generator functions, as core's does.
+  - The mock's `withScope` running generator functions, as core's does, is deferred: it lands in the plugin copy in B3, then moves to the template (monorepo roadmap #30). Modals' non-generator callbacks must pass through unchanged.
 - **CI facts:**
   - `BlockFiltersTest` already runs on CI (#95), and CI provides only `WP_HTML_Tag_Processor`, not `WP_HTML_Processor`.
   - Playwright doesn't run on CI. Roadmap #28 covers that.
@@ -410,7 +411,7 @@ The Sort block's `block.json` points `viewScriptModule` at the shared view modul
 
 ### 8.2 PHP (Brain\Monkey)
 
-1. **Characterization tests first (B0).** Write `QueryLoopHandlerTest` against 0.3.3:
+1. **Characterization tests first (B0).** Write `QueryLoopHandlerTest` against 0.3.4:
 
    - post type validation;
    - tax_query merging;
@@ -418,7 +419,7 @@ The Sort block's `block.json` points `viewScriptModule` at the shared view modul
    - search;
    - order validation.
 
-   When B1 ports these to the new classes, only the §3.6 changes may differ, and each difference is written as its own test named for the change.
+   When B1 ports these to the new classes, only the changes listed in §3.6 or required by §3.2's validation rules may differ, and each difference is written as its own test named for the change.
 
 2. **Unit tests:**
    - `QueryParams`: keys, loops without a `queryId`, form ID, pagination stripping.
@@ -459,7 +460,7 @@ The Sort block's `block.json` points `viewScriptModule` at the shared view modul
 ### 8.4 Playwright
 
 - **Configuration:**
-  - A root `playwright.config.js` extends `@wordpress/scripts/config/playwright.config.js` with `testDir: './tests/e2e'`, and chains the default authentication global setup with a fixture setup.
+  - A root `playwright.config.js` extends `@wordpress/scripts/config/playwright.config.js` with `testDir: './tests/e2e/specs'`, and chains the default authentication global setup with a fixture setup. Setup, fixtures and helpers sit beside `specs/` so they stay out of test discovery.
   - `test:e2e` runs `wp-scripts test-playwright`.
   - `@playwright/test` and `@wordpress/e2e-test-utils-playwright` are added as explicit devDependencies.
   - `artifacts/` is added to `.gitignore`.

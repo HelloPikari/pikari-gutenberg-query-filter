@@ -74,6 +74,8 @@ npm run test:e2e -- tests/e2e/specs/filters.spec.js   # one spec
 
 The E2E global setup (`tests/e2e/setup/fixtures.js`) deletes and recreates all posts, pages, non-admin users and categories on the tests instance each run. Fixture data and expected results live in `tests/e2e/fixtures/content.js`. CI doesn't run E2E yet (roadmap #28).
 
+`test:e2e` checks for and installs Playwright browsers on each run; set `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` to skip it once they're installed.
+
 ### WordPress Playground
 
 ```bash

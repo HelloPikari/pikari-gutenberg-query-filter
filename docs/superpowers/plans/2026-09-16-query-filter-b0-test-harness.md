@@ -14,7 +14,7 @@
   - Specs assert only what visitors see and the URL parameters the 1.0 contract keeps. Sort and author parameter names change in B1, so those specs assert results, not URLs.
 - **No production code changes.**
 
-**Tech Stack:** PHPUnit 9.6 + Brain\Monkey + Mockery; Playwright 1.59 via `wp-scripts test-playwright`; `@wordpress/e2e-test-utils-playwright` 1.43 `RequestUtils`; `@wordpress/env` 10.39.
+**Tech Stack:** PHPUnit 9.6 + Brain\Monkey + Mockery; Playwright 1.63 via `wp-scripts test-playwright`; `@wordpress/e2e-test-utils-playwright` 1.54 `RequestUtils`; `@wordpress/env` 10.39.
 
 **Spec:** `docs/superpowers/specs/2026-09-16-query-filter-1.0-design.md` (revision 2): §8.1, §8.2 item 1, §8.4, §10.1 row B0.
 
@@ -444,7 +444,7 @@ class QueryLoopHandlerTest extends TestCase {
 
 Run: `vendor/bin/phpunit tests/php/QueryLoopHandlerTest.php --testdox`
 
-Expected: `OK (23 tests, …)`.
+Expected: `OK (24 tests, …)`.
 
 If a test fails, don't change the test to match your expectation. First re-read `includes/Core/QueryLoopHandler.php`:
 
@@ -467,7 +467,7 @@ Expected: no output (all mutations reverted).
 
 Run: `composer test && composer lint`
 
-Expected: `OK (54 tests, …)` (31 existing + 23 new) and no phpcs errors.
+Expected: `OK (55 tests, …)` (31 existing + 24 new) and no phpcs errors.
 
 - [ ] **Step 5: Commit**
 
@@ -568,6 +568,9 @@ Create `playwright.config.js`:
 const path = require('path');
 const baseConfig = require('@wordpress/scripts/config/playwright.config.js');
 
+// Playwright rejects `port` and `url` together, so drop the inherited port.
+const { port, ...webServer } = baseConfig.webServer;
+
 module.exports = {
 	...baseConfig,
 	testDir: './tests/e2e/specs',
@@ -577,9 +580,14 @@ module.exports = {
 		path.resolve(__dirname, 'tests/e2e/setup/fixtures.js'),
 	],
 	webServer: {
-		...baseConfig.webServer,
+		...webServer,
 		// The package's own `wp-env` script adds --xdebug and can't take `start`.
-		command: 'npx wp-env start',
+		// Keep the process alive after wp-env start exits; Playwright fails if
+		// the webServer process exits before the URL is ready, and kills it at teardown.
+		command: 'npx wp-env start && tail -f /dev/null',
+		// /wp-json/ 404s until pretty permalinks and .htaccess exist, so readiness waits for afterStart.
+		url: new URL('wp-json/', baseConfig.use.baseURL).href,
+		timeout: 300_000,
 	},
 };
 ```
@@ -908,12 +916,17 @@ const param = (page, name) => new URL(page.url()).searchParams.get(name);
 /**
  * Wait until a URL parameter has a value, or is absent when value is null.
  *
+ * Times out after 10s rather than the full test timeout, so a missed
+ * navigation fails fast instead of waiting out the whole test.
+ *
  * @param {import('@playwright/test').Page} page  Page.
  * @param {string}                          name  Parameter name.
  * @param {string|null}                     value Expected value.
  */
 const waitForParam = (page, name, value) =>
-	page.waitForURL((url) => new URL(url).searchParams.get(name) === value);
+	page.waitForURL((url) => new URL(url).searchParams.get(name) === value, {
+		timeout: 10_000,
+	});
 
 module.exports = {
 	isSameDocument,
@@ -1024,6 +1037,11 @@ const { path, queryId } = PAGES.filters;
 const categoryParam = `query-${queryId}-category`;
 const isNews = (post) => post.category === 'news';
 
+// FilterHelper::get_taxonomy_filter_terms() calls get_terms() with no
+// orderby, so terms render name-ASC: Events before News. updateFilters()
+// joins the checked checkboxes in DOM order, not click order, so both
+// checked always serializes as "events,news".
+
 test.use({ storageState: visitor });
 
 test.beforeEach(async ({ page }) => {
@@ -1053,8 +1071,10 @@ test('writes checked categories as one comma-separated parameter', async ({
 	await page.getByRole('checkbox', { name: 'News' }).check();
 	await waitForParam(page, categoryParam, 'news');
 
+	await expect.poll(() => resultTitles(page)).toEqual(newestTitles(isNews));
+
 	await page.getByRole('checkbox', { name: 'Events' }).check();
-	await waitForParam(page, categoryParam, 'news,events');
+	await waitForParam(page, categoryParam, 'events,news');
 
 	await expect.poll(() => resultTitles(page)).toEqual(newestTitles());
 });
@@ -1089,7 +1109,7 @@ test('restores the previous filter on Back', async ({ page }) => {
 	await page.getByRole('checkbox', { name: 'News' }).check();
 	await waitForParam(page, categoryParam, 'news');
 	await page.getByRole('checkbox', { name: 'Events' }).check();
-	await waitForParam(page, categoryParam, 'news,events');
+	await waitForParam(page, categoryParam, 'events,news');
 
 	await page.goBack();
 	await waitForParam(page, categoryParam, 'news');
@@ -1241,10 +1261,12 @@ test('keeps injected styles after filtering', async ({ page }) => {
 	await page.goto(path);
 	const injected = page.locator('.e2e-injected');
 	await expect(injected).toHaveCSS('color', INJECTED_COLOR);
+	await markDocument(page);
 
 	await page.getByRole('checkbox', { name: 'News' }).check();
 	await waitForParam(page, `query-${queryId}-category`, 'news');
 
+	expect(await isSameDocument(page)).toBe(true);
 	await expect(injected).toHaveCSS('color', INJECTED_COLOR);
 });
 
@@ -1348,7 +1370,7 @@ npm run test:e2e
 
 Expected:
 
-- `OK (54 tests, …)`;
+- `OK (55 tests, …)`;
 - `Tests: 30 passed`;
 - no lint errors;
 - `13 passed` (3 harness + 7 filters + 1 sort + 2 injected styles).
@@ -1382,14 +1404,14 @@ B0 of the Query Filter 1.0 effort (spec §10.1). No production code changes.
 ## What's here
 - **The 1.0 spec**, revision 2, approved: `docs/superpowers/specs/2026-09-16-query-filter-1.0-design.md`.
 - **This plan:** `docs/superpowers/plans/2026-09-16-query-filter-b0-test-harness.md`.
-- **`QueryLoopHandlerTest`:** 23 characterization tests of how 0.3.4 maps URL parameters to query arguments. The known bugs B1 fixes (the forced AND relation, `post__in` removal, any `orderby`, ignored unresolved authors) are pinned and marked in docblocks.
+- **`QueryLoopHandlerTest`:** 24 characterization tests of how 0.3.4 maps URL parameters to query arguments. The known bugs B1 fixes (the forced AND relation, `post__in` removal, any `orderby`, ignored unresolved authors, sticky posts leaking into filters other than post type) are pinned and marked in docblocks.
 - **Playwright harness** (`wp-scripts test-playwright`, wp-env tests instance on 5885, pretty permalinks via `lifecycleScripts`):
   - fixture content rebuilt every run;
   - 13 specs covering the harness, category/author/search filtering, pagination reset, Back, accessible names, a Sort-only loop, and injected styles after filtering and enhanced pagination.
 - The Interactivity test mock matches its monorepo template again. The template gained this plugin's `readStore` in monorepo `a92292d`.
 
 ## Verification
-- **Tests:** PHP 54 of 54, Jest 30 of 30, Playwright 13 of 13 locally. Lint clean.
+- **Tests:** PHP 55 of 55, Jest 30 of 30, Playwright 13 of 13 locally. Lint clean.
 - **Each new test proven able to fail:**
   - PHP, by 3 temporary mutations;
   - filters spec, by removing `data-wp-interactive` from the Query wrapper (the 0.3.0 bug);
