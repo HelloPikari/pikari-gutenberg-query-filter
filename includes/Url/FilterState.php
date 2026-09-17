@@ -7,6 +7,8 @@
 
 namespace Pikari\GutenbergQueryFilter\Url;
 
+use Pikari\GutenbergQueryFilter\Query\SortOptions;
+
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -389,6 +391,6 @@ class FilterState {
         $key = $params->key( 'sort' );
         $raw = isset( $get[ $key ] ) ? (string) $get[ $key ] : '';
 
-        return \Pikari\GutenbergQueryFilter\Query\SortOptions::find( $raw );
+        return SortOptions::find( $raw );
     }
 }
