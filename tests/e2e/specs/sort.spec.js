@@ -43,5 +43,9 @@ test("choosing the loop's own order removes the sort parameter", async ({
 		.selectOption({ label: 'Date (Newest First)' });
 	await waitForParam(page, 'query-3-sort', null);
 
-	await expect.poll(() => resultTitles(page)).toEqual(newestTitles());
+	// No filter is active once the sort parameter is removed, so the
+	// sticky post pins to the front again (spec §4.2).
+	await expect
+		.poll(() => resultTitles(page))
+		.toEqual(newestTitles(undefined, undefined, { sticky: true }));
 });
