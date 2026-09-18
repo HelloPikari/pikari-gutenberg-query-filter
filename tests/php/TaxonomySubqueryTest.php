@@ -93,6 +93,11 @@ class TaxonomySubqueryTest extends TestCase {
             'AND wp_posts.ID IN ( SELECT object_id FROM wp_term_relationships WHERE term_taxonomy_id IN (11,12) )',
             $result
         );
+        // The posts_where callback in MainQueryFilter relies on this fragment
+        // starting with a space so it can append directly to core's WHERE
+        // clause; assertSqlEquals() normalizes whitespace, so it can't catch
+        // that contract dropping.
+        $this->assertStringStartsWith( ' AND', $result );
     }
 
     public function test_two_taxonomies_produce_two_and_clauses(): void {
