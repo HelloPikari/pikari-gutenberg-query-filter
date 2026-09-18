@@ -92,6 +92,38 @@ class FilterStateTest extends TestCase {
         Functions\when( 'get_taxonomies' )->justReturn( $taxonomies );
     }
 
+    /**
+     * Replace setUp()'s `returnArg()` sanitize_text_field() stub with one that
+     * behaves like WordPress's real `_sanitize_text_fields()`
+     * (wp-includes/formatting.php): it strips tags, collapses whitespace, and
+     * removes every percent-encoded octet (`%xx`). `returnArg()` doesn't
+     * strip anything, so a test asserting that octets or tags survive (or
+     * don't) needs this to fail for the right reason on old code.
+     */
+    private function stub_realistic_sanitize_text_field(): void {
+        Functions\when( 'sanitize_text_field' )->alias(
+            static function ( $str ) {
+                if ( ! is_scalar( $str ) ) {
+                    return '';
+                }
+
+                $filtered = (string) $str;
+
+                if ( str_contains( $filtered, '<' ) ) {
+                    $filtered = strip_tags( $filtered );
+                }
+
+                $filtered = trim( preg_replace( '/[\r\n\t ]+/', ' ', $filtered ) );
+
+                while ( preg_match( '/%[a-f0-9]{2}/i', $filtered, $match ) ) {
+                    $filtered = str_replace( $match[0], '', $filtered );
+                }
+
+                return trim( preg_replace( '/ +/', ' ', $filtered ) );
+            }
+        );
+    }
+
     /*
      * No parameters
      */
@@ -141,6 +173,22 @@ class FilterStateTest extends TestCase {
         $state = FilterState::from_array( array( 'query-3-category' => 'News, Events' ), new QueryParams( 3 ) );
 
         $this->assertSame( array( 'category' => array( 'news', 'events' ) ), $state->taxonomies() );
+    }
+
+    /**
+     * The same octet-stripping problem as the author nicename test above
+     * applies to a term slug WordPress had to percent-encode (spec §3.2).
+     * Pre-existing, not introduced by the author change, but fixed in the
+     * same read path.
+     */
+    public function test_percent_encoded_taxonomy_slugs_survive(): void {
+        $this->stub_realistic_sanitize_text_field();
+
+        $encoded_slug = '%e6%97%a5%e6%9c%ac';
+
+        $state = FilterState::from_array( array( 'query-3-category' => $encoded_slug ), new QueryParams( 3 ) );
+
+        $this->assertSame( array( 'category' => array( $encoded_slug ) ), $state->taxonomies() );
     }
 
     public function test_non_viewable_taxonomies_are_ignored(): void {
@@ -300,6 +348,48 @@ class FilterStateTest extends TestCase {
         $this->assertTrue( $state->has_filters() );
     }
 
+    /**
+     * Regression guard for the 1.0 author-nicename change (spec §3.2).
+     *
+     * WordPress stores `user_nicename` percent-encoded for a name it can't
+     * transliterate — Cyrillic, Greek, CJK, Arabic, Hebrew, Thai — because
+     * `sanitize_title()` falls back to `utf8_uri_encode()`. For example
+     * "анна" is stored as `%d0%b0%d0%bd%d0%bd%d0%b0`. `sanitize_text_field()`
+     * strips every `%xx` octet, which used to reduce the value to `''`,
+     * dropping the filter and silently showing every author's posts instead
+     * of that one author's. Assert the `get_users()` argument, not just the
+     * result, so a reintroduction of `sanitize_text_field()` in the read path
+     * fails loudly here rather than only in a slower end-to-end test.
+     */
+    public function test_percent_encoded_author_nicenames_reach_get_users_intact(): void {
+        $this->stub_realistic_sanitize_text_field();
+
+        $encoded_nicename = '%d0%b0%d0%bd%d0%bd%d0%b0';
+
+        Functions\expect( 'get_users' )
+            ->once()
+            ->with(
+                array(
+                    'blog_id'      => 1,
+                    'nicename__in' => array( $encoded_nicename ),
+                    'fields'       => array( 'ID', 'user_nicename' ),
+                    'number'       => 50,
+                )
+            )
+            ->andReturn(
+                array(
+                    (object) array(
+                        'ID'            => 42,
+                        'user_nicename' => $encoded_nicename,
+                    ),
+                )
+            );
+
+        $state = FilterState::from_array( array( 'query-3-author' => $encoded_nicename ), new QueryParams( 3 ) );
+
+        $this->assertSame( array( 42 ), $state->author_ids() );
+    }
+
     public function test_author_lookups_are_limited_to_this_site(): void {
         Functions\expect( 'get_users' )
             ->once()
@@ -321,10 +411,56 @@ class FilterStateTest extends TestCase {
      * Search
      */
 
-    public function test_search_is_sanitized(): void {
-        $state = FilterState::from_array( array( 'query-3-s' => 'mango' ), new QueryParams( 3 ) );
+    /**
+     * Unlike author and taxonomy values (spec §3.2), search is free text, not
+     * a slug, so it keeps going through sanitize_text_field(). This is what
+     * `returnArg()`'s stub in setUp() can't prove: it returns its input
+     * unchanged, so a test written against it would pass whether or not
+     * sanitize_text_field() were still being called at all.
+     */
+    public function test_search_still_strips_tags_and_control_characters(): void {
+        $this->stub_realistic_sanitize_text_field();
 
-        $this->assertSame( 'mango', $state->search() );
+        $state = FilterState::from_array(
+            array( 'query-3-s' => "  <b>mango</b>\tsmoothie  " ),
+            new QueryParams( 3 )
+        );
+
+        $this->assertSame( 'mango smoothie', $state->search() );
+    }
+
+    /**
+     * Guards includes/Url/FilterState.php's resolve_sort() and the array
+     * branch of read_values() against `?query-3-sort[]=x`-style URLs. Casting
+     * an array to a string emits "Array to string conversion", which on a
+     * site with display_errors on leaks the plugin's file path to an
+     * anonymous visitor.
+     */
+    public function test_array_values_for_sort_and_search_are_ignored_without_a_warning(): void {
+        $this->stub_realistic_sanitize_text_field();
+
+        $get = array(
+            'query-3-sort' => array( 'x' ),
+            'query-3-s'    => array( 'y' ),
+        );
+
+        $previous_level = error_reporting( E_ALL );
+        set_error_handler(
+            static function ( $errno, $errstr ) {
+                throw new \ErrorException( $errstr, 0, $errno );
+            },
+            E_ALL
+        );
+
+        try {
+            $state = FilterState::from_array( $get, new QueryParams( 3 ) );
+        } finally {
+            restore_error_handler();
+            error_reporting( $previous_level );
+        }
+
+        $this->assertNull( $state->sort() );
+        $this->assertSame( '', $state->search() );
     }
 
     /*

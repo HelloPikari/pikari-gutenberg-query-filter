@@ -184,6 +184,17 @@ class FilterState {
      * Accepts a comma-separated string or a key[] array (spec §3.2). Both
      * are trimmed, emptied of blank entries, deduplicated, and capped at 50.
      *
+     * Deliberately does not run values through sanitize_text_field(): it
+     * strips every percent-encoded octet, which is exactly how WordPress
+     * stores a user_nicename or a term slug it can't transliterate (Cyrillic,
+     * CJK, Arabic, …). Each caller validates the shape it needs downstream —
+     * post types through an allowlist, taxonomy slugs and author nicenames
+     * through sanitize_title_for_query(), sort through the SortOptions
+     * allowlist — so no blanket sanitizer belongs here.
+     *
+     * A non-scalar entry (for example `key[][]=x`) is dropped rather than
+     * cast, which would emit an "Array to string conversion" warning.
+     *
      * @param array  $get URL parameters.
      * @param string $key Parameter name.
      * @return string[]
@@ -198,12 +209,12 @@ class FilterState {
         if ( is_array( $raw ) ) {
             $values = array_map(
                 static function ( $value ) {
-                    return sanitize_text_field( wp_unslash( (string) $value ) );
+                    return is_scalar( $value ) ? wp_unslash( (string) $value ) : '';
                 },
                 $raw
             );
         } else {
-            $values = explode( ',', sanitize_text_field( wp_unslash( (string) $raw ) ) );
+            $values = is_scalar( $raw ) ? explode( ',', wp_unslash( (string) $raw ) ) : array();
         }
 
         $values = array_map( 'trim', $values );
@@ -295,15 +306,34 @@ class FilterState {
      * include for the all-digit values that didn't match a nicename. A
      * nicename match wins over an ID match sharing the same digits.
      *
+     * Values are run through sanitize_title_for_query() before either
+     * lookup. It preserves the percent-encoded octets WordPress already
+     * stores for a non-Latin nicename and encodes a raw UTF-8 value the same
+     * way, so a plugin-generated link and a hand-typed URL resolve
+     * identically. A numeric value passes through unchanged.
+     *
      * @param array       $get    URL parameters.
      * @param QueryParams $params Parameter names for this loop.
      * @return int[]|null Null when absent, array( 0 ) when nothing resolved.
      */
     private static function resolve_author_ids( array $get, QueryParams $params ): ?array {
-        $values = self::read_values( $get, $params->key( 'author' ) );
+        $raw_values = self::read_values( $get, $params->key( 'author' ) );
+
+        if ( empty( $raw_values ) ) {
+            return null;
+        }
+
+        $values = array_values(
+            array_filter(
+                array_map( 'sanitize_title_for_query', $raw_values ),
+                static function ( $value ) {
+                    return '' !== (string) $value;
+                }
+            )
+        );
 
         if ( empty( $values ) ) {
-            return null;
+            return array( 0 );
         }
 
         $blog_id = get_current_blog_id();
@@ -389,7 +419,7 @@ class FilterState {
      */
     private static function resolve_sort( array $get, QueryParams $params ): ?array {
         $key = $params->key( 'sort' );
-        $raw = isset( $get[ $key ] ) ? (string) $get[ $key ] : '';
+        $raw = isset( $get[ $key ] ) && is_scalar( $get[ $key ] ) ? (string) $get[ $key ] : '';
 
         return SortOptions::find( $raw );
     }

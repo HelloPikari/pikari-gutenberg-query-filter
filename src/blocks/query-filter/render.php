@@ -68,9 +68,24 @@ if ( empty( $options ) ) {
     return;
 }
 
-// Get current selection
-// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Filtering parameters don't require nonces.
-$current_value = isset( $_GET[ $query_var ] ) ? sanitize_text_field( wp_unslash( $_GET[ $query_var ] ) ) : '';
+// Get current selection.
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Filtering parameters don't require nonces; sanitized below via sanitize_text_field() or sanitize_title_for_query(), depending on $filter_type.
+$raw_value = isset( $_GET[ $query_var ] ) && is_scalar( $_GET[ $query_var ] ) ? wp_unslash( $_GET[ $query_var ] ) : '';
+
+if ( 'author' === $filter_type ) {
+    // Author option values are nicenames, which WordPress stores percent-
+    // encoded for a name it can't transliterate (spec §3.2). sanitize_text_field()
+    // strips those octets, so each comma-separated value is sanitized on its
+    // own with sanitize_title_for_query() instead, matching
+    // Url\FilterState::resolve_author_ids(). Running the whole string through
+    // it at once would also strip the commas separating multiple values.
+    $current_value = implode(
+        ',',
+        array_map( 'sanitize_title_for_query', explode( ',', $raw_value ) )
+    );
+} else {
+    $current_value = sanitize_text_field( $raw_value );
+}
 
 // Prepare template variables
 $label_text    = $attributes['label'] ?? $default_label;
