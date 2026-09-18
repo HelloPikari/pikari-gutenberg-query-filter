@@ -6,6 +6,7 @@
 let actions;
 let callbacks;
 let getContext;
+let getElement;
 let navigate;
 let routerState;
 let stripInheritedPagination;
@@ -48,7 +49,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 		// view.js keeps per-page state, so load a fresh copy for each test.
 		jest.resetModules();
 		let store;
-		( { store, getContext } = require( '@wordpress/interactivity' ) );
+		( { store, getContext, getElement } = require( '@wordpress/interactivity' ) );
 		( {
 			actions: { navigate },
 		} = require( '@wordpress/interactivity-router' ) );
@@ -288,6 +289,48 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 
 			expect( navigate ).toHaveBeenCalledWith(
 				'http://localhost/some-page/page/2/?query-3-category=articles'
+			);
+		} );
+
+		it( "strips an inherited loop's pagination path segment on a search", async () => {
+			window.history.replaceState(
+				null,
+				'',
+				'http://localhost/category/news/page/2/'
+			);
+			getContext.mockReturnValue( {
+				pageVar: 'paged',
+				paginationBase: 'page',
+			} );
+			getElement.mockReturnValue( {
+				ref: { tagName: 'INPUT', name: 's', value: 'mango' },
+			} );
+
+			await run( actions.search( { preventDefault: () => {} } ) );
+
+			expect( navigate ).toHaveBeenCalledWith(
+				'http://localhost/category/news/?s=mango'
+			);
+		} );
+
+		it( "leaves a custom loop's path untouched on a search", async () => {
+			window.history.replaceState(
+				null,
+				'',
+				'http://localhost/some-page/page/2/'
+			);
+			getContext.mockReturnValue( {
+				pageVar: 'query-3-page',
+				paginationBase: 'page',
+			} );
+			getElement.mockReturnValue( {
+				ref: { tagName: 'INPUT', name: 'query-3-s', value: 'mango' },
+			} );
+
+			await run( actions.search( { preventDefault: () => {} } ) );
+
+			expect( navigate ).toHaveBeenCalledWith(
+				'http://localhost/some-page/page/2/?query-3-s=mango'
 			);
 		} );
 	} );

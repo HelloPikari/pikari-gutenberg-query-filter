@@ -36,6 +36,11 @@ class BlockFiltersTest extends TestCase {
         );
     }
 
+    protected function tearDown(): void {
+        unset( $GLOBALS['wp_rewrite'] );
+        parent::tearDown();
+    }
+
     /*
      * render_block_query()
      */
@@ -144,6 +149,69 @@ class BlockFiltersTest extends TestCase {
         $processor->next_tag( array( 'tag_name' => 'input', 'class_name' => 'wp-block-search__input' ) );
 
         $this->assertSame( 'query-0-s', $processor->get_attribute( 'name' ) );
+    }
+
+    /**
+     * An inherited loop's search form sends the site's actual pagination
+     * base, read from $wp_rewrite, not a hardcoded 'page' (spec §3.3).
+     * view.js needs it to strip a trailing pretty-permalink pagination
+     * segment on a filter change.
+     */
+    public function test_render_block_search_sends_pagination_base_for_an_inherited_loop(): void {
+        $this->stub_search_render_functions();
+        $_GET = array();
+
+        $GLOBALS['wp_rewrite']                  = Mockery::mock( 'WP_Rewrite' );
+        $GLOBALS['wp_rewrite']->pagination_base = 'seite';
+
+        $instance          = Mockery::mock( 'WP_Block' );
+        $instance->context = array(
+            'query' => array( 'inherit' => true ),
+        );
+
+        $html = ( new BlockFilters() )->render_block_search(
+            '<form><input type="search" class="wp-block-search__input"></form>',
+            array(),
+            $instance
+        );
+
+        $processor = new \WP_HTML_Tag_Processor( $html );
+        $processor->next_tag( array( 'tag_name' => 'form' ) );
+        $context = json_decode( $processor->get_attribute( 'data-wp-context' ), true );
+
+        $this->assertSame( 'seite', $context['paginationBase'] );
+    }
+
+    /**
+     * A custom loop's search form also sends a pagination base, falling back
+     * to core's own default when $wp_rewrite isn't available (some CLI
+     * contexts). It doesn't currently need it — only an inherited loop's
+     * pagination lives in the path — but the context is built once for every
+     * loop type, and the fallback is what protects a request with no
+     * $wp_rewrite at all from a fatal.
+     */
+    public function test_render_block_search_sends_pagination_base_for_a_custom_loop(): void {
+        $this->stub_search_render_functions();
+        $_GET = array();
+        unset( $GLOBALS['wp_rewrite'] );
+
+        $instance          = Mockery::mock( 'WP_Block' );
+        $instance->context = array(
+            'queryId' => 3,
+            'query'   => array( 'inherit' => false ),
+        );
+
+        $html = ( new BlockFilters() )->render_block_search(
+            '<form><input type="search" class="wp-block-search__input"></form>',
+            array(),
+            $instance
+        );
+
+        $processor = new \WP_HTML_Tag_Processor( $html );
+        $processor->next_tag( array( 'tag_name' => 'form' ) );
+        $context = json_decode( $processor->get_attribute( 'data-wp-context' ), true );
+
+        $this->assertSame( 'page', $context['paginationBase'] );
     }
 
     /**

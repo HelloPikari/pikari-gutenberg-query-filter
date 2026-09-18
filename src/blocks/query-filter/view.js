@@ -209,11 +209,20 @@ store( 'pikari/gutenberg-query-filter', {
 			// Build new URL with search parameter
 			const url = new URL( window.location );
 			const pageVar = context.pageVar || 'page';
+			const { paginationBase } = context;
 
 			// Remove page parameter when search changes
 			url.searchParams.delete( pageVar );
 			if ( pageVar !== 'page' ) {
 				url.searchParams.delete( 'page' );
+			}
+
+			// An inherited loop's page number can also live in the path.
+			if ( pageVar === 'paged' ) {
+				url.pathname = stripInheritedPagination(
+					url.pathname,
+					paginationBase || 'page'
+				);
 			}
 
 			// Update search parameter
