@@ -190,10 +190,10 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			).toBe( '/category/news/' );
 		} );
 
-		it( 'removes a trailing pagination segment without a trailing slash', () => {
+		it( 'preserves a path that had no trailing slash, rather than adding one', () => {
 			expect(
 				stripInheritedPagination( '/category/news/page/2', 'page' )
-			).toBe( '/category/news/' );
+			).toBe( '/category/news' );
 		} );
 
 		it( 'honours a non-default pagination base', () => {
@@ -246,6 +246,30 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 
 			expect( navigate ).toHaveBeenCalledWith(
 				'http://localhost/category/news/?query-author=jane-doe'
+			);
+		} );
+
+		it( 'preserves a path with no trailing slash, rather than adding one', async () => {
+			window.history.replaceState(
+				null,
+				'',
+				'http://localhost/category/news/page/2'
+			);
+			getContext.mockReturnValue( {
+				queryVar: 'query-author',
+				pageVar: 'paged',
+				paginationBase: 'page',
+			} );
+
+			await run(
+				actions.handleSelect( {
+					preventDefault: () => {},
+					target: { value: 'jane-doe' },
+				} )
+			);
+
+			expect( navigate ).toHaveBeenCalledWith(
+				'http://localhost/category/news?query-author=jane-doe'
 			);
 		} );
 

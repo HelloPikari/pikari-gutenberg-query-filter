@@ -47,6 +47,38 @@ test('an inherited archive keeps its own identity while filtering by author', as
 		.toEqual(newestTitles((post) => isNews(post) && isJane(post)));
 });
 
+test('a taxonomy filter cannot hijack the archive it runs on', async ({
+	page,
+}) => {
+	// A full navigation, not a checkbox click: the Interactivity Router only
+	// patches the Query block's own router region (BlockFilters::render_block_query()),
+	// which sits beside the query-title heading, not around it. A client-side
+	// filter change never re-renders the heading either way, so it can't
+	// prove anything about whether the *server's* response for this URL
+	// would have hijacked it. Only a real request exercises that.
+	const response = await page.goto('/category/news/?query-category=events');
+	expect(response.status()).toBe(200);
+
+	// This is §4.4's actual risk: a valid, different term intersected with
+	// the archive's own category, not merely an unknown one (see the next
+	// test). The old approach — writing filter terms into the tax_query
+	// query var — makes core think the page *is* that term: it overwrites
+	// the category_name/cat query vars from WP_Tax_Query::queried_terms
+	// (class-wp-query.php's "Ensure … 'cat', and 'category_name' vars are
+	// set for backward compatibility" block), hijacking the title along
+	// with it. TaxonomySubquery exists so it doesn't.
+	await expect(page.getByRole('heading', { name: /News/ })).toBeVisible();
+	await expect(page.getByRole('heading', { name: /Events/ })).toHaveCount(
+		0
+	);
+
+	expect(param(page, 'query-category')).toBe('events');
+
+	// News and Events are disjoint in this fixture — every post has exactly
+	// one category (content.js) — so intersecting them returns nothing.
+	await expect.poll(() => resultTitles(page)).toEqual([]);
+});
+
 test("an unknown taxonomy term doesn't 404 the archive", async ({ page }) => {
 	const response = await page.goto(
 		'/category/news/?query-category=does-not-exist'
