@@ -156,6 +156,11 @@ function pikari_gutenberg_query_filter_setup_cache_hooks() {
 function pikari_gutenberg_query_filter_init_query_handler() {
     // Instantiate the handler which will register its own hooks.
     new \Pikari\GutenbergQueryFilter\Core\QueryLoopHandler();
+
+    // Core never applies query_loop_block_query_vars to a Query Loop that
+    // inherits the main query, so MainQueryFilter filters it directly
+    // through pre_get_posts (spec section 4.4).
+    new \Pikari\GutenbergQueryFilter\Integrations\MainQueryFilter();
 }
 
 /**
