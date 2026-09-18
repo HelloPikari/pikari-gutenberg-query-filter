@@ -385,6 +385,11 @@ class QueryLoopHandlerTest extends TestCase {
      * pre_get_posts (spec section 4.4).
      */
     public function test_inherited_loop_returns_the_query_args_unchanged(): void {
+        // Stub what the non-inherited path would call, so a regression that
+        // removes the early return fails on a real assertion diff instead of
+        // an unstubbed get_taxonomies() fatal.
+        $this->stub_public_taxonomies();
+
         $_GET = array(
             'query-category' => 'news',
             's'              => 'mango',

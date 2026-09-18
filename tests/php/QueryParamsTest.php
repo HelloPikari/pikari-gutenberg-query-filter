@@ -71,6 +71,25 @@ class QueryParamsTest extends TestCase {
         $this->assertSame( 'query-page', QueryParams::from_block( $block )->page_key() );
     }
 
+    /**
+     * An explicit `queryId: 0` is not the same as a missing one: core's own
+     * page key depends on this distinction (post-template.php:50), and a
+     * future `?:` in place of `?? null` would silently break the first loop
+     * on a page.
+     */
+    public function test_from_block_with_an_explicit_query_id_of_zero_uses_query_0(): void {
+        $block          = Mockery::mock( 'WP_Block' );
+        $block->context = array(
+            'queryId' => 0,
+            'query'   => array( 'inherit' => false ),
+        );
+
+        $params = QueryParams::from_block( $block );
+
+        $this->assertSame( 'query-0-', $params->prefix() );
+        $this->assertSame( 'query-0-page', $params->page_key() );
+    }
+
     public function test_from_block_reads_inherit(): void {
         $block          = Mockery::mock( 'WP_Block' );
         $block->context = array( 'query' => array( 'inherit' => true ) );
