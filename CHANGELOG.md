@@ -12,15 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sort links use one URL parameter.** A loop's sort is now read from a single `query-{id}-sort` value (for example `query-3-sort=title-asc`), not the old pair of `orderby` and `order` parameters. Old bookmarked or shared sort links stop sorting; the loop falls back to its own default order.
 - **Author filter links use nicenames, not IDs.** Author options and links now write the user's nicename (`query-3-author=jane-doe`). A plain numeric author ID is still accepted and resolved, so links generated before this change keep working.
 - **An author value that matches nobody now shows no results,** instead of showing every author's posts. This matches how an unknown taxonomy term already behaved, and avoids revealing whether a given username exists.
+- **The Sort dropdown no longer shows a separate "Default" choice when the loop's own order already matches one of the sort options.** That option is selected instead, and choosing it keeps the URL clean.
 - **Internal helper classes are removed:** the `SortHelper` and `AbstractQueryHelper` classes, and the methods `FilterHelper::get_current_filter_value()`, `FilterHelper::get_*_filter_config()`, and `AuthorHelper::get_author_filter_config()`. These were never part of the documented `docs/hooks.md` contract, but any code calling them directly will need to move to `Url\QueryParams`, `Url\FilterState`, `Query\QueryArgs` and `Query\SortOptions`.
+
+### Fixed
+
+- Sticky posts no longer leak into filtered Query Loop results. A sticky post that doesn't match a taxonomy, author or search filter used to appear anyway; filtering now correctly excludes it.
+- A taxonomy filter no longer forces the loop's own taxonomy query to `relation => AND`. A Query Loop already configured with its own tax query (for example, its own `OR` relation) keeps that relation; the filter's terms are combined with it instead of overwriting it.
+- A post type filter no longer drops a loop's `post__in`. A loop built around a fixed list of posts (such as a "sticky only" loop) keeps that list when a post type filter is also applied.
+
+## [0.3.4] - 2026-09-16
 
 ### Fixed
 
 - A Sort block now works on its own. It loaded a script from a block that no longer exists, so without a Query Filter or Search block on the same page, choosing a sort did nothing. Its stylesheet also pointed at a file the build doesn't produce.
 - Block stylesheets are now versioned with the plugin version. They were stuck at `?ver=0.1.0`, so where a stylesheet isn't inlined, browsers and CDNs could keep serving CSS from an earlier release.
-- Sticky posts no longer leak into filtered Query Loop results. A sticky post that doesn't match a taxonomy, author or search filter used to appear anyway; filtering now correctly excludes it.
-- A taxonomy filter no longer forces the loop's own taxonomy query to `relation => AND`. A Query Loop already configured with its own tax query (for example, its own `OR` relation) keeps that relation; the filter's terms are combined with it instead of overwriting it.
-- A post type filter no longer drops a loop's `post__in`. A loop built around a fixed list of posts (such as a "sticky only" loop) keeps that list when a post type filter is also applied.
 
 ### Changed
 
@@ -90,7 +96,8 @@ Releases between 0.1.0 and 0.2.0 are listed on [GitHub Releases](https://github.
 - Initial release of pikari-gutenberg-query-filter
 - [Add initial features here]
 
-[Unreleased]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/compare/v0.3.4...HEAD
+[0.3.4]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v0.3.4
 [0.3.3]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v0.3.3
 [0.3.2]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v0.3.2
 [0.3.1]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v0.3.1
