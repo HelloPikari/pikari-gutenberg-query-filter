@@ -8,7 +8,16 @@ const fs = require('fs');
 const path = require('path');
 const { request } = require('@playwright/test');
 const { RequestUtils } = require('@wordpress/e2e-test-utils-playwright');
-const { AUTHORS, CATEGORIES, PAGES, POSTS } = require('../fixtures/content');
+const {
+	AUTHORS,
+	CATEGORIES,
+	PAGES,
+	POSTS,
+	TEMPLATES,
+} = require('../fixtures/content');
+
+// wp-env's default active theme (Twenty Twenty-Five).
+const THEME = 'twentytwentyfive';
 
 const deleteCategories = async (requestUtils) => {
 	const categories = await requestUtils.rest({
@@ -49,6 +58,19 @@ module.exports = async function fixtures(config) {
 	await requestUtils.deleteAllPages();
 	await requestUtils.deleteAllUsers();
 	await deleteCategories(requestUtils);
+	await requestUtils.deleteAllTemplates('wp_template');
+
+	// Five per page, matching newestTitles()'s default count, so the News
+	// category's six posts (spec-fixture POSTS, filtered to `news`) span two
+	// pages and inherited-loop pagination (tests/e2e/specs/inherited-loops.spec.js)
+	// has a real page 2 to reset from. The default of 10 would leave News on
+	// a single page. Custom Query Loop fixtures (PAGES below) set their own
+	// perPage and are unaffected.
+	await requestUtils.rest({
+		method: 'POST',
+		path: '/wp/v2/settings',
+		data: { posts_per_page: 5 },
+	});
 
 	const categoryIds = {};
 	for (const { name, slug } of CATEGORIES) {
@@ -110,6 +132,14 @@ module.exports = async function fixtures(config) {
 				status: 'publish',
 				content: page.content,
 			},
+		});
+	}
+
+	for (const template of Object.values(TEMPLATES)) {
+		await requestUtils.createTemplate('wp_template', {
+			slug: template.slug,
+			content: template.content,
+			theme: THEME,
 		});
 	}
 
