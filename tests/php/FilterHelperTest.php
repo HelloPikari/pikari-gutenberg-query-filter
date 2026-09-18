@@ -9,10 +9,21 @@ namespace Pikari\Tests\GutenbergQueryFilter;
 
 use Pikari\Tests\TestCase;
 use Pikari\GutenbergQueryFilter\Helpers\FilterHelper;
+use Pikari\GutenbergQueryFilter\Integrations\MainQueryFilter;
 use Brain\Monkey\Functions;
 use Brain\Monkey\Filters;
+use Mockery;
+use ReflectionProperty;
 
 class FilterHelperTest extends TestCase {
+
+    /**
+     * The $wp_query global's value before this test replaced it, restored
+     * in tearDown().
+     *
+     * @var mixed
+     */
+    private $original_wp_query;
 
     protected function setUp(): void {
         parent::setUp();
@@ -26,6 +37,277 @@ class FilterHelperTest extends TestCase {
                 return preg_replace( '/[^A-Za-z0-9_-]/', '', $sanitized );
             }
         );
+
+        global $wp_query;
+        $this->original_wp_query = $wp_query;
+
+        MainQueryFilter::reset_for_tests();
+    }
+
+    protected function tearDown(): void {
+        global $wp_query;
+        $wp_query = $this->original_wp_query;
+
+        MainQueryFilter::reset_for_tests();
+
+        parent::tearDown();
+    }
+
+    /**
+     * Record a main-query post_type value the way MainQueryFilter would,
+     * without running its full pre_get_posts pipeline. That pipeline is
+     * MainQueryFilter's own responsibility and is covered by
+     * MainQueryFilterTest; these tests only need the recorded value it
+     * produces.
+     *
+     * @param mixed $value Value MainQueryFilter::original( 'post_type' ) should return.
+     */
+    private function record_original_post_type( $value ): void {
+        $property = new ReflectionProperty( MainQueryFilter::class, 'original' );
+        $property->setValue( null, array( 'post_type' => $value ) );
+    }
+
+    /**
+     * Build a WP_Query stand-in stubbed with the is_*() methods and
+     * get_queried_object() that get_filter_post_types() can call, plus the
+     * raw `query` property used as a fallback when nothing was recorded.
+     *
+     * get() is deliberately left unstubbed: get_filter_post_types() must
+     * never call it for an inherited loop's post types, and Mockery throws
+     * if an unstubbed method is called.
+     *
+     * @param array $flags Overrides for the boolean is_*() methods.
+     * @param array $query Value for the `query` property (raw request query vars).
+     * @return \WP_Query
+     */
+    private function wp_query_stub( array $flags = array(), array $query = array() ): \WP_Query {
+        $flags = array_merge(
+            array(
+                'is_search'   => false,
+                'is_tax'      => false,
+                'is_category' => false,
+                'is_tag'      => false,
+            ),
+            $flags
+        );
+
+        $query_object = Mockery::mock( 'WP_Query' );
+
+        foreach ( $flags as $method => $value ) {
+            $query_object->shouldReceive( $method )->andReturn( $value );
+        }
+
+        $query_object->query = $query;
+
+        return $query_object;
+    }
+
+    /**
+     * Build a block instance for get_filter_post_types(), with the given
+     * inherit flag and block-declared postType.
+     *
+     * @param bool   $inherit   Whether the loop inherits the main query.
+     * @param string $post_type The block's own postType attribute.
+     * @return object
+     */
+    private function post_type_filter_block( bool $inherit, string $post_type = 'post' ): object {
+        return (object) array(
+            'context' => array(
+                'query' => array(
+                    'inherit'  => $inherit,
+                    'postType' => $post_type,
+                ),
+            ),
+        );
+    }
+
+    /*
+     * get_filter_post_types(), inherited loops (spec §4.5)
+     */
+
+    public function test_inherited_post_types_come_from_recorded_original_value(): void {
+        Functions\when( 'get_post_type_object' )->alias( fn( $slug ) => (object) array( 'name' => $slug ) );
+        Functions\when( 'get_option' )->justReturn( true );
+
+        $this->record_original_post_type( 'page' );
+
+        global $wp_query;
+        // No get() stub: get_filter_post_types() must not read the query
+        // this way, only through MainQueryFilter::original(). The `query`
+        // property is a decoy fallback value that must not win.
+        $wp_query = $this->wp_query_stub( array(), array( 'post_type' => 'attachment' ) );
+
+        $result = FilterHelper::get_filter_post_types( $this->post_type_filter_block( true, 'category' ) );
+
+        $this->assertSame( array( 'page' ), array_map( fn( $t ) => $t->name, array_values( $result ) ) );
+    }
+
+    public function test_inherited_post_types_replace_the_blocks_own_post_type_rather_than_merging(): void {
+        Functions\when( 'get_post_type_object' )->alias( fn( $slug ) => (object) array( 'name' => $slug ) );
+        Functions\when( 'get_option' )->justReturn( true );
+
+        $this->record_original_post_type( 'page' );
+
+        global $wp_query;
+        $wp_query = $this->wp_query_stub();
+
+        // The block declares postType=post; the main query says page. Only
+        // page must render (spec §4.5: "They replace the block context's postType").
+        $result = FilterHelper::get_filter_post_types( $this->post_type_filter_block( true, 'post' ) );
+
+        $this->assertSame( array( 'page' ), array_map( fn( $t ) => $t->name, array_values( $result ) ) );
+    }
+
+    public function test_inherited_post_types_on_search_with_empty_value_are_public_non_search_excluded_types(): void {
+        Functions\when( 'get_post_type_object' )->alias( fn( $slug ) => (object) array( 'name' => $slug ) );
+        Functions\when( 'get_option' )->justReturn( true );
+        Functions\expect( 'get_post_types' )
+            ->once()
+            ->with( array( 'public' => true, 'exclude_from_search' => false ) )
+            ->andReturn( array( 'post', 'page' ) );
+
+        $this->record_original_post_type( '' );
+
+        global $wp_query;
+        $wp_query = $this->wp_query_stub( array( 'is_search' => true ) );
+
+        $result = FilterHelper::get_filter_post_types( $this->post_type_filter_block( true ) );
+
+        $this->assertSame( array( 'post', 'page' ), array_map( fn( $t ) => $t->name, array_values( $result ) ) );
+    }
+
+    public function test_inherited_post_types_on_search_with_any_value_are_public_non_search_excluded_types(): void {
+        Functions\when( 'get_post_type_object' )->alias( fn( $slug ) => (object) array( 'name' => $slug ) );
+        Functions\when( 'get_option' )->justReturn( true );
+        Functions\expect( 'get_post_types' )
+            ->once()
+            ->with( array( 'public' => true, 'exclude_from_search' => false ) )
+            ->andReturn( array( 'post', 'page' ) );
+
+        $this->record_original_post_type( 'any' );
+
+        global $wp_query;
+        $wp_query = $this->wp_query_stub( array( 'is_search' => true ) );
+
+        $result = FilterHelper::get_filter_post_types( $this->post_type_filter_block( true ) );
+
+        $this->assertSame( array( 'post', 'page' ), array_map( fn( $t ) => $t->name, array_values( $result ) ) );
+    }
+
+    public function test_inherited_post_types_on_taxonomy_archive_with_empty_value_are_the_taxonomys_viewable_object_types(): void {
+        Functions\when( 'get_post_type_object' )->alias( fn( $slug ) => (object) array( 'name' => $slug ) );
+        Functions\when( 'get_option' )->justReturn( true );
+        Functions\when( 'is_post_type_viewable' )->alias( fn( $post_type ) => 'movie' !== $post_type );
+        Functions\when( 'get_taxonomy' )->justReturn( (object) array( 'object_type' => array( 'post', 'movie' ) ) );
+
+        $this->record_original_post_type( '' );
+
+        global $wp_query;
+        $wp_query = $this->wp_query_stub( array( 'is_tax' => true ) );
+        $wp_query->shouldReceive( 'get_queried_object' )->andReturn( (object) array( 'taxonomy' => 'genre' ) );
+
+        $result = FilterHelper::get_filter_post_types( $this->post_type_filter_block( true ) );
+
+        // Only 'post' survives: 'movie' is registered for the taxonomy but not viewable.
+        $this->assertSame( array( 'post' ), array_map( fn( $t ) => $t->name, array_values( $result ) ) );
+    }
+
+    public function test_inherited_post_types_anywhere_else_with_empty_value_default_to_post(): void {
+        Functions\when( 'get_post_type_object' )->alias( fn( $slug ) => (object) array( 'name' => $slug ) );
+        Functions\when( 'get_option' )->justReturn( true );
+
+        $this->record_original_post_type( '' );
+
+        global $wp_query;
+        $wp_query = $this->wp_query_stub();
+
+        $result = FilterHelper::get_filter_post_types( $this->post_type_filter_block( true ) );
+
+        $this->assertSame( array( 'post' ), array_map( fn( $t ) => $t->name, array_values( $result ) ) );
+    }
+
+    public function test_inherited_post_types_drop_attachment_when_attachment_pages_are_disabled(): void {
+        Functions\when( 'get_post_type_object' )->alias( fn( $slug ) => (object) array( 'name' => $slug ) );
+        Functions\when( 'get_option' )->justReturn( false );
+
+        $this->record_original_post_type( array( 'post', 'attachment' ) );
+
+        global $wp_query;
+        $wp_query = $this->wp_query_stub();
+
+        $result = FilterHelper::get_filter_post_types( $this->post_type_filter_block( true ) );
+
+        $this->assertSame( array( 'post' ), array_map( fn( $t ) => $t->name, array_values( $result ) ) );
+    }
+
+    public function test_inherited_post_types_keep_attachment_when_attachment_pages_are_enabled(): void {
+        Functions\when( 'get_post_type_object' )->alias( fn( $slug ) => (object) array( 'name' => $slug ) );
+        Functions\when( 'get_option' )->justReturn( true );
+
+        $this->record_original_post_type( array( 'post', 'attachment' ) );
+
+        global $wp_query;
+        $wp_query = $this->wp_query_stub();
+
+        $result = FilterHelper::get_filter_post_types( $this->post_type_filter_block( true ) );
+
+        $this->assertSame( array( 'post', 'attachment' ), array_map( fn( $t ) => $t->name, array_values( $result ) ) );
+    }
+
+    public function test_inherited_post_types_fall_back_to_wp_query_when_nothing_was_recorded(): void {
+        Functions\when( 'get_post_type_object' )->alias( fn( $slug ) => (object) array( 'name' => $slug ) );
+        Functions\when( 'get_option' )->justReturn( true );
+
+        // MainQueryFilter never ran its recording logic on this request
+        // (e.g. the first page load, with no filter parameter in the URL
+        // yet), so original( 'post_type' ) is null and the raw request's
+        // own post_type, a post type archive's for example, is used instead
+        // (spec §4.5).
+        global $wp_query;
+        $wp_query = $this->wp_query_stub( array(), array( 'post_type' => 'movie' ) );
+
+        $result = FilterHelper::get_filter_post_types( $this->post_type_filter_block( true ) );
+
+        $this->assertSame( array( 'movie' ), array_map( fn( $t ) => $t->name, array_values( $result ) ) );
+    }
+
+    public function test_custom_loop_post_types_are_unaffected_by_inherited_loop_changes(): void {
+        Functions\when( 'get_post_type_object' )->alias( fn( $slug ) => (object) array( 'name' => $slug ) );
+
+        $block = (object) array(
+            'context' => array(
+                'query' => array(
+                    'inherit'  => false,
+                    'postType' => 'post,page',
+                ),
+            ),
+        );
+
+        $result = FilterHelper::get_filter_post_types( $block );
+
+        $this->assertSame( array( 'post', 'page' ), array_map( fn( $t ) => $t->name, array_values( $result ) ) );
+    }
+
+    /**
+     * Advanced Query Loop's multiple_posts support (custom loops only) must
+     * keep working exactly as it did before this task.
+     */
+    public function test_custom_loop_multiple_posts_support_is_unaffected(): void {
+        Functions\when( 'get_post_type_object' )->alias( fn( $slug ) => (object) array( 'name' => $slug ) );
+
+        $block = (object) array(
+            'context' => array(
+                'query' => array(
+                    'inherit'        => false,
+                    'postType'       => 'post',
+                    'multiple_posts' => array( 'page', 'movie' ),
+                ),
+            ),
+        );
+
+        $result = FilterHelper::get_filter_post_types( $block );
+
+        $this->assertSame( array( 'post', 'page', 'movie' ), array_map( fn( $t ) => $t->name, array_values( $result ) ) );
     }
 
     /*

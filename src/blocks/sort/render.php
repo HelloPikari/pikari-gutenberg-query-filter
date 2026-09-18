@@ -1,5 +1,6 @@
 <?php
 
+use Pikari\GutenbergQueryFilter\Integrations\MainQueryFilter;
 use Pikari\GutenbergQueryFilter\Query\SortOptions;
 use Pikari\GutenbergQueryFilter\Url\QueryParams;
 
@@ -18,9 +19,17 @@ $requested     = SortOptions::find( $requested_key );
 
 // Find the option matching the loop's own order, which renders with an empty
 // value so choosing it removes the parameter (spec §4.3).
-$default_orderby = $block->context['query']['orderBy'] ?? '';
-$default_order   = $block->context['query']['order'] ?? '';
-$default_option  = SortOptions::match( $default_orderby, $default_order );
+if ( $params->is_inherit() ) {
+    // Block context always claims date/desc for an inherited loop, so the
+    // main query's own unfiltered order is read instead. An empty orderby,
+    // as on a search request, means relevance and matches no option.
+    $default_orderby = (string) ( MainQueryFilter::original( 'orderby' ) ?? '' );
+    $default_order   = (string) ( MainQueryFilter::original( 'order' ) ?? '' );
+} else {
+    $default_orderby = $block->context['query']['orderBy'] ?? '';
+    $default_order   = $block->context['query']['order'] ?? '';
+}
+$default_option = SortOptions::match( $default_orderby, $default_order );
 
 // Prepare template variables.
 $label_text  = $attributes['label'] ?? __( 'Sort By', 'pikari-gutenberg-query-filter' );
