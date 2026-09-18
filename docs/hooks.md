@@ -21,7 +21,7 @@ A custom loop's names come from its `queryId`, following the same `query-{id}-{k
 | Search    | `query-3-s=term`                 | `s=term` (core)                |
 | Page      | `query-3-page=2` (core)          | `/page/2/` or `paged=2` (core) |
 
-A **custom loop with no `queryId`** — every Query Loop in Twenty Twenty-Five, for example — uses the prefix `query-0-`. Its page parameter is the one exception: it stays `query-page`, because that's what core itself uses for a loop with no ID. This is different from an inherited loop, which never has a `queryId` and drops the prefix altogether rather than falling back to `0`.
+A **custom loop with no `queryId`** — every Query Loop in Twenty Twenty-Five, for example — uses the prefix `query-0-`. Its page parameter is the one exception: it stays `query-page`, because that's what core itself uses for a loop with no ID. This is different from an inherited loop, which never has a `queryId` and uses `query-` with no loop number at all, rather than falling back to `query-0-`.
 
 ### Values
 
@@ -39,9 +39,10 @@ A **custom loop with no `queryId`** — every Query Loop in Twenty Twenty-Five, 
 - **They never apply to** a single post or page, a 404, a feed, or the admin — a stray `?query-post_type=post` can't 404 a page.
 - **On a post type archive,** `query-post_type` is ignored; the archive is already that post type.
 - **On an author archive,** `query-author` is intersected with the archive's own author rather than replacing it. An author filter that doesn't include the archive's own author returns no results.
-- **Filtering never changes what the page is.** Its title, template and queried object stay the same. An unknown taxonomy term shows an empty result rather than a 404, and a filtered date archive doesn't 404 either.
+- **A taxonomy name that starts with digits and a hyphen** (`2024-events`) can't be filtered in an inherited loop: its parameter, `query-2024-events`, reads like loop 2024's own `events` key and is ignored rather than read as a taxonomy filter.
+- **Filtering never changes what the page is.** Its title, template and queried object stay the same. An unknown taxonomy term shows an empty result rather than a 404, and a filtered date archive doesn't 404 either — unless a hand-built link also pages it past the end, which still 404s.
 - **Filtering, sorting or searching resets pagination.** A change made from `/page/2/` returns to page 1.
-- **The Sort block starts on "Default"** in an inherited loop, because WordPress hasn't decided the query's order yet at the point the block renders.
+- **The Sort block starts on "Default"** on an inherited loop's first, unfiltered load. This plugin only records the archive's own order once a filter parameter is already present in the request, so with nothing recorded yet, no sort option matches and the empty placeholder shows.
 
 **Things to know:**
 
