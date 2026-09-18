@@ -20,6 +20,14 @@ $layout_direction = $attributes['layoutDirection'] ?? 'vertical';
 $params   = QueryParams::from_block( $block );
 $page_var = $params->page_key();
 
+// An inherited loop paginates through a trailing path segment on pretty
+// permalinks (/category/news/page/2/), not just the `paged` query var, so
+// view.js needs the rewrite's own pagination base to strip it on a filter
+// change (spec §3.3). $wp_rewrite isn't always available (some CLI
+// contexts), so fall back to core's own default.
+global $wp_rewrite;
+$pagination_base = ( $wp_rewrite instanceof WP_Rewrite ) ? $wp_rewrite->pagination_base : 'page';
+
 // Get configuration based on filter type
 switch ( $filter_type ) {
     case 'post-type':
@@ -110,6 +118,7 @@ echo wp_json_encode(
         'pageVar' => $page_var,
         'filterType' => $filter_type,
         'taxonomy' => $filter_type === 'taxonomy' ? $taxonomy : '',
+        'paginationBase' => $pagination_base,
     )
 );
 ?>

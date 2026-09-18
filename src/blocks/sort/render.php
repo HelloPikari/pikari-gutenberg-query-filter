@@ -12,6 +12,14 @@ $params   = QueryParams::from_block( $block );
 $sort_var = $params->key( 'sort' );
 $page_var = $params->page_key();
 
+// An inherited loop paginates through a trailing path segment on pretty
+// permalinks (/category/news/page/2/), not just the `paged` query var, so
+// view.js needs the rewrite's own pagination base to strip it on a filter
+// change (spec §3.3). $wp_rewrite isn't always available (some CLI
+// contexts), so fall back to core's own default.
+global $wp_rewrite;
+$pagination_base = ( $wp_rewrite instanceof WP_Rewrite ) ? $wp_rewrite->pagination_base : 'page';
+
 // Resolve the requested sort key against the allowlist (spec §3.2).
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Filtering parameters don't require nonces.
 $requested_key = isset( $_GET[ $sort_var ] ) ? sanitize_text_field( wp_unslash( $_GET[ $sort_var ] ) ) : '';
@@ -50,6 +58,7 @@ echo wp_json_encode(
     array(
         'sortVar' => $sort_var,
         'pageVar' => $page_var,
+        'paginationBase' => $pagination_base,
     )
 );
 ?>

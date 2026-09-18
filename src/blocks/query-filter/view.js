@@ -29,6 +29,27 @@ const enableInjectedStyles = () => {
 // On back/forward the router re-renders the cached page in a microtask, so run after it.
 window.addEventListener( 'popstate', () => setTimeout( enableInjectedStyles ) );
 
+/**
+ * Remove a trailing pagination path segment from a URL's pathname.
+ *
+ * An inherited loop paginates through a `/{base}/{n}/` path segment on
+ * pretty permalinks, not only the `paged` query var (spec §3.3). Filtering
+ * without stripping it can leave a request pointed at a page number the
+ * filtered query no longer has, which core 404s (spec §4.4). Only a
+ * trailing segment is stripped, so a path that merely contains the base
+ * word elsewhere (`/page-two/`) or has it followed by more path
+ * (`/blog/page/2/extra/`) is left untouched.
+ *
+ * @param {string} pathname       URL pathname.
+ * @param {string} paginationBase Rewrite pagination base, e.g. "page".
+ * @return {string} Pathname with a trailing pagination segment removed.
+ */
+export const stripInheritedPagination = ( pathname, paginationBase ) => {
+	const base = paginationBase.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' );
+
+	return pathname.replace( new RegExp( `/${ base }/\\d+/?$` ), '/' );
+};
+
 function* navigate( url ) {
 	captureInjectedStyles();
 
@@ -58,7 +79,7 @@ store( 'pikari/gutenberg-query-filter', {
 			event.preventDefault();
 			const { ref } = getElement();
 			const context = getContext();
-			const { queryVar, pageVar } = context;
+			const { queryVar, pageVar, paginationBase } = context;
 
 			// Get all checkboxes in this filter block
 			const filterBlock = ref.closest( '[data-wp-interactive="pikari/gutenberg-query-filter"]' );
@@ -72,6 +93,14 @@ store( 'pikari/gutenberg-query-filter', {
 			url.searchParams.delete( pageVar );
 			if ( pageVar !== 'page' ) {
 				url.searchParams.delete( 'page' );
+			}
+
+			// An inherited loop's page number can also live in the path.
+			if ( pageVar === 'paged' ) {
+				url.pathname = stripInheritedPagination(
+					url.pathname,
+					paginationBase || 'page'
+				);
 			}
 
 			// Update this filter's parameter
@@ -88,7 +117,7 @@ store( 'pikari/gutenberg-query-filter', {
 		*handleSelect( event ) {
 			event.preventDefault();
 			const context = getContext();
-			const { queryVar, pageVar } = context;
+			const { queryVar, pageVar, paginationBase } = context;
 			const value = event.target.value;
 
 			// Build new URL with all current parameters
@@ -98,6 +127,14 @@ store( 'pikari/gutenberg-query-filter', {
 			url.searchParams.delete( pageVar );
 			if ( pageVar !== 'page' ) {
 				url.searchParams.delete( 'page' );
+			}
+
+			// An inherited loop's page number can also live in the path.
+			if ( pageVar === 'paged' ) {
+				url.pathname = stripInheritedPagination(
+					url.pathname,
+					paginationBase || 'page'
+				);
 			}
 
 			// Update this filter's parameter
@@ -114,7 +151,7 @@ store( 'pikari/gutenberg-query-filter', {
 		*handleSort( event ) {
 			event.preventDefault();
 			const context = getContext();
-			const { sortVar, pageVar } = context;
+			const { sortVar, pageVar, paginationBase } = context;
 			const value = event.target.value;
 
 			// Build new URL with all current parameters
@@ -124,6 +161,14 @@ store( 'pikari/gutenberg-query-filter', {
 			url.searchParams.delete( pageVar );
 			if ( pageVar !== 'page' ) {
 				url.searchParams.delete( 'page' );
+			}
+
+			// An inherited loop's page number can also live in the path.
+			if ( pageVar === 'paged' ) {
+				url.pathname = stripInheritedPagination(
+					url.pathname,
+					paginationBase || 'page'
+				);
 			}
 
 			// Update the sort parameter

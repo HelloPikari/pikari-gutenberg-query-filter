@@ -8,6 +8,7 @@ let callbacks;
 let getContext;
 let navigate;
 let routerState;
+let stripInheritedPagination;
 
 const event = {
 	preventDefault: () => {},
@@ -51,7 +52,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 		( {
 			actions: { navigate },
 		} = require( '@wordpress/interactivity-router' ) );
-		require( '../../../../src/blocks/query-filter/view' );
+		( { stripInheritedPagination } = require( '../../../../src/blocks/query-filter/view' ) );
 		( { actions, callbacks } = store.getStore(
 			'pikari/gutenberg-query-filter'
 		) );
@@ -61,6 +62,10 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			queryVar: 'query-3-category',
 			pageVar: 'query-3-page',
 		} );
+	} );
+
+	afterEach( () => {
+		window.history.replaceState( null, '', '/' );
 	} );
 
 	it( 'should navigate to the filtered URL', async () => {
@@ -148,10 +153,6 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			} );
 		} );
 
-		afterEach( () => {
-			window.history.replaceState( null, '', '/' );
-		} );
-
 		it( 'writes a single sort parameter and drops the page parameter', async () => {
 			window.history.replaceState( null, '', '/?query-3-page=2' );
 
@@ -178,6 +179,116 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			);
 
 			expect( navigate ).toHaveBeenCalledWith( 'http://localhost/' );
+		} );
+	} );
+
+	describe( 'stripInheritedPagination', () => {
+		it( 'removes a trailing pagination segment with a trailing slash', () => {
+			expect(
+				stripInheritedPagination( '/category/news/page/2/', 'page' )
+			).toBe( '/category/news/' );
+		} );
+
+		it( 'removes a trailing pagination segment without a trailing slash', () => {
+			expect(
+				stripInheritedPagination( '/category/news/page/2', 'page' )
+			).toBe( '/category/news/' );
+		} );
+
+		it( 'honours a non-default pagination base', () => {
+			expect(
+				stripInheritedPagination(
+					'/kategorie/neuigkeiten/seite/2/',
+					'seite'
+				)
+			).toBe( '/kategorie/neuigkeiten/' );
+		} );
+
+		it( 'leaves a path that merely contains the word "page" untouched', () => {
+			expect( stripInheritedPagination( '/page-two/', 'page' ) ).toBe(
+				'/page-two/'
+			);
+		} );
+
+		it( 'only strips a trailing segment, not one followed by more path', () => {
+			expect(
+				stripInheritedPagination( '/blog/page/2/extra/', 'page' )
+			).toBe( '/blog/page/2/extra/' );
+		} );
+
+		it( 'leaves a path with no pagination segment untouched', () => {
+			expect( stripInheritedPagination( '/category/news/', 'page' ) ).toBe(
+				'/category/news/'
+			);
+		} );
+	} );
+
+	describe( 'inherited-loop pagination reset', () => {
+		it( "strips an inherited loop's pagination path segment on a filter change", async () => {
+			window.history.replaceState(
+				null,
+				'',
+				'http://localhost/category/news/page/2/'
+			);
+			getContext.mockReturnValue( {
+				queryVar: 'query-author',
+				pageVar: 'paged',
+				paginationBase: 'page',
+			} );
+
+			await run(
+				actions.handleSelect( {
+					preventDefault: () => {},
+					target: { value: 'jane-doe' },
+				} )
+			);
+
+			expect( navigate ).toHaveBeenCalledWith(
+				'http://localhost/category/news/?query-author=jane-doe'
+			);
+		} );
+
+		it( "honours the site's pagination base when stripping", async () => {
+			window.history.replaceState(
+				null,
+				'',
+				'http://localhost/kategorie/neuigkeiten/seite/2/'
+			);
+			getContext.mockReturnValue( {
+				queryVar: 'query-author',
+				pageVar: 'paged',
+				paginationBase: 'seite',
+			} );
+
+			await run(
+				actions.handleSelect( {
+					preventDefault: () => {},
+					target: { value: 'jane-doe' },
+				} )
+			);
+
+			expect( navigate ).toHaveBeenCalledWith(
+				'http://localhost/kategorie/neuigkeiten/?query-author=jane-doe'
+			);
+		} );
+
+		it( "leaves a custom loop's path untouched", async () => {
+			window.history.replaceState(
+				null,
+				'',
+				'http://localhost/some-page/page/2/'
+			);
+			getContext.mockReturnValue( {
+				queryVar: 'query-3-category',
+				pageVar: 'query-3-page',
+				paginationBase: 'page',
+			} );
+
+			await run( actions.handleSelect( event ) );
+
+			expect( navigate ).toHaveBeenCalledWith(
+				'http://localhost/some-page/page/2/?query-3-category=articles'
+			);
 		} );
 	} );
 } );
