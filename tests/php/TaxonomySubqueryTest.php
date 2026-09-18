@@ -171,12 +171,42 @@ class TaxonomySubqueryTest extends TestCase {
         $this->assertSqlEquals( 'AND 1=0', $result );
     }
 
+    /**
+     * Both term_taxonomy_id values carry injected SQL rather than a clean
+     * numeric string. If either (int) cast in
+     * TaxonomySubquery::resolve_term_taxonomy_ids() were removed, the
+     * injected text would land straight in the fragment and this assertion
+     * would fail — a plain '11' fixture can't tell the difference, since it
+     * renders the same whether or not it's cast.
+     */
     public function test_ids_are_cast_to_integers(): void {
-        Functions\when( 'get_terms' )->justReturn( array( $this->term( 1, '11' ) ) );
+        Functions\when( 'get_terms' )->justReturn(
+            array(
+                $this->term( 1, '11 OR 1=1' ),
+                $this->term( 2, '12; DROP TABLE wp_posts' ),
+            )
+        );
 
-        $result = TaxonomySubquery::where( array( 'category' => array( 'news' ) ) );
+        $result = TaxonomySubquery::where( array( 'category' => array( 'news', 'events' ) ) );
 
-        $this->assertStringContainsString( 'IN (11)', $result );
-        $this->assertStringNotContainsString( "'11'", $result );
+        $this->assertSqlEquals(
+            'AND wp_posts.ID IN ( SELECT object_id FROM wp_term_relationships WHERE term_taxonomy_id IN (11,12) )',
+            $result
+        );
+    }
+
+    /**
+     * A hierarchical taxonomy whose slug matches no term has no parent term
+     * to look up children for, so it must still produce the no-posts
+     * fragment rather than skip the taxonomy's condition entirely.
+     */
+    public function test_hierarchical_taxonomy_with_no_matching_term_matches_no_posts(): void {
+        Functions\when( 'is_taxonomy_hierarchical' )->justReturn( true );
+        Functions\when( 'get_terms' )->justReturn( array() );
+        Functions\expect( 'get_term_children' )->never();
+
+        $result = TaxonomySubquery::where( array( 'category' => array( 'nonexistent' ) ) );
+
+        $this->assertSqlEquals( 'AND 1=0', $result );
     }
 }
