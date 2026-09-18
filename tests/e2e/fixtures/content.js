@@ -14,8 +14,17 @@ const CATEGORIES = [
 
 const AUTHORS = [
 	{ username: 'jane-doe', name: 'Jane Doe' },
-	{ username: 'sam-lee', name: 'Sam Lee' },
+	// A REST slug that differs from the username, so specs can tell the
+	// author filter's URL value (the nicename) apart from the username.
+	{ username: 'sam-lee', name: 'Sam Lee', slug: 'sam-the-editor' },
 ];
+
+// The nicename Sam Lee's REST record resolves to; exported so specs can
+// assert the author filter writes it to the URL (spec §3.2).
+const AUTHOR_SLUG = 'sam-the-editor';
+
+// A sticky post outside News and Events, older than every other post.
+const STICKY_TITLE = 'Quince';
 
 const TITLES = [
 	'Kiwi',
@@ -39,20 +48,52 @@ const POSTS = TITLES.map((title, index) => ({
 	date: `2026-01-${String(index + 1).padStart(2, '0')}T09:00:00`,
 	category: index % 2 === 0 ? 'news' : 'events',
 	author: index < 6 ? 'jane-doe' : 'sam-lee',
-}));
+})).concat({
+	title: STICKY_TITLE,
+	// Older than every dated post above, so it only shows up via the sticky pin.
+	date: '2025-12-31T09:00:00',
+	category: 'uncategorized',
+	author: 'jane-doe',
+	sticky: true,
+});
 
 /**
  * Titles of the newest posts matching a predicate, newest first.
  *
- * @param {Function} predicate Receives a POSTS entry.
- * @param {number}   count     Posts per page.
+ * WordPress pins a sticky post to the front of an unfiltered loop's first
+ * page (spec §4.2); pass `sticky: true` to reflect that. When the sticky
+ * post is older than every other match (as fixture STICKY_TITLE is), it
+ * ranks outside the normal top `count` on its own date, so WordPress fetches
+ * it separately and adds it as an extra post rather than displacing one —
+ * the page shows `count + 1` titles. A loop with any filter applied ignores
+ * sticky posts, so callers that already pass a predicate for an active
+ * filter should leave this off.
+ *
+ * @param {Function} predicate      Receives a POSTS entry.
+ * @param {number}   count          Posts per page.
+ * @param {Object}   options
+ * @param {boolean}  options.sticky Whether the sticky post is pinned first.
  * @return {string[]} Titles.
  */
-const newestTitles = (predicate = () => true, count = 5) =>
-	POSTS.filter(predicate)
-		.reverse()
-		.slice(0, count)
+const newestTitles = (predicate = () => true, count = 5, { sticky = false } = {}) => {
+	// Sort by date rather than relying on array order: STICKY_TITLE is
+	// appended last in POSTS but dated before everything else.
+	const titles = POSTS.filter(predicate)
+		.slice()
+		.sort((a, b) => new Date(b.date) - new Date(a.date))
 		.map((post) => post.title);
+
+	if (!sticky) {
+		return titles.slice(0, count);
+	}
+
+	const top = titles.slice(0, count);
+	if (top.includes(STICKY_TITLE)) {
+		return [STICKY_TITLE, ...top.filter((title) => title !== STICKY_TITLE)];
+	}
+
+	return [STICKY_TITLE, ...top];
+};
 
 /**
  * The first titles in alphabetical order.
@@ -139,11 +180,13 @@ ${injectedStyleBlock}`,
 };
 
 module.exports = {
+	AUTHOR_SLUG,
 	AUTHORS,
 	CATEGORIES,
 	INJECTED_COLOR,
 	PAGES,
 	POSTS,
+	STICKY_TITLE,
 	newestTitles,
 	titlesByTitle,
 };

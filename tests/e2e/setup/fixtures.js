@@ -60,8 +60,16 @@ module.exports = async function fixtures(config) {
 		categoryIds[slug] = term.id;
 	}
 
+	// The default "Uncategorized" category can't be deleted (see
+	// deleteCategories() above), so reuse it rather than create a duplicate.
+	const [uncategorized] = await requestUtils.rest({
+		path: '/wp/v2/categories',
+		params: { slug: 'uncategorized' },
+	});
+	categoryIds.uncategorized = uncategorized.id;
+
 	const authorIds = {};
-	for (const { username, name } of AUTHORS) {
+	for (const { username, name, slug } of AUTHORS) {
 		const user = await requestUtils.rest({
 			method: 'POST',
 			path: '/wp/v2/users',
@@ -71,6 +79,7 @@ module.exports = async function fixtures(config) {
 				email: `${username}@example.com`,
 				password: 'password',
 				roles: ['author'],
+				...(slug ? { slug } : {}),
 			},
 		});
 		authorIds[username] = user.id;
@@ -86,6 +95,7 @@ module.exports = async function fixtures(config) {
 				date: post.date,
 				categories: [categoryIds[post.category]],
 				author: authorIds[post.author],
+				...(post.sticky ? { sticky: true } : {}),
 			},
 		});
 	}

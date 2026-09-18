@@ -15,6 +15,9 @@ for (const [key, fixture] of Object.entries(PAGES)) {
 		await expect(
 			page.locator('.wp-block-pikari-gutenberg-query-filter').first()
 		).toBeVisible();
-		expect(await resultTitles(page)).toEqual(newestTitles());
+		// Sticky posts pin to the front of an unfiltered loop's first page (spec §4.2).
+		expect(await resultTitles(page)).toEqual(
+			newestTitles(undefined, undefined, { sticky: true })
+		);
 	});
 }

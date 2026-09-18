@@ -147,7 +147,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 			} ) ),
 			author: authors.map( ( author ) => ( {
 				key: author.id,
-				value: author.id,
+				value: author.slug,
 				label: author.name,
 				slug: author.slug,
 			} ) ),

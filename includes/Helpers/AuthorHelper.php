@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Helper class for query author filter functionality.
  */
-class AuthorHelper extends AbstractQueryHelper {
+class AuthorHelper {
 
     /**
      * Cache key prefix for author data.
@@ -26,21 +26,6 @@ class AuthorHelper extends AbstractQueryHelper {
      * Cache expiry time in seconds (1 hour).
      */
     const CACHE_EXPIRY = 3600;
-
-    /**
-     * Get author filter configuration.
-     *
-     * @param array $block Block instance.
-     * @return array {
-     *     Query configuration array.
-     *     @type string $query_var Query variable name.
-     *     @type string $page_var  Page variable name.
-     *     @type string $base_url  Base URL without query parameters.
-     * }
-     */
-    public static function get_author_filter_config( $block ) {
-        return static::get_query_config( $block, 'author' );
-    }
 
     /**
      * Get authors for filter with caching.

@@ -326,26 +326,46 @@ When working with frontend code, always:
 
 ### Query Filter render flow
 
-1. `src/blocks/query-filter/render.php` resolves the query variable and loads raw items for the `filterType`: `FilterHelper::get_filter_post_types()`, `FilterHelper::get_taxonomy_filter_terms()`, or `AuthorHelper::get_filter_authors()`.
-2. `FilterHelper::get_filter_options( $items, $attributes )` normalizes items into `value` / `label` / `slug` / `item` arrays and applies `pikari_gutenberg_query_filter_options`.
-3. Radio groups prepend `FilterHelper::get_all_option()`, the "All" choice, which stays outside the options filter. For each radio or checkbox option, `FilterHelper::get_option_classes()` builds the `<label>` classes, including the unique `{key}_{slug}` class, and applies `pikari_gutenberg_query_filter_option_classes`.
-4. `FilterHelper::get_option_label_html()` builds the markup after the `<input>`, applies `pikari_gutenberg_query_filter_option_label`, and sanitizes it with `wp_kses_post()`.
-5. `src/blocks/query-filter/view.js` reads `input.value` on change and navigates with `@wordpress/interactivity-router`. The router only swaps in the new results because `BlockFilters::render_block_query()` gives the core/query wrapper both `data-wp-router-region` and `data-wp-interactive`. Without the interactive attribute the router fetches the filtered page and silently discards it — the URL changes, the results do not.
+1. `Url\QueryParams::from_block( $block )` resolves this loop's parameter names from its block context (`queryId`, or none for `query-0-`): `$params->key( $name )` for a filter's URL variable, `$params->page_key()` for its pagination key. Both `src/blocks/query-filter/render.php` and `src/blocks/sort/render.php` start here.
+2. `src/blocks/query-filter/render.php` loads raw items for the block's `filterType`: `FilterHelper::get_filter_post_types()`, `FilterHelper::get_taxonomy_filter_terms()`, or `AuthorHelper::get_filter_authors()`.
+3. `FilterHelper::get_filter_options( $items, $attributes )` normalizes items into `value` / `label` / `slug` / `item` arrays and applies `pikari_gutenberg_query_filter_options`.
+4. Radio groups prepend `FilterHelper::get_all_option()`, the "All" choice, which stays outside the options filter. For each radio or checkbox option, `FilterHelper::get_option_classes()` builds the `<label>` classes, including the unique `{key}_{slug}` class, and applies `pikari_gutenberg_query_filter_option_classes`.
+5. `FilterHelper::get_option_label_html()` builds the markup after the `<input>`, applies `pikari_gutenberg_query_filter_option_label`, and sanitizes it with `wp_kses_post()`.
+6. `src/blocks/query-filter/view.js` reads `input.value` on change and navigates with `@wordpress/interactivity-router`. The router only swaps in the new results because `BlockFilters::render_block_query()` gives the core/query wrapper both `data-wp-router-region` and `data-wp-interactive`. Without the interactive attribute the router fetches the filtered page and silently discards it — the URL changes, the results do not.
+
+### Applying filters to the query
+
+This is the other half of the round trip: turning the URL parameters `render.php` reads back into `WP_Query` arguments. It's a separate path from rendering options above and doesn't touch `FilterHelper`.
+
+- `Core\QueryLoopHandler` hooks `query_loop_block_query_vars` at priority 19. It's a thin adapter: for a custom Query Loop (one with a `queryId`, or none, falling back to `query-0-`) it builds `Url\QueryParams::from_block( $block )`, reads `Url\FilterState::for_loop( $params )`, and merges the result into the loop's query arguments with `Query\QueryArgs::apply()`.
+- `Url\FilterState::for_loop()` parses and validates `$_GET` once per loop prefix per request — core rebuilds a custom loop's query vars up to 6 times per page — and memoizes the result; `FilterState::reset_cache()` clears it between tests. `FilterState::from_array()` is the uncached constructor tests call directly.
+- `Query\QueryArgs::apply()` is a pure merge, with no WordPress calls of its own: it overrides `post_type` (leaving `post__in` alone), builds one `tax_query` clause per filtered taxonomy (nesting the loop's own `tax_query` unchanged when it already has one, rather than replacing its relation), sets `author__in` and `s`, sets `orderby` / `order` / `meta_key` from the resolved sort option, and sets `ignore_sticky_posts` once any filter is active and the loop hasn't already decided.
+- Sort uses one allowlist everywhere: `Query\SortOptions::all()` supplies the Sort block's `<select>` options and is filterable with `pikari_gutenberg_query_filter_sort_options`; `SortOptions::find()` validates the `sort` URL parameter against that same list; `SortOptions::match()` finds the option matching a loop's own default order (from block context for a custom loop) so selecting it renders with an empty value and clears the parameter.
+- Inherited Query Loops (archive, search and home templates) aren't touched by `QueryLoopHandler` — `modify_query()` returns early for them. Filtering those is a later release; only their own `s` search parameter works today.
 
 ### Extension rules
 
 - Option logic lives in `FilterHelper`, not `render.php`. `render.php` is not unit-tested; keep it a loop over helper output. Do not reintroduce per-filter-type `switch` blocks there.
+- Query-argument logic lives in `Query\QueryArgs`, sort logic in `Query\SortOptions`, and URL parsing/validation in `Url\FilterState` and `Url\QueryParams` — not in `Core\QueryLoopHandler`, which stays a thin adapter over them.
 - New hooks use the `pikari_gutenberg_query_filter_` prefix and ship with a PHPDoc block at the `apply_filters()` call, a Brain\Monkey test (`Filters\expectApplied`), and a section in `docs/hooks.md`.
 - Keep the `<input>` outside filterable markup. `view.js` depends on its `type`, `value`, `name`, and `data-wp-on--change` attributes.
 - Unique option classes (`category_news`, `post-type_page`, `author_jane-doe`, `category_all`) are deliberately **unprefixed** — a product decision (2026-09-12) and the one exception to the CSS Class Name Standards below. Do not add the plugin prefix to them.
 - The `{key}_{slug}` format is implemented twice: `FilterHelper::get_option_classes()` for the frontend and `src/utils/option-class-name.js` for the editor preview. Change both together, with their tests.
 - Existing BEM classes (`__radio-item`, `__checkbox-item`, `__radio-text`, `__checkbox-text`, `__*-group`, `__select`, `__label`) are public. Do not rename them.
-- The Sort block has no radios or checkboxes, and none of these filters apply to it.
+- The Sort block has no radios or checkboxes, and none of these three option filters apply to it. It has its own filter instead, `pikari_gutenberg_query_filter_sort_options` (see `docs/hooks.md`).
 
 ### Tests for this area
 
 - `tests/php/FilterHelperTest.php` — Brain\Monkey. Plugin classes load through the composer `autoload.psr-4` entry for `includes/`; run `composer dump-autoload` after adding a class.
-- `tests/unit/utils/option-class-name.test.js` — Jest.
+- `tests/php/QueryParamsTest.php` — URL parameter names per loop: the `query-{id}-` prefix, the `queryId: 0` vs. missing-`queryId` distinction, and inherited-loop keys.
+- `tests/php/FilterStateTest.php` — parsing and validating `$_GET` into post types, taxonomies, author IDs, search and sort for one loop (spec §3.2).
+- `tests/php/QueryArgsTest.php` — merging `FilterState` into `WP_Query` arguments: `post__in`, `tax_query` relations, sticky posts.
+- `tests/php/QueryLoopHandlerTest.php` — the `query_loop_block_query_vars` adapter: hook registration, prefix resolution, the inherited-loop early return.
+- `tests/php/SortOptionsTest.php` — the sort allowlist that keeps `orderby`/`order`/`meta_key` off arbitrary URL input.
+- `tests/php/BlockFiltersTest.php` — core block integrations: router-region markup, Search block naming, block-style versioning, unique ID reservation.
+- `tests/unit/utils/option-class-name.test.js` — Jest. The `{key}_{slug}` option class format, mirrored from `FilterHelper::get_option_classes()`.
+- `tests/unit/blocks/block-metadata.test.js` — Jest. `block.json` fields match what the build actually produces.
+- `tests/e2e/specs/` — Playwright, against a seeded wp-env. Filtering, sorting, sticky posts, author nicenames (including old numeric links), and injected styles surviving enhanced pagination.
 
 ## Git Workflow
 

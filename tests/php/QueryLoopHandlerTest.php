@@ -1,10 +1,15 @@
 <?php
 /**
- * Characterization tests for QueryLoopHandler (0.3.4 behaviour).
+ * Characterization tests for QueryLoopHandler, the thin adapter over the
+ * Url\QueryParams, Url\FilterState and Query\QueryArgs classes (1.0 contract).
  *
- * These pin how URL parameters become Query Loop query arguments before the
- * 1.0 rewrite. Tests describing a known bug say so; B1 changes only the
- * behaviours listed in the 1.0 spec, section 3.6.
+ * Detailed value parsing and query-merging rules now live in FilterStateTest
+ * and QueryArgsTest; this file pins only the adapter's own behaviour: hook
+ * registration, prefix resolution, the inherited-loop early return, and one
+ * example of each filter type reaching the query arguments. Tests whose
+ * expected behaviour changed from 0.3.4 carry a docblock naming the spec
+ * clause that now governs them
+ * (docs/superpowers/specs/2026-09-16-query-filter-1.0-design.md, section 3.6).
  *
  * @package Pikari\Tests\GutenbergQueryFilter
  */
@@ -15,12 +20,13 @@ use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
 use Mockery;
 use Pikari\GutenbergQueryFilter\Core\QueryLoopHandler;
+use Pikari\GutenbergQueryFilter\Url\FilterState;
 use Pikari\Tests\TestCase;
 
 class QueryLoopHandlerTest extends TestCase {
 
     /**
-     * Post types the stubs treat as registered and viewable.
+     * Post types the stubs treat as viewable.
      */
     private const VIEWABLE_POST_TYPES = array( 'post', 'page', 'resource' );
 
@@ -36,21 +42,33 @@ class QueryLoopHandlerTest extends TestCase {
                 return abs( (int) $value );
             }
         );
-        Functions\when( 'post_type_exists' )->alias(
-            function ( $post_type ) {
-                return in_array( $post_type, array_merge( self::VIEWABLE_POST_TYPES, array( 'wp_block' ) ), true );
-            }
-        );
         Functions\when( 'is_post_type_viewable' )->alias(
             function ( $post_type ) {
                 return in_array( $post_type, self::VIEWABLE_POST_TYPES, true );
             }
         );
-        Functions\when( 'taxonomy_exists' )->justReturn( true );
+        Functions\when( 'is_taxonomy_viewable' )->justReturn( true );
+        Functions\when( 'sanitize_title_for_query' )->alias(
+            function ( $value ) {
+                return strtolower( (string) $value );
+            }
+        );
+        Functions\when( 'get_option' )->justReturn( false );
+        Functions\when( 'get_current_blog_id' )->justReturn( 1 );
+        Functions\when( 'get_users' )->justReturn( array() );
+        Functions\stubTranslationFunctions();
+        Functions\when( 'sanitize_key' )->alias(
+            function ( $key ) {
+                return strtolower( preg_replace( '/[^a-zA-Z0-9_\-]/', '', (string) $key ) );
+            }
+        );
     }
 
     protected function tearDown(): void {
         $_GET = array();
+        // FilterState::for_loop() memoizes per prefix; without this, the next
+        // test in this file would read this test's $_GET (see task-5-brief).
+        FilterState::reset_cache();
         parent::tearDown();
     }
 
@@ -181,13 +199,13 @@ class QueryLoopHandlerTest extends TestCase {
     }
 
     /**
-     * Known behaviour B1 changes: a post type filter should keep the loop's
-     * post__in, for example sticky "only" (spec §3.6).
+     * Change from 0.3.4, which removed post__in and broke a loop like sticky
+     * "only" (spec section 3.6).
      */
-    public function test_post_type_filter_removes_post__in(): void {
+    public function test_post_type_filter_keeps_post__in(): void {
         $result = $this->filter( array( 'query-3-post_type' => 'page' ), array( 'post__in' => array( 7, 9 ) ) );
 
-        $this->assertArrayNotHasKey( 'post__in', $result );
+        $this->assertSame( array( 7, 9 ), $result['post__in'] );
     }
 
     /*
@@ -241,20 +259,23 @@ class QueryLoopHandlerTest extends TestCase {
     }
 
     /**
-     * Known bug B1 fixes: filters other than post type leave ignore_sticky_posts
-     * unset, so core adds sticky posts that don't match the filter
-     * (spec §1, §3.6, §4.2).
+     * Change from 0.3.4, in which only a post type filter cleared sticky
+     * posts. Now any filter does, because core prepends sticky posts on
+     * page 1 without applying tax, author or search conditions
+     * (spec section 1, section 3.6, section 4.2).
      */
-    public function test_taxonomy_filter_leaves_ignore_sticky_posts_unset(): void {
-        $this->assertArrayNotHasKey( 'ignore_sticky_posts', $this->filter( array( 'query-3-category' => 'news' ) ) );
+    public function test_any_filter_ignores_sticky_posts(): void {
+        $result = $this->filter( array( 'query-3-category' => 'news' ) );
+
+        $this->assertTrue( $result['ignore_sticky_posts'] );
     }
 
     /**
-     * Known bug B1 fixes: the loop's own relation is overwritten with AND,
-     * so an OR tax_query (such as core's post format filter) stops matching
-     * (spec §1, §3.6, §4.2).
+     * Change from 0.3.4, which forced the loop's existing tax_query relation
+     * to AND and broke core's OR post-format tax_query
+     * (spec section 3.6, section 4.2).
      */
-    public function test_existing_tax_query_is_nested_with_its_relation_forced_to_and(): void {
+    public function test_existing_tax_query_is_nested_with_its_own_relation(): void {
         $existing = array(
             'relation' => 'OR',
             array(
@@ -268,8 +289,7 @@ class QueryLoopHandlerTest extends TestCase {
         $result = $this->filter( array( 'query-3-category' => 'news' ), array( 'tax_query' => $existing ) );
 
         $this->assertSame( 'AND', $result['tax_query']['relation'] );
-        $this->assertSame( 'AND', $result['tax_query'][0]['relation'] );
-        $this->assertSame( 'post_format', $result['tax_query'][0][0]['taxonomy'] );
+        $this->assertSame( $existing, $result['tax_query'][0] );
         $this->assertSame( 'category', $result['tax_query'][1][0]['taxonomy'] );
     }
 
@@ -277,19 +297,25 @@ class QueryLoopHandlerTest extends TestCase {
      * Authors
      */
 
-    public function test_author_parameter_sets_author__in_to_nonzero_integer_ids(): void {
-        $result = $this->filter( array( 'query-3-author' => '7,abc,0,-5,12' ) );
-
-        $this->assertSame( array( 7, -5, 12 ), array_values( $result['author__in'] ) );
-    }
-
     /**
-     * Known behaviour B1 changes: authors resolve by nicename, and an
-     * unresolvable value returns no results instead of being ignored
-     * (spec §3.2, §3.6).
+     * Change from 0.3.4: authors resolve by user nicename instead of a raw
+     * numeric ID (spec section 3.1, section 3.2, section 3.6). The nobody-
+     * resolves-to-no-results case is pinned in FilterStateTest and
+     * QueryArgsTest, not repeated here.
      */
-    public function test_author_parameter_without_valid_ids_is_ignored(): void {
-        $this->assertArrayNotHasKey( 'author__in', $this->filter( array( 'query-3-author' => 'nobody' ) ) );
+    public function test_author_parameter_resolves_nicenames_to_author__in(): void {
+        Functions\when( 'get_users' )->justReturn(
+            array(
+                (object) array(
+                    'ID'            => 5,
+                    'user_nicename' => 'jane-doe',
+                ),
+            )
+        );
+
+        $result = $this->filter( array( 'query-3-author' => 'jane-doe' ) );
+
+        $this->assertSame( array( 5 ), $result['author__in'] );
     }
 
     /*
@@ -306,27 +332,36 @@ class QueryLoopHandlerTest extends TestCase {
 
     /*
      * Sorting
-     *
-     * Known behaviour B1 changes: 1.0 no longer reads query-{id}-orderby or
-     * query-{id}-order. A single query-{id}-sort key is looked up in an
-     * allowlist instead (spec §3.1, §3.2, §3.6). Every test in this section
-     * pins 0.3.4 only.
      */
 
     /**
-     * Known behaviour B1 changes: any orderby value reaches WP_Query. 1.0 reads a
-     * single sort key from an allowlist instead (spec §3.2, §3.6).
+     * Change from 0.3.4: query-{id}-orderby and query-{id}-order are no
+     * longer read. A single query-{id}-sort key, looked up in an allowlist,
+     * replaces them (spec section 3.1, section 3.2, section 3.6).
      */
-    public function test_orderby_passes_any_value_through(): void {
-        $this->assertSame( 'rand', $this->filter( array( 'query-3-orderby' => 'rand' ) )['orderby'] );
+    public function test_old_orderby_and_order_parameters_are_ignored(): void {
+        $query_args = array( 'orderby' => 'date' );
+
+        $result = $this->filter(
+            array(
+                'query-3-orderby' => 'rand',
+                'query-3-order'   => 'asc',
+            ),
+            $query_args
+        );
+
+        $this->assertSame( $query_args, $result );
     }
 
-    public function test_order_is_uppercased(): void {
-        $this->assertSame( 'ASC', $this->filter( array( 'query-3-order' => 'asc' ) )['order'] );
-    }
+    /**
+     * Change from 0.3.4: sort is now a single allowlisted key
+     * (spec section 3.1, section 3.2, section 3.6).
+     */
+    public function test_sort_parameter_sets_orderby_and_order(): void {
+        $result = $this->filter( array( 'query-3-sort' => 'title-asc' ) );
 
-    public function test_order_other_than_asc_or_desc_is_ignored(): void {
-        $this->assertArrayNotHasKey( 'order', $this->filter( array( 'query-3-order' => 'sideways' ) ) );
+        $this->assertSame( 'title', $result['orderby'] );
+        $this->assertSame( 'ASC', $result['order'] );
     }
 
     /*
@@ -343,19 +378,27 @@ class QueryLoopHandlerTest extends TestCase {
     }
 
     /**
-     * Core never calls this filter for inherited loops (spec §1), so this
-     * branch only runs when another plugin applies the filter itself.
+     * Change from 0.3.4: core never applies this filter to inherited loops
+     * (`wp-includes/blocks/post-template.php`, spec section 1), so
+     * modify_query() now returns early for them instead of parsing
+     * unnumbered parameters itself. B2 handles inherited loops through
+     * pre_get_posts (spec section 4.4).
      */
-    public function test_inherited_loop_reads_unnumbered_parameters_and_core_search(): void {
+    public function test_inherited_loop_returns_the_query_args_unchanged(): void {
+        // Stub what the non-inherited path would call, so a regression that
+        // removes the early return fails on a real assertion diff instead of
+        // an unstubbed get_taxonomies() fatal.
         $this->stub_public_taxonomies();
+
         $_GET = array(
             'query-category' => 'news',
             's'              => 'mango',
         );
 
-        $result = ( new QueryLoopHandler() )->modify_query( array(), $this->block( array( 'inherit' => true ) ), 1 );
+        $query_args = array( 'post_type' => 'post' );
 
-        $this->assertSame( 'category', $result['tax_query'][0]['taxonomy'] );
-        $this->assertSame( 'mango', $result['s'] );
+        $result = ( new QueryLoopHandler() )->modify_query( $query_args, $this->block( array( 'inherit' => true ) ), 1 );
+
+        $this->assertSame( $query_args, $result );
     }
 }

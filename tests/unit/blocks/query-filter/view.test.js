@@ -139,4 +139,45 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 
 		expect( fromFetchedPage.sheet.disabled ).toBe( true );
 	} );
+
+	describe( 'handleSort', () => {
+		beforeEach( () => {
+			getContext.mockReturnValue( {
+				sortVar: 'query-3-sort',
+				pageVar: 'query-3-page',
+			} );
+		} );
+
+		afterEach( () => {
+			window.history.replaceState( null, '', '/' );
+		} );
+
+		it( 'writes a single sort parameter and drops the page parameter', async () => {
+			window.history.replaceState( null, '', '/?query-3-page=2' );
+
+			await run(
+				actions.handleSort( {
+					preventDefault: () => {},
+					target: { value: 'title-asc' },
+				} )
+			);
+
+			expect( navigate ).toHaveBeenCalledWith(
+				'http://localhost/?query-3-sort=title-asc'
+			);
+		} );
+
+		it( 'removes the sort parameter for an empty value', async () => {
+			window.history.replaceState( null, '', '/?query-3-sort=title-asc' );
+
+			await run(
+				actions.handleSort( {
+					preventDefault: () => {},
+					target: { value: '' },
+				} )
+			);
+
+			expect( navigate ).toHaveBeenCalledWith( 'http://localhost/' );
+		} );
+	} );
 } );

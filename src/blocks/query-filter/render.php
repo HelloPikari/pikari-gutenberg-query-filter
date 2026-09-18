@@ -2,6 +2,7 @@
 
 use Pikari\GutenbergQueryFilter\Helpers\FilterHelper;
 use Pikari\GutenbergQueryFilter\Helpers\AuthorHelper;
+use Pikari\GutenbergQueryFilter\Url\QueryParams;
 
 // Validate required attributes
 $filter_type = $attributes['filterType'] ?? 'post-type';
@@ -16,12 +17,13 @@ $id               = 'pikari-gutenberg-query-filter-' . wp_generate_uuid4();
 $display_type     = $attributes['displayType'] ?? 'select';
 $layout_direction = $attributes['layoutDirection'] ?? 'vertical';
 
+$params   = QueryParams::from_block( $block );
+$page_var = $params->page_key();
+
 // Get configuration based on filter type
 switch ( $filter_type ) {
     case 'post-type':
-        $query_config = FilterHelper::get_post_type_filter_config( $block );
-        $query_var    = $query_config['query_var'];
-        $page_var     = $query_config['page_var'];
+        $query_var = $params->key( 'post_type' );
 
         $items = FilterHelper::get_filter_post_types( $block );
         if ( empty( $items ) ) {
@@ -32,10 +34,8 @@ switch ( $filter_type ) {
         break;
 
     case 'taxonomy':
-        $taxonomy     = $attributes['taxonomy'];
-        $query_config = FilterHelper::get_taxonomy_filter_config( $block, $taxonomy );
-        $query_var    = $query_config['query_var'];
-        $page_var     = $query_config['page_var'];
+        $taxonomy  = $attributes['taxonomy'];
+        $query_var = $params->key( $taxonomy );
 
         $items = FilterHelper::get_taxonomy_filter_terms( $taxonomy );
         if ( false === $items ) {
@@ -47,9 +47,7 @@ switch ( $filter_type ) {
         break;
 
     case 'author':
-        $query_config = AuthorHelper::get_author_filter_config( $block );
-        $query_var    = $query_config['query_var'];
-        $page_var     = $query_config['page_var'];
+        $query_var = $params->key( 'author' );
 
         $items = AuthorHelper::get_filter_authors();
 
@@ -70,8 +68,25 @@ if ( empty( $options ) ) {
     return;
 }
 
-// Get current selection
-$current_value = FilterHelper::get_current_filter_value( $query_var );
+// Get current selection.
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Filtering parameters don't require nonces; sanitized below via sanitize_text_field() or sanitize_title_for_query(), depending on $filter_type.
+$raw_value = isset( $_GET[ $query_var ] ) && is_scalar( $_GET[ $query_var ] ) ? wp_unslash( $_GET[ $query_var ] ) : '';
+
+if ( 'author' === $filter_type || 'taxonomy' === $filter_type ) {
+    // Author nicenames and taxonomy term slugs are both stored percent-
+    // encoded by WordPress for a value it can't transliterate (spec §3.2).
+    // sanitize_text_field() strips those octets, so each comma-separated
+    // value is sanitized on its own with sanitize_title_for_query() instead,
+    // matching Url\FilterState::resolve_author_ids() and
+    // Url\FilterState::resolve_taxonomies(). Running the whole string through
+    // it at once would also strip the commas separating multiple values.
+    $current_value = implode(
+        ',',
+        array_map( 'sanitize_title_for_query', explode( ',', $raw_value ) )
+    );
+} else {
+    $current_value = sanitize_text_field( $raw_value );
+}
 
 // Prepare template variables
 $label_text    = $attributes['label'] ?? $default_label;

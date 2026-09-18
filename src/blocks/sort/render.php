@@ -1,62 +1,32 @@
 <?php
 
-use Pikari\GutenbergQueryFilter\Helpers\SortHelper;
+use Pikari\GutenbergQueryFilter\Query\SortOptions;
+use Pikari\GutenbergQueryFilter\Url\QueryParams;
 
 // Initialize variables.
 $id = 'query-filter-' . wp_generate_uuid4();
 
-// Get query configuration.
-$query_config = SortHelper::get_sort_config( $block );
-$orderby_var  = $query_config['orderby_var'];
-$order_var    = $query_config['order_var'];
-$page_var     = $query_config['page_var'];
+// Get query parameter names.
+$params   = QueryParams::from_block( $block );
+$sort_var = $params->key( 'sort' );
+$page_var = $params->page_key();
 
-// Get current sort selection.
-$current_sort = SortHelper::get_current_sort_value( $orderby_var, $order_var );
+// Resolve the requested sort key against the allowlist (spec §3.2).
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Filtering parameters don't require nonces.
+$requested_key = isset( $_GET[ $sort_var ] ) ? sanitize_text_field( wp_unslash( $_GET[ $sort_var ] ) ) : '';
+$requested     = SortOptions::find( $requested_key );
+
+// Find the option matching the loop's own order, which renders with an empty
+// value so choosing it removes the parameter (spec §4.3).
+$default_orderby = $block->context['query']['orderBy'] ?? '';
+$default_order   = $block->context['query']['order'] ?? '';
+$default_option  = SortOptions::match( $default_orderby, $default_order );
 
 // Prepare template variables.
-$label_text    = $attributes['label'] ?? __( 'Sort By', 'pikari-gutenberg-query-filter' );
-$empty_label   = $attributes['emptyLabel'] ?? __( 'Date', 'pikari-gutenberg-query-filter' );
-$show_label    = $attributes['showLabel'] ?? true;
-$label_class   = $show_label ? '' : ' screen-reader-text';
-
-// Define sort options.
-$sort_options = array(
-    array(
-        'label'   => __( 'Date (Newest First)', 'pikari-gutenberg-query-filter' ),
-        'orderby' => 'date',
-        'order'   => 'desc',
-        'value'   => 'date-desc',
-    ),
-    array(
-        'label'   => __( 'Date (Oldest First)', 'pikari-gutenberg-query-filter' ),
-        'orderby' => 'date',
-        'order'   => 'asc',
-        'value'   => 'date-asc',
-    ),
-    array(
-        'label'   => __( 'Title (A-Z)', 'pikari-gutenberg-query-filter' ),
-        'orderby' => 'title',
-        'order'   => 'asc',
-        'value'   => 'title-asc',
-    ),
-    array(
-        'label'   => __( 'Title (Z-A)', 'pikari-gutenberg-query-filter' ),
-        'orderby' => 'title',
-        'order'   => 'desc',
-        'value'   => 'title-desc',
-    ),
-);
-
-// Determine current selection.
-$current_value = '';
-if ( ! empty( $current_sort['orderby'] ) && ! empty( $current_sort['order'] ) ) {
-    $current_value = $current_sort['orderby'] . '-' . $current_sort['order'];
-}
-
-// Check if this is the default state (no URL parameters).
-$has_sort_params = isset( $_GET[ $orderby_var ] ) || isset( $_GET[ $order_var ] );
-$is_default_sort = ! $has_sort_params && $current_value === 'date-desc';
+$label_text  = $attributes['label'] ?? __( 'Sort By', 'pikari-gutenberg-query-filter' );
+$empty_label = $attributes['emptyLabel'] ?: __( 'Default', 'pikari-gutenberg-query-filter' );
+$show_label  = $attributes['showLabel'] ?? true;
+$label_class = $show_label ? '' : ' screen-reader-text';
 
 $wrapper_attributes = get_block_wrapper_attributes(
     array(
@@ -69,8 +39,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 <?php
 echo wp_json_encode(
     array(
-        'orderbyVar' => $orderby_var,
-        'orderVar' => $order_var,
+        'sortVar' => $sort_var,
         'pageVar' => $page_var,
     )
 );
@@ -81,11 +50,16 @@ echo wp_json_encode(
     </label>
 
     <select class="wp-block-pikari-gutenberg-query-filter-sort__select wp-block-pikari-gutenberg-query-filter__select" id="<?php echo esc_attr( $id ); ?>" data-wp-on--change="actions.handleSort">
-        <?php if ( ! $is_default_sort ) : ?>
-            <option value="" <?php selected( empty( $current_value ) || ( ! $has_sort_params && $current_value === 'date-desc' ) ); ?>><?php echo esc_html( $empty_label ); ?></option>
+        <?php if ( null === $default_option ) : ?>
+            <option value="" <?php selected( null === $requested ); ?>><?php echo esc_html( $empty_label ); ?></option>
         <?php endif; ?>
-        <?php foreach ( $sort_options as $option ) : ?>
-            <option value="<?php echo esc_attr( $option['value'] ); ?>" <?php selected( $option['value'], $current_value ); ?>>
+        <?php foreach ( SortOptions::all() as $option ) : ?>
+            <?php
+            $is_default  = null !== $default_option && $default_option['key'] === $option['key'];
+            $value       = $is_default ? '' : $option['key'];
+            $is_selected = null !== $requested ? $requested['key'] === $option['key'] : $is_default;
+            ?>
+            <option value="<?php echo esc_attr( $value ); ?>" <?php selected( $is_selected ); ?>>
             <?php echo esc_html( $option['label'] ); ?>
             </option>
         <?php endforeach; ?>

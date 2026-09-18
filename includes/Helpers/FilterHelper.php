@@ -15,49 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Helper class for query filter functionality.
  */
-class FilterHelper extends AbstractQueryHelper {
-
-    /**
-     * Get query variables and URLs for the post type filter.
-     *
-     * @param array $block Block instance.
-     * @return array {
-     *     Query configuration array.
-     *     @type string $query_var Query variable name.
-     *     @type string $page_var  Page variable name.
-     *     @type string $base_url  Base URL without query parameters.
-     * }
-     */
-    public static function get_post_type_filter_config( $block ) {
-        return static::get_query_config( $block, 'post_type' );
-    }
-
-    /**
-     * Get query configuration for taxonomy filter.
-     *
-     * @param array  $block      Block instance.
-     * @param string $taxonomy   Taxonomy name.
-     * @return array {
-     *     Query configuration array.
-     *     @type string $query_var Query variable name.
-     *     @type string $page_var  Page variable name.
-     *     @type string $base_url  Base URL without query parameters.
-     * }
-     */
-    public static function get_taxonomy_filter_config( $block, $taxonomy ) {
-        return static::get_taxonomy_query_config( $block, $taxonomy );
-    }
-
-
-    /**
-     * Get current selected value from query parameters.
-     *
-     * @param string $query_var Query variable name.
-     * @return string Sanitized current value.
-     */
-    public static function get_current_filter_value( $query_var ) {
-        return isset( $_GET[ $query_var ] ) ? sanitize_text_field( wp_unslash( $_GET[ $query_var ] ) ) : '';
-    }
+class FilterHelper {
 
     /**
      * Get post types for the filter.
@@ -164,7 +122,7 @@ class FilterHelper extends AbstractQueryHelper {
                     break;
                 case 'author':
                     $options[] = array(
-                        'value' => (string) $item->ID,
+                        'value' => $item->user_nicename,
                         'label' => $item->display_name,
                         'slug'  => $item->user_nicename,
                         'item'  => $item,

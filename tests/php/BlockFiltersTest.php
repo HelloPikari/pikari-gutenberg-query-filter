@@ -7,6 +7,7 @@
 
 namespace Pikari\Tests\GutenbergQueryFilter;
 
+use Mockery;
 use Pikari\Tests\TestCase;
 use Pikari\GutenbergQueryFilter\Integrations\BlockFilters;
 use Brain\Monkey\Functions;
@@ -88,6 +89,74 @@ class BlockFiltersTest extends TestCase {
             'pikari/gutenberg-query-filter::callbacks.restoreInjectedStyles',
             $processor->get_attribute( 'data-wp-watch---pikari-gutenberg-query-filter' )
         );
+    }
+
+    /*
+     * render_block_search()
+     */
+
+    /**
+     * Names the search input from the loop's queryId (spec §3.1).
+     */
+    public function test_render_block_search_names_input_from_query_id(): void {
+        $this->stub_search_render_functions();
+        $_GET = array();
+
+        $instance          = Mockery::mock( 'WP_Block' );
+        $instance->context = array(
+            'queryId' => 3,
+            'query'   => array( 'inherit' => false ),
+        );
+
+        $html = ( new BlockFilters() )->render_block_search(
+            '<form><input type="search" class="wp-block-search__input"></form>',
+            array(),
+            $instance
+        );
+
+        $processor = new \WP_HTML_Tag_Processor( $html );
+        $processor->next_tag( array( 'tag_name' => 'input', 'class_name' => 'wp-block-search__input' ) );
+
+        $this->assertSame( 'query-3-s', $processor->get_attribute( 'name' ) );
+    }
+
+    /**
+     * A loop with no queryId — every loop in Twenty Twenty-Five — still gets a
+     * named search input, using the query-0- prefix (spec §3.1). 0.3.4's
+     * empty( $query_id ) check skipped these loops entirely.
+     */
+    public function test_render_block_search_without_query_id_uses_zero_prefix(): void {
+        $this->stub_search_render_functions();
+        $_GET = array();
+
+        $instance          = Mockery::mock( 'WP_Block' );
+        $instance->context = array(
+            'query' => array( 'inherit' => false ),
+        );
+
+        $html = ( new BlockFilters() )->render_block_search(
+            '<form><input type="search" class="wp-block-search__input"></form>',
+            array(),
+            $instance
+        );
+
+        $processor = new \WP_HTML_Tag_Processor( $html );
+        $processor->next_tag( array( 'tag_name' => 'input', 'class_name' => 'wp-block-search__input' ) );
+
+        $this->assertSame( 'query-0-s', $processor->get_attribute( 'name' ) );
+    }
+
+    /**
+     * Stub the WordPress functions render_block_search() calls beyond naming.
+     */
+    private function stub_search_render_functions(): void {
+        Functions\when( 'wp_enqueue_script_module' )->justReturn( null );
+        Functions\when( 'get_query_var' )->justReturn( 1 );
+        Functions\when( 'add_query_arg' )->justReturn( 'http://example.com/' );
+        Functions\when( 'sanitize_text_field' )->returnArg();
+        Functions\when( 'wp_unslash' )->returnArg();
+        Functions\when( 'wp_interactivity_state' )->justReturn( null );
+        Functions\when( 'wp_json_encode' )->alias( 'json_encode' );
     }
 
     /*
