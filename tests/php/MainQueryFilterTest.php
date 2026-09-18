@@ -73,7 +73,6 @@ class MainQueryFilterTest extends TestCase {
         Functions\when( 'get_current_blog_id' )->justReturn( 1 );
         Functions\when( 'get_users' )->justReturn( array() );
         Functions\when( 'get_user_by' )->justReturn( false );
-        Functions\when( 'get_taxonomies' )->justReturn( array( 'category' => 'category' ) );
         Functions\when( 'get_terms' )->justReturn(
             array( (object) array( 'term_id' => 1, 'term_taxonomy_id' => 11 ) )
         );
@@ -94,6 +93,19 @@ class MainQueryFilterTest extends TestCase {
         MainQueryFilter::reset_for_tests();
 
         parent::tearDown();
+    }
+
+    /**
+     * Stub get_taxonomies() to return the taxonomy most tests need.
+     *
+     * Kept out of setUp() so the parameter-gate tests can assert
+     * get_taxonomies() is never called when the gate rejects a request:
+     * Brain\Monkey's expect() does not override a when() stub already
+     * registered for the same function (same gotcha documented in
+     * QueryLoopHandlerTest::stub_public_taxonomies()).
+     */
+    private function stub_public_taxonomies(): void {
+        Functions\when( 'get_taxonomies' )->justReturn( array( 'category' => 'category' ) );
     }
 
     /**
@@ -294,7 +306,18 @@ class MainQueryFilterTest extends TestCase {
         $this->assertSame( array(), $this->set_calls );
     }
 
+    /**
+     * Asserting on set_calls alone isn't enough here: this fixture also
+     * resolves to has_filters() === false one step later, so it would stay
+     * green even if the ^query-(?!\d+-|page$) regex check were deleted.
+     * get_taxonomies() is the first WordPress function FilterState calls
+     * while parsing (resolve_taxonomies() runs unconditionally), so
+     * asserting it's never called proves the request was rejected by the
+     * gate instead of just happening to parse into nothing.
+     */
     public function test_it_does_not_run_without_an_inherited_style_parameter(): void {
+        Functions\expect( 'get_taxonomies' )->never();
+
         $_GET  = array();
         $query = $this->main_query();
 
@@ -306,8 +329,14 @@ class MainQueryFilterTest extends TestCase {
     /**
      * query-page is core's own page key for a loop with no queryId, not a
      * filter parameter, so it must not trigger the gate on its own.
+     *
+     * Same vacuousness risk as the test above: this fixture also parses to
+     * no filters, so asserting get_taxonomies() is never called is what
+     * actually proves the gate rejected it before parsing began.
      */
     public function test_query_page_alone_does_not_trigger_it(): void {
+        Functions\expect( 'get_taxonomies' )->never();
+
         $_GET  = array( 'query-page' => '2' );
         $query = $this->main_query();
 
@@ -321,6 +350,7 @@ class MainQueryFilterTest extends TestCase {
      */
 
     public function test_it_runs_on_a_home_request(): void {
+        $this->stub_public_taxonomies();
         $_GET  = array( 'query-category' => 'news' );
         $query = $this->main_query( array( 'is_home' => true ) );
 
@@ -331,6 +361,7 @@ class MainQueryFilterTest extends TestCase {
     }
 
     public function test_it_runs_on_an_archive_request(): void {
+        $this->stub_public_taxonomies();
         $_GET  = array( 'query-category' => 'news' );
         $query = $this->main_query( array( 'is_home' => false, 'is_archive' => true ) );
 
@@ -341,6 +372,7 @@ class MainQueryFilterTest extends TestCase {
     }
 
     public function test_it_runs_on_a_search_request(): void {
+        $this->stub_public_taxonomies();
         $_GET  = array( 'query-category' => 'news' );
         $query = $this->main_query( array( 'is_home' => false, 'is_search' => true ) );
 
@@ -355,6 +387,7 @@ class MainQueryFilterTest extends TestCase {
      */
 
     public function test_post_types_are_set(): void {
+        $this->stub_public_taxonomies();
         $_GET  = array( 'query-post_type' => 'page' );
         $query = $this->main_query();
 
@@ -368,6 +401,7 @@ class MainQueryFilterTest extends TestCase {
      * but a taxonomy filter still applies.
      */
     public function test_post_types_are_ignored_on_a_post_type_archive(): void {
+        $this->stub_public_taxonomies();
         $_GET  = array(
             'query-post_type' => 'page',
             'query-category'  => 'news',
@@ -381,6 +415,7 @@ class MainQueryFilterTest extends TestCase {
     }
 
     public function test_authors_are_set(): void {
+        $this->stub_public_taxonomies();
         Functions\when( 'get_users' )->justReturn(
             array( (object) array( 'ID' => 9, 'user_nicename' => 'sam' ) )
         );
@@ -404,6 +439,7 @@ class MainQueryFilterTest extends TestCase {
      * be resolved from author_name here instead of from the author var.
      */
     public function test_author_archives_intersect(): void {
+        $this->stub_public_taxonomies();
         Functions\when( 'get_users' )->justReturn(
             array( (object) array( 'ID' => 9, 'user_nicename' => 'sam' ) )
         );
@@ -423,6 +459,7 @@ class MainQueryFilterTest extends TestCase {
     }
 
     public function test_author_archives_intersect_when_the_archive_author_is_named(): void {
+        $this->stub_public_taxonomies();
         Functions\when( 'get_users' )->justReturn(
             array(
                 (object) array( 'ID' => 7, 'user_nicename' => 'jane-doe' ),
@@ -454,6 +491,7 @@ class MainQueryFilterTest extends TestCase {
      * array( 0 ), not array( 7 ).
      */
     public function test_author_archives_intersect_on_a_plain_permalink(): void {
+        $this->stub_public_taxonomies();
         Functions\when( 'get_users' )->justReturn(
             array(
                 (object) array( 'ID' => 7, 'user_nicename' => 'jane-doe' ),
@@ -473,6 +511,7 @@ class MainQueryFilterTest extends TestCase {
     }
 
     public function test_sort_sets_orderby_and_order(): void {
+        $this->stub_public_taxonomies();
         $_GET  = array( 'query-sort' => 'title-asc' );
         $query = $this->main_query();
 
@@ -483,6 +522,7 @@ class MainQueryFilterTest extends TestCase {
     }
 
     public function test_a_meta_sort_also_sets_meta_key(): void {
+        $this->stub_public_taxonomies();
         Functions\when( 'apply_filters' )->alias(
             function ( $hook, $options ) {
                 if ( 'pikari_gutenberg_query_filter_sort_options' === $hook ) {
@@ -509,6 +549,7 @@ class MainQueryFilterTest extends TestCase {
     }
 
     public function test_search_is_left_to_core(): void {
+        $this->stub_public_taxonomies();
         $_GET  = array(
             'query-category' => 'news',
             's'              => 'mango',
@@ -521,6 +562,7 @@ class MainQueryFilterTest extends TestCase {
     }
 
     public function test_any_filter_ignores_sticky_posts(): void {
+        $this->stub_public_taxonomies();
         $_GET  = array( 'query-category' => 'news' );
         $query = $this->main_query();
 
@@ -535,6 +577,7 @@ class MainQueryFilterTest extends TestCase {
      * get_queried_object(), so a filter must never touch it.
      */
     public function test_taxonomies_do_not_touch_the_tax_query_var(): void {
+        $this->stub_public_taxonomies();
         $_GET  = array( 'query-category' => 'news' );
         $query = $this->main_query();
 
@@ -544,6 +587,7 @@ class MainQueryFilterTest extends TestCase {
     }
 
     public function test_a_taxonomy_filter_adds_a_posts_where_callback(): void {
+        $this->stub_public_taxonomies();
         $_GET  = array( 'query-category' => 'news' );
         $query = $this->main_query();
 
@@ -557,6 +601,7 @@ class MainQueryFilterTest extends TestCase {
      */
 
     public function test_the_where_callback_only_acts_on_its_own_query(): void {
+        $this->stub_public_taxonomies();
         $_GET    = array( 'query-category' => 'news' );
         $query   = $this->main_query();
         $where   = $this->capture_posts_where_callback( $query );
@@ -569,6 +614,7 @@ class MainQueryFilterTest extends TestCase {
     }
 
     public function test_the_where_callback_appends_the_subquery(): void {
+        $this->stub_public_taxonomies();
         $_GET  = array( 'query-category' => 'news' );
         $query = $this->main_query();
         $where = $this->capture_posts_where_callback( $query );
@@ -581,6 +627,7 @@ class MainQueryFilterTest extends TestCase {
     }
 
     public function test_the_where_callback_removes_itself_after_running(): void {
+        $this->stub_public_taxonomies();
         $_GET  = array( 'query-category' => 'news' );
         $query = $this->main_query();
         $where = $this->capture_posts_where_callback( $query );
@@ -595,6 +642,7 @@ class MainQueryFilterTest extends TestCase {
      */
 
     public function test_the_unfiltered_post_type_is_recorded_before_filtering(): void {
+        $this->stub_public_taxonomies();
         $_GET  = array( 'query-post_type' => 'page' );
         $query = $this->main_query( array(), array( 'post_type' => 'post' ) );
 
@@ -607,6 +655,7 @@ class MainQueryFilterTest extends TestCase {
     }
 
     public function test_orderby_and_order_are_recorded(): void {
+        $this->stub_public_taxonomies();
         $_GET  = array( 'query-sort' => 'title-asc' );
         $query = $this->main_query( array(), array( 'orderby' => 'date', 'order' => 'DESC' ) );
 
@@ -617,6 +666,7 @@ class MainQueryFilterTest extends TestCase {
     }
 
     public function test_a_filtered_date_archive_does_not_404(): void {
+        $this->stub_public_taxonomies();
         $_GET  = array( 'query-category' => 'news' );
         $query = $this->main_query( array( 'is_home' => false, 'is_archive' => true, 'is_date' => true, 'is_paged' => false ) );
 
@@ -636,6 +686,7 @@ class MainQueryFilterTest extends TestCase {
     }
 
     public function test_a_paged_date_archive_still_404s(): void {
+        $this->stub_public_taxonomies();
         $_GET  = array( 'query-category' => 'news' );
         $query = $this->main_query( array( 'is_home' => false, 'is_archive' => true, 'is_date' => true, 'is_paged' => true ) );
 
