@@ -357,7 +357,15 @@ This is the other half of the round trip: turning the URL parameters `render.php
 ### Tests for this area
 
 - `tests/php/FilterHelperTest.php` — Brain\Monkey. Plugin classes load through the composer `autoload.psr-4` entry for `includes/`; run `composer dump-autoload` after adding a class.
-- `tests/unit/utils/option-class-name.test.js` — Jest.
+- `tests/php/QueryParamsTest.php` — URL parameter names per loop: the `query-{id}-` prefix, the `queryId: 0` vs. missing-`queryId` distinction, and inherited-loop keys.
+- `tests/php/FilterStateTest.php` — parsing and validating `$_GET` into post types, taxonomies, author IDs, search and sort for one loop (spec §3.2).
+- `tests/php/QueryArgsTest.php` — merging `FilterState` into `WP_Query` arguments: `post__in`, `tax_query` relations, sticky posts.
+- `tests/php/QueryLoopHandlerTest.php` — the `query_loop_block_query_vars` adapter: hook registration, prefix resolution, the inherited-loop early return.
+- `tests/php/SortOptionsTest.php` — the sort allowlist that keeps `orderby`/`order`/`meta_key` off arbitrary URL input.
+- `tests/php/BlockFiltersTest.php` — core block integrations: router-region markup, Search block naming, block-style versioning, unique ID reservation.
+- `tests/unit/utils/option-class-name.test.js` — Jest. The `{key}_{slug}` option class format, mirrored from `FilterHelper::get_option_classes()`.
+- `tests/unit/blocks/block-metadata.test.js` — Jest. `block.json` fields match what the build actually produces.
+- `tests/e2e/specs/` — Playwright, against a seeded wp-env. Filtering, sorting, sticky posts, author nicenames (including old numeric links), and injected styles surviving enhanced pagination.
 
 ## Git Workflow
 
