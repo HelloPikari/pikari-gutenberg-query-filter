@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The Sort dropdown no longer shows a separate "Default" choice when the loop's own order already matches one of the sort options.** That option is selected instead, and choosing it keeps the URL clean.
 - **Internal helper classes are removed:** the `SortHelper` and `AbstractQueryHelper` classes, and the methods `FilterHelper::get_current_filter_value()`, `FilterHelper::get_*_filter_config()`, and `AuthorHelper::get_author_filter_config()`. These were never part of the documented `docs/hooks.md` contract, but any code calling them directly will need to move to `Url\QueryParams`, `Url\FilterState`, `Query\QueryArgs` and `Query\SortOptions`.
 
+### Added
+
+- Filters, sorting and search now work in Query Loops that inherit the template's query, so archive, search and home templates can carry them, not just Query Loops with their own query settings. They use unnumbered parameters (`query-{taxonomy}`, `query-post_type`, `query-author`, `query-sort`), core's own `s` for search, and core's own pagination.
+- Filtering an inherited loop never changes what the page is: a post type filter is ignored on a post type archive, an author filter narrows an author archive to its own author instead of replacing it, and the archive's title, template and queried object stay put. An unknown term or a filtered date archive returns an empty result instead of a 404. Filtering, sorting or searching from page 2 returns to page 1.
+
 ### Fixed
 
 - Sticky posts no longer leak into filtered Query Loop results. A sticky post that doesn't match a taxonomy, author or search filter used to appear anyway; filtering now correctly excludes it.
