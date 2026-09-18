@@ -284,6 +284,17 @@ class MainQueryFilter {
             return;
         }
 
+        // Because tax_query stays untouched, WP_Query never sees this query
+        // as depending on terms, so it doesn't salt its results-cache key
+        // with terms' last_changed (only added when tax_query->queries is
+        // non-empty). On a persistent object cache, a direct term-membership
+        // change (wp_set_object_terms(), a bulk edit, an import) could then
+        // serve a stale result set here. A taxonomy archive already carries
+        // its own tax_query, so core salts its cache key correctly on its own.
+        if ( ! $query->is_tax() && ! $query->is_category() && ! $query->is_tag() ) {
+            $query->set( 'cache_results', false );
+        }
+
         $callback = null;
         $callback = function ( $where, $wp_query ) use ( $query, $taxonomies, &$callback ) {
             if ( $wp_query !== $query ) {

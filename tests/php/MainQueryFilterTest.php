@@ -131,6 +131,9 @@ class MainQueryFilterTest extends TestCase {
                 'is_author'            => false,
                 'is_date'              => false,
                 'is_paged'             => false,
+                'is_tax'               => false,
+                'is_category'          => false,
+                'is_tag'               => false,
             ),
             $flags
         );
@@ -594,6 +597,57 @@ class MainQueryFilterTest extends TestCase {
         ( new MainQueryFilter() )->filter_main_query( $query );
 
         $this->assertNotFalse( has_filter( 'posts_where' ) );
+    }
+
+    /**
+     * Because tax_query stays untouched (spec section 4.4), WP_Query never
+     * salts its results cache with terms' last_changed, so a persistent
+     * object cache can serve stale results after a direct term-membership
+     * change. A home or search request has no tax_query of its own, so the
+     * cache has to be disabled explicitly there.
+     */
+    public function test_a_taxonomy_filter_disables_the_results_cache_on_a_home_request(): void {
+        $this->stub_public_taxonomies();
+        $_GET  = array( 'query-category' => 'news' );
+        $query = $this->main_query( array( 'is_home' => true ) );
+
+        ( new MainQueryFilter() )->filter_main_query( $query );
+
+        $this->assertTrue( $this->was_set( 'cache_results' ) );
+        $this->assertFalse( $this->value_set( 'cache_results' ) );
+    }
+
+    /**
+     * Author, post type, search and sort filters don't depend on term
+     * relationships, so none of them need the results cache disabled.
+     */
+    public function test_an_author_only_filter_does_not_disable_the_results_cache(): void {
+        $this->stub_public_taxonomies();
+        Functions\when( 'get_users' )->justReturn(
+            array( (object) array( 'ID' => 9, 'user_nicename' => 'sam' ) )
+        );
+
+        $_GET  = array( 'query-author' => 'sam' );
+        $query = $this->main_query();
+
+        ( new MainQueryFilter() )->filter_main_query( $query );
+
+        $this->assertFalse( $this->was_set( 'cache_results' ) );
+    }
+
+    /**
+     * A taxonomy archive already has its own tax_query, so core salts its
+     * cache key with terms' last_changed on its own; disabling the cache
+     * here would only cost performance for no correctness gain.
+     */
+    public function test_a_taxonomy_filter_on_a_taxonomy_archive_does_not_disable_the_results_cache(): void {
+        $this->stub_public_taxonomies();
+        $_GET  = array( 'query-category' => 'news' );
+        $query = $this->main_query( array( 'is_home' => false, 'is_archive' => true, 'is_category' => true ) );
+
+        ( new MainQueryFilter() )->filter_main_query( $query );
+
+        $this->assertFalse( $this->was_set( 'cache_results' ) );
     }
 
     /*
