@@ -212,6 +212,14 @@ class BlockFilters {
         $query_var = $params->key( 's' );
         $page_var  = $params->page_key();
 
+        // An inherited loop paginates through a trailing path segment on
+        // pretty permalinks (/category/news/page/2/), not just the `paged`
+        // query var, so view.js needs the rewrite's own pagination base to
+        // strip it on a filter change (spec §3.3). $wp_rewrite isn't always
+        // available (some CLI contexts), so fall back to core's own default.
+        global $wp_rewrite;
+        $pagination_base = ( $wp_rewrite instanceof \WP_Rewrite ) ? $wp_rewrite->pagination_base : 'page';
+
         // Build the form action URL, removing pagination.
         $current_page = get_query_var( 'paged', 1 );
         $action       = str_replace( '/page/' . $current_page, '', add_query_arg( array( $query_var => '' ) ) );
@@ -238,9 +246,10 @@ class BlockFilters {
             $processor->set_attribute( 'data-wp-on--submit', 'actions.search' );
             $context_data = wp_json_encode(
                 array(
-                    'searchValue' => $value,
-                    'queryVar'    => $query_var,
-                    'pageVar'     => $page_var,
+                    'searchValue'    => $value,
+                    'queryVar'       => $query_var,
+                    'pageVar'        => $page_var,
+                    'paginationBase' => $pagination_base,
                 )
             );
 

@@ -6,22 +6,22 @@ How the Query Filter block renders on the frontend, the classes themes can targe
 
 ## URL Parameters
 
-Query Filter, Sort and Search read and write plain URL query parameters. What follows is the contract for a **custom Query Loop** — one with a `queryId`, which is any Query Loop that isn't set to inherit the main query. Inherited Query Loops (used on archive, search and home templates) only read core's own `s` search parameter today; filtering them by taxonomy, post type, author or sort is planned for a later release, so don't rely on those parameters there yet.
+Query Filter, Sort and Search read and write plain URL query parameters. A **custom Query Loop** — one with a `queryId`, which is any Query Loop that isn't set to inherit the main query — uses the numbered parameters below. An **inherited Query Loop** — one that uses the template's own query, as on home, archive and search templates — reads and writes the same filters without a loop number; see [Inherited loops](#inherited-loops) for where those apply.
 
 ### Parameter names
 
-Names come from the loop's `queryId`, following the same `query-{id}-{key}` scheme the block editor already uses for pagination:
+A custom loop's names come from its `queryId`, following the same `query-{id}-{key}` scheme the block editor already uses for pagination. An inherited loop drops the loop number entirely:
 
-| Filter    | Parameter                        |
-| --------- | -------------------------------- |
-| Post type | `query-3-post_type=post,page`    |
-| Taxonomy  | `query-3-{taxonomy}=news,events` |
-| Author    | `query-3-author=jane-doe,sam`    |
-| Sort      | `query-3-sort=title-asc`         |
-| Search    | `query-3-s=term`                 |
-| Page      | `query-3-page=2` (core)          |
+| Filter    | Custom loop (`queryId` 3)        | Inherited loop                 |
+| --------- | -------------------------------- | ------------------------------ |
+| Post type | `query-3-post_type=post,page`    | `query-post_type=post,page`    |
+| Taxonomy  | `query-3-{taxonomy}=news,events` | `query-{taxonomy}=news,events` |
+| Author    | `query-3-author=jane-doe,sam`    | `query-author=jane-doe,sam`    |
+| Sort      | `query-3-sort=title-asc`         | `query-sort=title-asc`         |
+| Search    | `query-3-s=term`                 | `s=term` (core)                |
+| Page      | `query-3-page=2` (core)          | `/page/2/` or `paged=2` (core) |
 
-A Query Loop with no `queryId` — every Query Loop in Twenty Twenty-Five, for example — uses the prefix `query-0-`. Its page parameter is the one exception: it stays `query-page`, because that's what core itself uses for a loop with no ID.
+A **custom loop with no `queryId`** — every Query Loop in Twenty Twenty-Five, for example — uses the prefix `query-0-`. Its page parameter is the one exception: it stays `query-page`, because that's what core itself uses for a loop with no ID. This is different from an inherited loop, which never has a `queryId` and uses `query-` with no loop number at all, rather than falling back to `query-0-`.
 
 ### Values
 
@@ -32,6 +32,21 @@ A Query Loop with no `queryId` — every Query Loop in Twenty Twenty-Five, for e
 - **Post type values** must be viewable (`is_post_type_viewable()`). `attachment` is accepted only when attachment pages are enabled.
 - **Author values** are the user's nicename, for example `query-3-author=jane-doe`. A plain numeric value is still accepted and resolved by user ID, but a nicename match always wins over an ID match for the same value. An author value that matches no user returns no results — the same as an unknown taxonomy slug — rather than showing every author's posts.
 - **Sort values** must be a key from [`pikari_gutenberg_query_filter_sort_options`](#pikari_gutenberg_query_filter_sort_options). An empty or unrecognized value means the loop's own default order.
+
+### Inherited loops
+
+- **They apply to** the main query on the home page, archives and search results.
+- **They never apply to** a single post or page, a 404, a feed, or the admin — a stray `?query-post_type=post` can't 404 a page.
+- **On a post type archive,** `query-post_type` is ignored; the archive is already that post type.
+- **On an author archive,** `query-author` is intersected with the archive's own author rather than replacing it. An author filter that doesn't include the archive's own author returns no results.
+- **A taxonomy name that starts with digits and a hyphen** (`2024-events`) can't be filtered in an inherited loop: its parameter, `query-2024-events`, reads like loop 2024's own `events` key and is ignored rather than read as a taxonomy filter.
+- **Filtering never changes what the page is.** Its title, template and queried object stay the same. An unknown taxonomy term shows an empty result rather than a 404, and a filtered date archive doesn't 404 either — unless a hand-built link also pages it past the end, which still 404s.
+- **Filtering, sorting or searching resets pagination.** A change made from `/page/2/` returns to page 1.
+- **The Sort block starts on "Default"** on an inherited loop's first, unfiltered load. This plugin only records the archive's own order once a filter parameter is already present in the request, so with nothing recorded yet, no sort option matches and the empty placeholder shows.
+
+**Things to know:**
+
+- **Plain permalinks on an author archive.** If the site uses plain URLs (`?p=123`) and a filter picks an author other than the archive's own, WordPress re-adds the archive's own author to the query after this plugin runs, so the results show that author's posts instead of none. Pretty permalinks (`/author/jane-doe/`) aren't affected.
 
 ---
 

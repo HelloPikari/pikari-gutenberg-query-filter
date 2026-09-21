@@ -1,5 +1,6 @@
 <?php
 
+use Pikari\GutenbergQueryFilter\Integrations\MainQueryFilter;
 use Pikari\GutenbergQueryFilter\Query\SortOptions;
 use Pikari\GutenbergQueryFilter\Url\QueryParams;
 
@@ -11,6 +12,14 @@ $params   = QueryParams::from_block( $block );
 $sort_var = $params->key( 'sort' );
 $page_var = $params->page_key();
 
+// An inherited loop paginates through a trailing path segment on pretty
+// permalinks (/category/news/page/2/), not just the `paged` query var, so
+// view.js needs the rewrite's own pagination base to strip it on a filter
+// change (spec §3.3). $wp_rewrite isn't always available (some CLI
+// contexts), so fall back to core's own default.
+global $wp_rewrite;
+$pagination_base = ( $wp_rewrite instanceof WP_Rewrite ) ? $wp_rewrite->pagination_base : 'page';
+
 // Resolve the requested sort key against the allowlist (spec §3.2).
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Filtering parameters don't require nonces.
 $requested_key = isset( $_GET[ $sort_var ] ) ? sanitize_text_field( wp_unslash( $_GET[ $sort_var ] ) ) : '';
@@ -18,9 +27,17 @@ $requested     = SortOptions::find( $requested_key );
 
 // Find the option matching the loop's own order, which renders with an empty
 // value so choosing it removes the parameter (spec §4.3).
-$default_orderby = $block->context['query']['orderBy'] ?? '';
-$default_order   = $block->context['query']['order'] ?? '';
-$default_option  = SortOptions::match( $default_orderby, $default_order );
+if ( $params->is_inherit() ) {
+    // Block context always claims date/desc for an inherited loop, so the
+    // main query's own unfiltered order is read instead. An empty orderby,
+    // as on a search request, means relevance and matches no option.
+    $default_orderby = (string) ( MainQueryFilter::original( 'orderby' ) ?? '' );
+    $default_order   = (string) ( MainQueryFilter::original( 'order' ) ?? '' );
+} else {
+    $default_orderby = $block->context['query']['orderBy'] ?? '';
+    $default_order   = $block->context['query']['order'] ?? '';
+}
+$default_option = SortOptions::match( $default_orderby, $default_order );
 
 // Prepare template variables.
 $label_text  = $attributes['label'] ?? __( 'Sort By', 'pikari-gutenberg-query-filter' );
@@ -41,6 +58,7 @@ echo wp_json_encode(
     array(
         'sortVar' => $sort_var,
         'pageVar' => $page_var,
+        'paginationBase' => $pagination_base,
     )
 );
 ?>

@@ -7,6 +7,8 @@
 
 namespace Pikari\GutenbergQueryFilter\Helpers;
 
+use Pikari\GutenbergQueryFilter\Integrations\MainQueryFilter;
+
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -26,30 +28,14 @@ class FilterHelper {
     public static function get_filter_post_types( $block ) {
         global $wp_query;
 
-        $post_types = array_map( 'trim', explode( ',', $block->context['query']['postType'] ?? 'post' ) );
-
-        // Support for enhanced query block.
-        if ( isset( $block->context['query']['multiple_posts'] ) && is_array( $block->context['query']['multiple_posts'] ) ) {
-            $post_types = array_merge( $post_types, $block->context['query']['multiple_posts'] );
-        }
-
-        // Fill in inherited query types.
         if ( $block->context['query']['inherit'] ) {
-            if ( $wp_query->get( 'query-filter-post_type' ) === 'any' ) {
-                $inherited_post_types = get_post_types(
-                    array(
-                        'public'              => true,
-                        'exclude_from_search' => false,
-                    )
-                );
-            } else {
-                $inherited_post_types = (array) $wp_query->get( 'query-filter-post_type' );
-            }
+            $post_types = self::get_inherited_post_types( $wp_query );
+        } else {
+            $post_types = array_map( 'trim', explode( ',', $block->context['query']['postType'] ?? 'post' ) );
 
-            $post_types = array_merge( $post_types, $inherited_post_types );
-
-            if ( ! get_option( 'wp_attachment_pages_enabled' ) ) {
-                $post_types = array_diff( $post_types, array( 'attachment' ) );
+            // Support for enhanced query block.
+            if ( isset( $block->context['query']['multiple_posts'] ) && is_array( $block->context['query']['multiple_posts'] ) ) {
+                $post_types = array_merge( $post_types, $block->context['query']['multiple_posts'] );
             }
         }
 
@@ -58,6 +44,73 @@ class FilterHelper {
         $post_types = array_filter( $post_types );
 
         return $post_types;
+    }
+
+    /**
+     * Get the post types an inherited loop's filter offers (spec §4.5).
+     *
+     * These replace the block's own postType attribute rather than merging
+     * with it: a Query block's postType is an editor convenience with no
+     * bearing on what the main query it inherits actually returns.
+     *
+     * @param \WP_Query $wp_query The main query.
+     * @return string[] Post type slugs.
+     */
+    private static function get_inherited_post_types( \WP_Query $wp_query ): array {
+        $original = MainQueryFilter::original( 'post_type' );
+
+        // Nothing was recorded when no inherited filter parameter was on
+        // the request (e.g. the page's first, unfiltered load), so fall
+        // back to the request's own raw post_type (spec §4.5).
+        if ( null === $original ) {
+            $original = $wp_query->query['post_type'] ?? '';
+        }
+
+        if ( is_array( $original ) && ! empty( $original ) ) {
+            $post_types = $original;
+        } elseif ( is_string( $original ) && '' !== $original && 'any' !== $original ) {
+            $post_types = array( $original );
+        } else {
+            $post_types = self::get_default_inherited_post_types( $wp_query );
+        }
+
+        if ( ! get_option( 'wp_attachment_pages_enabled' ) ) {
+            $post_types = array_diff( $post_types, array( 'attachment' ) );
+        }
+
+        return array_values( $post_types );
+    }
+
+    /**
+     * Resolve the post types offered when the main query's post_type is
+     * empty or `any` (spec §4.5).
+     *
+     * @param \WP_Query $wp_query The main query.
+     * @return string[] Post type slugs.
+     */
+    private static function get_default_inherited_post_types( \WP_Query $wp_query ): array {
+        if ( $wp_query->is_search() ) {
+            return get_post_types(
+                array(
+                    'public'              => true,
+                    'exclude_from_search' => false,
+                )
+            );
+        }
+
+        if ( $wp_query->is_tax() || $wp_query->is_category() || $wp_query->is_tag() ) {
+            $queried_object  = $wp_query->get_queried_object();
+            $taxonomy        = is_object( $queried_object ) ? ( $queried_object->taxonomy ?? '' ) : '';
+            $taxonomy_object = $taxonomy ? get_taxonomy( $taxonomy ) : false;
+
+            if ( ! $taxonomy_object ) {
+                return array();
+            }
+
+            return array_values( array_filter( (array) $taxonomy_object->object_type, 'is_post_type_viewable' ) );
+        }
+
+        return array( 'post' );
     }
 
     /**

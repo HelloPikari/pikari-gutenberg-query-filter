@@ -11,7 +11,7 @@ A WordPress plugin that adds advanced filtering capabilities to Query Loop block
 - **Sort Controls**: Sort by date or title
 - **Advanced Query Loop Support**: Works with both core Query Loop blocks and Advanced Query Loop by Ryan Welcher
 - **In-Place Updates**: Results update through the Interactivity API router, without a full page reload
-- **Custom Query Loops**: Filters and sort apply to Query Loops with their own query settings. In loops that inherit the template's query (archive and search templates), only the Search block works for now
+- **Custom and Inherited Query Loops**: Filters, sort and search apply to Query Loops with their own query settings, and to loops that inherit the template's query on home, archive and search templates
 - **URL-Based State**: Filter state persists in URLs for sharing and bookmarking
 - **Theme-Friendly Markup**: Unique classes on every radio and checkbox option, plus PHP filters for the option list, option classes, and label markup
 
@@ -280,7 +280,7 @@ pikari-gutenberg-query-filter/
 
 - **Core Query Loop**: Full support for WordPress core Query Loop blocks
 - **Advanced Query Loop**: Compatible with Advanced Query Loop by Ryan Welcher
-- **Query Settings**: Filters and sort apply to custom queries. Inherited queries support search only
+- **Query Settings**: Filters, sort and search apply to custom queries and to inherited queries on home, archive and search templates
 
 ### Themes
 

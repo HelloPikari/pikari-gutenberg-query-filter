@@ -141,6 +141,69 @@ ${innerBlocks}
 </div>
 <!-- /wp:query -->`;
 
+// A Query Loop that inherits the main query, the shape core itself gives
+// every archive and search template (no queryId, "inherit":true). Used by
+// TEMPLATES below to prove filtering works on the main query, not just a
+// custom loop (spec §3.4, §4.4).
+const inheritedQueryBlock = (innerBlocks) =>
+	`<!-- wp:query ${JSON.stringify({
+		query: {
+			perPage: 10,
+			pages: 0,
+			offset: 0,
+			postType: 'post',
+			order: 'desc',
+			orderBy: 'date',
+			author: '',
+			search: '',
+			exclude: [],
+			sticky: '',
+			inherit: true,
+		},
+	})} -->
+<div class="wp-block-query">
+${innerBlocks}
+<!-- wp:post-template -->
+<!-- wp:post-title /-->
+<!-- /wp:post-template -->
+<!-- wp:query-pagination -->
+<!-- wp:query-pagination-previous /-->
+<!-- wp:query-pagination-numbers /-->
+<!-- wp:query-pagination-next /-->
+<!-- /wp:query-pagination -->
+</div>
+<!-- /wp:query -->`;
+
+// Two wp_template overrides for the active theme (Twenty Twenty-Five),
+// exercising inherited-loop filtering on real archive and search requests.
+// Twenty Twenty-Five defines no `category` template of its own, so adding
+// one is safe. `search` is modelled on the theme's own template: the Search
+// block sits outside the loop, the layout that exposed a bug in review
+// (spec §3.3's "s on a search template whose Search block sits outside the
+// loop").
+const TEMPLATES = {
+	category: {
+		slug: 'category',
+		content: `<!-- wp:query-title {"type":"archive"} /-->
+${inheritedQueryBlock(
+	`<!-- wp:pikari-gutenberg-query-filter/query-filter {"filterType":"taxonomy","taxonomy":"category","label":"Category","displayType":"checkbox"} /-->
+<!-- wp:pikari-gutenberg-query-filter/query-filter {"filterType":"author","label":"Author"} /-->
+<!-- wp:pikari-gutenberg-query-filter/sort {"label":"Sort by"} /-->`
+)}`,
+	},
+	search: {
+		slug: 'search',
+		content: `<!-- wp:query-title {"type":"search"} /-->
+<!-- wp:search {"label":"Search","buttonText":"Search"} /-->
+${inheritedQueryBlock(
+	`<!-- wp:pikari-gutenberg-query-filter/query-filter {"filterType":"post-type","label":"Type"} /-->
+<!-- wp:pikari-gutenberg-query-filter/query-filter {"filterType":"taxonomy","taxonomy":"category","label":"Category","displayType":"checkbox"} /-->
+<!-- wp:pikari-gutenberg-query-filter/query-filter {"filterType":"author","label":"Author"} /-->
+<!-- wp:pikari-gutenberg-query-filter/sort {"label":"Sort by"} /-->`
+)}`,
+	},
+};
+
 const PAGES = {
 	filters: {
 		slug: 'e2e-filters',
@@ -187,6 +250,7 @@ module.exports = {
 	PAGES,
 	POSTS,
 	STICKY_TITLE,
+	TEMPLATES,
 	newestTitles,
 	titlesByTitle,
 };
