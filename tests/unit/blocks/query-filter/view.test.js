@@ -1,19 +1,23 @@
 /**
- * The router disables every stylesheet that is not in the fetched page's HTML,
- * including styles other scripts injected at runtime. view.js re-enables those.
+ * The store behind every filter control.
+ *
+ * Each test builds a real form in the JSDOM document, so `form.elements` and
+ * `FormData` do the work they do in a browser: the controls join the form by
+ * their `form` attribute, wherever they sit in the DOM.
+ *
+ * The injected-style tests are the pre-existing ones. Only their driver
+ * changed — `handleSelect` is gone, so they navigate through `actions.navigate`
+ * directly. The router disables every stylesheet that is not in the fetched
+ * page's HTML, including styles other scripts injected at runtime, and view.js
+ * re-enables those.
  */
 
 let actions;
 let callbacks;
 let getContext;
-let getElement;
 let navigate;
 let routerState;
-
-const event = {
-	preventDefault: () => {},
-	target: { value: 'articles' },
-};
+let withSyncEvent;
 
 /**
  * Step through a generator action, resolving each yielded promise.
@@ -43,12 +47,59 @@ function addStyle( id ) {
 	return style;
 }
 
+/**
+ * Build a loop form and its controls in the document.
+ *
+ * @param {Object}  options
+ * @param {string}  options.pageKey Page parameter name.
+ * @param {boolean} options.inherit Whether the loop inherits the main query.
+ * @return {HTMLFormElement} The form.
+ */
+function addForm( { pageKey = 'query-3-page', inherit = false } = {} ) {
+	document.body.innerHTML = `
+		<div data-wp-interactive="pikari/gutenberg-query-filter">
+			<select name="query-3-category" form="f"><option value=""></option><option value="news">News</option><option value="events">Events</option></select>
+			<input type="search" name="query-3-s" form="f" value="" />
+			<form id="f" method="get" action="/library/"
+				data-query-page-key="${ pageKey }"
+				data-query-inherit="${ inherit }"
+				data-query-pagination-base="page">
+				<input type="hidden" name="lang" value="fr" />
+			</form>
+		</div>`;
+	return document.getElementById( 'f' );
+}
+
+/**
+ * Hand the store an event, as the Interactivity API's directive would.
+ *
+ * @param {HTMLElement} control The control the event came from.
+ * @param {string}      type    Event type: change, input or compositionend.
+ * @param {Object}      [extra] Further event properties.
+ */
+function fire( control, type, extra = {} ) {
+	actions.change( { type, target: control, ...extra } );
+}
+
+/**
+ * Let a navigation's promise chain run, without advancing the clock.
+ *
+ * @return {Promise} Resolves once the pending microtasks have run.
+ */
+function flush() {
+	return jest.advanceTimersByTimeAsync( 0 );
+}
+
 describe( 'pikari/gutenberg-query-filter view', () => {
 	beforeEach( () => {
 		// view.js keeps per-page state, so load a fresh copy for each test.
 		jest.resetModules();
 		let store;
-		( { store, getContext, getElement } = require( '@wordpress/interactivity' ) );
+		( {
+			store,
+			getContext,
+			withSyncEvent,
+		} = require( '@wordpress/interactivity' ) );
 		( {
 			actions: { navigate },
 		} = require( '@wordpress/interactivity-router' ) );
@@ -57,23 +108,10 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			'pikari/gutenberg-query-filter'
 		) );
 		( { state: routerState } = store( 'core/router' ) );
-
-		getContext.mockReturnValue( {
-			queryVar: 'query-3-category',
-			pageVar: 'query-3-page',
-		} );
 	} );
 
 	afterEach( () => {
 		window.history.replaceState( null, '', '/' );
-	} );
-
-	it( 'should navigate to the filtered URL', async () => {
-		await run( actions.handleSelect( event ) );
-
-		expect( navigate ).toHaveBeenCalledWith(
-			'http://localhost/?query-3-category=articles'
-		);
 	} );
 
 	it( 'should re-enable script-injected styles the router disables', async () => {
@@ -85,7 +123,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			return Promise.resolve();
 		} );
 
-		await run( actions.handleSelect( event ) );
+		await run( actions.navigate( 'http://localhost/?query-3-category=news' ) );
 
 		expect( injected.sheet.disabled ).toBe( false );
 		expect( enqueued.sheet.disabled ).toBe( true );
@@ -97,20 +135,22 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			fromFetchedPage = addStyle();
 			return Promise.resolve();
 		} );
-		await run( actions.handleSelect( event ) );
+		await run( actions.navigate( 'http://localhost/?query-3-category=news' ) );
 
 		navigate.mockImplementationOnce( () => {
 			fromFetchedPage.sheet.disabled = true;
 			return Promise.resolve();
 		} );
-		await run( actions.handleSelect( event ) );
+		await run(
+			actions.navigate( 'http://localhost/?query-3-category=events' )
+		);
 
 		expect( fromFetchedPage.sheet.disabled ).toBe( true );
 	} );
 
 	it( 'should re-enable script-injected styles after back/forward navigation', async () => {
 		const injected = addStyle();
-		await run( actions.handleSelect( event ) );
+		await run( actions.navigate( 'http://localhost/?query-3-category=news' ) );
 
 		window.dispatchEvent( new window.PopStateEvent( 'popstate' ) );
 		// The router re-renders the cached page in a microtask.
@@ -145,174 +185,248 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 		expect( fromFetchedPage.sheet.disabled ).toBe( true );
 	} );
 
-	describe( 'handleSort', () => {
+	describe( 'form-driven navigation', () => {
+		let form;
+		let select;
+		let search;
+
 		beforeEach( () => {
-			getContext.mockReturnValue( {
-				sortVar: 'query-3-sort',
-				pageVar: 'query-3-page',
-			} );
+			jest.useFakeTimers();
+			form = addForm();
+			select = document.querySelector( 'select' );
+			search = document.querySelector( 'input[type="search"]' );
 		} );
 
-		it( 'writes a single sort parameter and drops the page parameter', async () => {
-			window.history.replaceState( null, '', '/?query-3-page=2' );
+		afterEach( () => {
+			jest.useRealTimers();
+		} );
 
-			await run(
-				actions.handleSort( {
-					preventDefault: () => {},
-					target: { value: 'title-asc' },
-				} )
+		it( 'navigates 250ms after a filter changes, and not before', async () => {
+			select.value = 'news';
+			fire( select, 'change' );
+
+			await jest.advanceTimersByTimeAsync( 249 );
+			expect( navigate ).not.toHaveBeenCalled();
+
+			await jest.advanceTimersByTimeAsync( 1 );
+			expect( navigate ).toHaveBeenCalledWith(
+				'http://localhost/?query-3-category=news',
+				{}
 			);
+		} );
+
+		it( 'waits longer for a keystroke than for a filter change', async () => {
+			search.value = 'mango';
+			fire( search, 'input' );
+
+			await jest.advanceTimersByTimeAsync( 250 );
+			expect( navigate ).not.toHaveBeenCalled();
+
+			await jest.advanceTimersByTimeAsync( 150 );
+			expect( navigate ).toHaveBeenCalledWith(
+				'http://localhost/?query-3-s=mango',
+				{}
+			);
+		} );
+
+		it( 'replaces a pending navigation with the later one', async () => {
+			select.value = 'news';
+			fire( select, 'change' );
+
+			await jest.advanceTimersByTimeAsync( 100 );
+			select.value = 'events';
+			fire( select, 'change' );
+
+			await jest.advanceTimersByTimeAsync( 400 );
+			expect( navigate ).toHaveBeenCalledTimes( 1 );
+			expect( navigate ).toHaveBeenCalledWith(
+				'http://localhost/?query-3-category=events',
+				{}
+			);
+		} );
+
+		it( 'ignores a keystroke that is still part of a composition', async () => {
+			search.value = 'mang';
+			fire( search, 'input', { isComposing: true } );
+
+			expect( jest.getTimerCount() ).toBe( 0 );
+
+			await jest.advanceTimersByTimeAsync( 400 );
+			expect( navigate ).not.toHaveBeenCalled();
+		} );
+
+		it( 'navigates on compositionend even while a composition is pending', async () => {
+			search.value = 'mango';
+			fire( search, 'compositionend', { isComposing: true } );
+
+			await jest.advanceTimersByTimeAsync( 400 );
+			expect( navigate ).toHaveBeenCalledWith(
+				'http://localhost/?query-3-s=mango',
+				{}
+			);
+		} );
+
+		it( 'binds the typed text to the context before navigating', () => {
+			const context = {};
+			getContext.mockReturnValue( context );
+
+			search.value = 'mang';
+			fire( search, 'input' );
+
+			expect( context.searchValue ).toBe( 'mang' );
+			expect( navigate ).not.toHaveBeenCalled();
+		} );
+
+		it( 'does not navigate when the form already describes this URL', async () => {
+			window.history.replaceState( null, '', '/?query-3-category=news' );
+			select.value = 'news';
+			fire( select, 'change' );
+
+			expect( jest.getTimerCount() ).toBe( 0 );
+
+			await jest.advanceTimersByTimeAsync( 400 );
+			expect( navigate ).not.toHaveBeenCalled();
+		} );
+
+		it( 'cancels the pending navigation when the form returns to where it started', async () => {
+			select.value = 'news';
+			fire( select, 'change' );
+
+			await jest.advanceTimersByTimeAsync( 100 );
+			select.value = '';
+			fire( select, 'change' );
+
+			await jest.advanceTimersByTimeAsync( 400 );
+			expect( navigate ).not.toHaveBeenCalled();
+		} );
+
+		it( 'does not navigate again to the URL already being fetched', async () => {
+			navigate.mockImplementation( () => new Promise( () => {} ) );
+
+			select.value = 'news';
+			fire( select, 'change' );
+			await jest.advanceTimersByTimeAsync( 250 );
+			expect( navigate ).toHaveBeenCalledTimes( 1 );
+
+			fire( select, 'change' );
+
+			await jest.advanceTimersByTimeAsync( 400 );
+			expect( navigate ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		it( 'navigates at once while a request is already out', async () => {
+			navigate.mockImplementation( () => new Promise( () => {} ) );
+
+			select.value = 'news';
+			fire( select, 'change' );
+			await jest.advanceTimersByTimeAsync( 250 );
+
+			select.value = 'events';
+			fire( select, 'change' );
+
+			expect( jest.getTimerCount() ).toBe( 0 );
+
+			await flush();
+			expect( navigate ).toHaveBeenLastCalledWith(
+				'http://localhost/?query-3-category=events',
+				{}
+			);
+		} );
+
+		it( 'submits at once, cancelling anything pending', async () => {
+			const preventDefault = jest.fn();
+
+			select.value = 'news';
+			fire( select, 'change' );
+
+			actions.submit( { type: 'submit', target: form, preventDefault } );
+
+			expect( preventDefault ).toHaveBeenCalled();
+			expect( jest.getTimerCount() ).toBe( 0 );
+
+			await jest.advanceTimersByTimeAsync( 400 );
+			expect( navigate ).toHaveBeenCalledTimes( 1 );
+			expect( navigate ).toHaveBeenCalledWith(
+				'http://localhost/?query-3-category=news',
+				{}
+			);
+		} );
+
+		it( 'wraps the submit handler, so preventDefault stays synchronous', () => {
+			expect( withSyncEvent ).toHaveBeenCalledWith( expect.any( Function ) );
+		} );
+
+		it( 'replaces the history entry for a second search in one burst', async () => {
+			search.value = 'man';
+			fire( search, 'input' );
+			await jest.advanceTimersByTimeAsync( 400 );
+
+			expect( navigate ).toHaveBeenNthCalledWith(
+				1,
+				'http://localhost/?query-3-s=man',
+				{}
+			);
+
+			search.value = 'mango';
+			fire( search, 'input' );
+			await jest.advanceTimersByTimeAsync( 400 );
+
+			expect( navigate ).toHaveBeenNthCalledWith(
+				2,
+				'http://localhost/?query-3-s=mango',
+				{ replace: true }
+			);
+		} );
+
+		it( 'pushes a history entry again once the burst has ended', async () => {
+			search.value = 'man';
+			fire( search, 'input' );
+			await jest.advanceTimersByTimeAsync( 400 );
+
+			actions.endBurst();
+
+			search.value = 'mango';
+			fire( search, 'input' );
+			await jest.advanceTimersByTimeAsync( 400 );
+
+			expect( navigate ).toHaveBeenNthCalledWith(
+				2,
+				'http://localhost/?query-3-s=mango',
+				{}
+			);
+		} );
+
+		it( 'ends the burst when another control navigates', async () => {
+			search.value = 'man';
+			fire( search, 'input' );
+			await jest.advanceTimersByTimeAsync( 400 );
+
+			select.value = 'news';
+			fire( select, 'change' );
+			await jest.advanceTimersByTimeAsync( 250 );
+
+			search.value = 'mango';
+			fire( search, 'input' );
+			await jest.advanceTimersByTimeAsync( 400 );
+
+			expect( navigate ).toHaveBeenNthCalledWith(
+				3,
+				'http://localhost/?query-3-category=news&query-3-s=mango',
+				{}
+			);
+		} );
+
+		it( 'uses the form as it was when the event fired', async () => {
+			select.value = 'news';
+			fire( select, 'change' );
+
+			select.value = 'events';
+
+			await jest.advanceTimersByTimeAsync( 250 );
 
 			expect( navigate ).toHaveBeenCalledWith(
-				'http://localhost/?query-3-sort=title-asc'
-			);
-		} );
-
-		it( 'removes the sort parameter for an empty value', async () => {
-			window.history.replaceState( null, '', '/?query-3-sort=title-asc' );
-
-			await run(
-				actions.handleSort( {
-					preventDefault: () => {},
-					target: { value: '' },
-				} )
-			);
-
-			expect( navigate ).toHaveBeenCalledWith( 'http://localhost/' );
-		} );
-	} );
-
-	describe( 'inherited-loop pagination reset', () => {
-		it( "strips an inherited loop's pagination path segment on a filter change", async () => {
-			window.history.replaceState(
-				null,
-				'',
-				'http://localhost/category/news/page/2/'
-			);
-			getContext.mockReturnValue( {
-				queryVar: 'query-author',
-				pageVar: 'paged',
-				paginationBase: 'page',
-			} );
-
-			await run(
-				actions.handleSelect( {
-					preventDefault: () => {},
-					target: { value: 'jane-doe' },
-				} )
-			);
-
-			expect( navigate ).toHaveBeenCalledWith(
-				'http://localhost/category/news/?query-author=jane-doe'
-			);
-		} );
-
-		it( 'preserves a path with no trailing slash, rather than adding one', async () => {
-			window.history.replaceState(
-				null,
-				'',
-				'http://localhost/category/news/page/2'
-			);
-			getContext.mockReturnValue( {
-				queryVar: 'query-author',
-				pageVar: 'paged',
-				paginationBase: 'page',
-			} );
-
-			await run(
-				actions.handleSelect( {
-					preventDefault: () => {},
-					target: { value: 'jane-doe' },
-				} )
-			);
-
-			expect( navigate ).toHaveBeenCalledWith(
-				'http://localhost/category/news?query-author=jane-doe'
-			);
-		} );
-
-		it( "honours the site's pagination base when stripping", async () => {
-			window.history.replaceState(
-				null,
-				'',
-				'http://localhost/kategorie/neuigkeiten/seite/2/'
-			);
-			getContext.mockReturnValue( {
-				queryVar: 'query-author',
-				pageVar: 'paged',
-				paginationBase: 'seite',
-			} );
-
-			await run(
-				actions.handleSelect( {
-					preventDefault: () => {},
-					target: { value: 'jane-doe' },
-				} )
-			);
-
-			expect( navigate ).toHaveBeenCalledWith(
-				'http://localhost/kategorie/neuigkeiten/?query-author=jane-doe'
-			);
-		} );
-
-		it( "leaves a custom loop's path untouched", async () => {
-			window.history.replaceState(
-				null,
-				'',
-				'http://localhost/some-page/page/2/'
-			);
-			getContext.mockReturnValue( {
-				queryVar: 'query-3-category',
-				pageVar: 'query-3-page',
-				paginationBase: 'page',
-			} );
-
-			await run( actions.handleSelect( event ) );
-
-			expect( navigate ).toHaveBeenCalledWith(
-				'http://localhost/some-page/page/2/?query-3-category=articles'
-			);
-		} );
-
-		it( "strips an inherited loop's pagination path segment on a search", async () => {
-			window.history.replaceState(
-				null,
-				'',
-				'http://localhost/category/news/page/2/'
-			);
-			getContext.mockReturnValue( {
-				pageVar: 'paged',
-				paginationBase: 'page',
-			} );
-			getElement.mockReturnValue( {
-				ref: { tagName: 'INPUT', name: 's', value: 'mango' },
-			} );
-
-			await run( actions.search( { preventDefault: () => {} } ) );
-
-			expect( navigate ).toHaveBeenCalledWith(
-				'http://localhost/category/news/?s=mango'
-			);
-		} );
-
-		it( "leaves a custom loop's path untouched on a search", async () => {
-			window.history.replaceState(
-				null,
-				'',
-				'http://localhost/some-page/page/2/'
-			);
-			getContext.mockReturnValue( {
-				pageVar: 'query-3-page',
-				paginationBase: 'page',
-			} );
-			getElement.mockReturnValue( {
-				ref: { tagName: 'INPUT', name: 'query-3-s', value: 'mango' },
-			} );
-
-			await run( actions.search( { preventDefault: () => {} } ) );
-
-			expect( navigate ).toHaveBeenCalledWith(
-				'http://localhost/some-page/page/2/?query-3-s=mango'
+				'http://localhost/?query-3-category=news',
+				{}
 			);
 		} );
 	} );

@@ -331,7 +331,7 @@ When working with frontend code, always:
 3. `FilterHelper::get_filter_options( $items, $attributes )` normalizes items into `value` / `label` / `slug` / `item` arrays and applies `pikari_gutenberg_query_filter_options`.
 4. Radio groups prepend `FilterHelper::get_all_option()`, the "All" choice, which stays outside the options filter. For each radio or checkbox option, `FilterHelper::get_option_classes()` builds the `<label>` classes, including the unique `{key}_{slug}` class, and applies `pikari_gutenberg_query_filter_option_classes`.
 5. `FilterHelper::get_option_label_html()` builds the markup after the `<input>`, applies `pikari_gutenberg_query_filter_option_label`, and sanitizes it with `wp_kses_post()`.
-6. `src/blocks/query-filter/view.js` reads `input.value` on change and navigates with `@wordpress/interactivity-router`. The router only swaps in the new results because `BlockFilters::render_block_query()` gives the core/query wrapper both `data-wp-router-region` and `data-wp-interactive`. Without the interactive attribute the router fetches the filtered page and silently discards it — the URL changes, the results do not.
+6. Every control carries a `name` and a `form`, and `BlockFilters::render_block_query()` injects one hidden `<form>` per Query Loop through `Url\LoopForm`, so the browser's own form ownership answers "what filters this loop?". On a change, `src/blocks/query-filter/view.js` reads that form with `FormData` and `form.elements`, and `buildUrl()` (`src/utils/build-url.js`) rewrites only the names the form owns, leaving every other URL parameter untouched, before navigating with `@wordpress/interactivity-router`. The router only swaps in the new results because `BlockFilters::render_block_query()` gives the core/query wrapper both `data-wp-router-region` and `data-wp-interactive`. Without the interactive attribute the router fetches the filtered page and silently discards it — the URL changes, the results do not.
 
 ### Applying filters to the query
 
@@ -348,11 +348,11 @@ This is the other half of the round trip: turning the URL parameters `render.php
 - Option logic lives in `FilterHelper`, not `render.php`. `render.php` is not unit-tested; keep it a loop over helper output. Do not reintroduce per-filter-type `switch` blocks there.
 - Query-argument logic lives in `Query\QueryArgs`, sort logic in `Query\SortOptions`, and URL parsing/validation in `Url\FilterState` and `Url\QueryParams` — not in `Core\QueryLoopHandler`, which stays a thin adapter over them.
 - New hooks use the `pikari_gutenberg_query_filter_` prefix and ship with a PHPDoc block at the `apply_filters()` call, a Brain\Monkey test (`Filters\expectApplied`), and a section in `docs/hooks.md`.
-- Keep the `<input>` outside filterable markup. `view.js` depends on its `type`, `value`, `name`, and `data-wp-on--change` attributes.
+- Keep the `<input>` outside filterable markup. `view.js` depends on its `type`, `value`, `name`, `form`, and `data-wp-on--change` attributes. The `form` attribute is what joins the control to its loop's hidden form, so dropping it takes the control out of both the JavaScript URL and the no-JavaScript submit.
 - Unique option classes (`category_news`, `post-type_page`, `author_jane-doe`, `category_all`) are deliberately **unprefixed** — a product decision (2026-09-12) and the one exception to the CSS Class Name Standards below. Do not add the plugin prefix to them.
 - The `{key}_{slug}` format is implemented twice: `FilterHelper::get_option_classes()` for the frontend and `src/utils/option-class-name.js` for the editor preview. Change both together, with their tests.
 - Existing BEM classes (`__radio-item`, `__checkbox-item`, `__radio-text`, `__checkbox-text`, `__*-group`, `__select`, `__label`) are public. Do not rename them.
-- The Sort block has no radios or checkboxes, and none of these three option filters apply to it. It has its own filter instead, `pikari_gutenberg_query_filter_sort_options` (see `docs/hooks.md`).
+- The Sort block has no radios or checkboxes, so none of these three option filters apply to it. It has its own filter instead, `pikari_gutenberg_query_filter_sort_options` (see `docs/hooks.md`). The form contract does apply to it: its `<select>` carries a `name` and a `form` like any other control, and it renders a `<noscript>` submit button, so sorting works without JavaScript.
 
 ### Tests for this area
 
