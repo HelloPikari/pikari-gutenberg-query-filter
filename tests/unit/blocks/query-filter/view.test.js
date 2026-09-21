@@ -9,7 +9,6 @@ let getContext;
 let getElement;
 let navigate;
 let routerState;
-let stripInheritedPagination;
 
 const event = {
 	preventDefault: () => {},
@@ -53,7 +52,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 		( {
 			actions: { navigate },
 		} = require( '@wordpress/interactivity-router' ) );
-		( { stripInheritedPagination } = require( '../../../../src/blocks/query-filter/view' ) );
+		require( '../../../../src/blocks/query-filter/view' );
 		( { actions, callbacks } = store.getStore(
 			'pikari/gutenberg-query-filter'
 		) );
@@ -180,47 +179,6 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			);
 
 			expect( navigate ).toHaveBeenCalledWith( 'http://localhost/' );
-		} );
-	} );
-
-	describe( 'stripInheritedPagination', () => {
-		it( 'removes a trailing pagination segment with a trailing slash', () => {
-			expect(
-				stripInheritedPagination( '/category/news/page/2/', 'page' )
-			).toBe( '/category/news/' );
-		} );
-
-		it( 'preserves a path that had no trailing slash, rather than adding one', () => {
-			expect(
-				stripInheritedPagination( '/category/news/page/2', 'page' )
-			).toBe( '/category/news' );
-		} );
-
-		it( 'honours a non-default pagination base', () => {
-			expect(
-				stripInheritedPagination(
-					'/kategorie/neuigkeiten/seite/2/',
-					'seite'
-				)
-			).toBe( '/kategorie/neuigkeiten/' );
-		} );
-
-		it( 'leaves a path that merely contains the word "page" untouched', () => {
-			expect( stripInheritedPagination( '/page-two/', 'page' ) ).toBe(
-				'/page-two/'
-			);
-		} );
-
-		it( 'only strips a trailing segment, not one followed by more path', () => {
-			expect(
-				stripInheritedPagination( '/blog/page/2/extra/', 'page' )
-			).toBe( '/blog/page/2/extra/' );
-		} );
-
-		it( 'leaves a path with no pagination segment untouched', () => {
-			expect( stripInheritedPagination( '/category/news/', 'page' ) ).toBe(
-				'/category/news/'
-			);
 		} );
 	} );
 

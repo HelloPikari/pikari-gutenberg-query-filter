@@ -1,4 +1,5 @@
 import { store, getContext, getElement } from '@wordpress/interactivity';
+import { stripInheritedPagination } from '../../utils/build-url';
 
 /*
  * The router disables every stylesheet that is not in the fetched page's HTML,
@@ -28,31 +29,6 @@ const enableInjectedStyles = () => {
 
 // On back/forward the router re-renders the cached page in a microtask, so run after it.
 window.addEventListener( 'popstate', () => setTimeout( enableInjectedStyles ) );
-
-/**
- * Remove a trailing pagination path segment from a URL's pathname.
- *
- * An inherited loop paginates through a `/{base}/{n}/` path segment on
- * pretty permalinks, not only the `paged` query var (spec §3.3). Filtering
- * without stripping it can leave a request pointed at a page number the
- * filtered query no longer has, which core 404s (spec §4.4). Only a
- * trailing segment is stripped, so a path that merely contains the base
- * word elsewhere (`/page-two/`) or has it followed by more path
- * (`/blog/page/2/extra/`) is left untouched. The result keeps whatever
- * trailing-slash style the input had — a path with no trailing slash
- * (`/category/news/page/2`) resolves to `/category/news`, not
- * `/category/news/` — since forcing one on could trigger a canonical
- * redirect on a site whose permalinks omit it.
- *
- * @param {string} pathname       URL pathname.
- * @param {string} paginationBase Rewrite pagination base, e.g. "page".
- * @return {string} Pathname with a trailing pagination segment removed.
- */
-export const stripInheritedPagination = ( pathname, paginationBase ) => {
-	const base = paginationBase.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' );
-
-	return pathname.replace( new RegExp( `/${ base }/\\d+(/?)$` ), '$1' );
-};
 
 function* navigate( url ) {
 	captureInjectedStyles();
