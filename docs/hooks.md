@@ -58,7 +58,6 @@ A taxonomy filter (`category`) with the **Checkbox** display type renders:
 <div
 	class="wp-block-pikari-gutenberg-query-filter"
 	data-wp-interactive="pikari/gutenberg-query-filter"
-	data-wp-context="{…}"
 >
 	<fieldset class="wp-block-pikari-gutenberg-query-filter__fieldset">
 		<legend class="wp-block-pikari-gutenberg-query-filter__label">
@@ -70,8 +69,10 @@ A taxonomy filter (`category`) with the **Checkbox** display type renders:
 			>
 				<input
 					type="checkbox"
+					name="query-3-category[]"
+					form="pikari-gutenberg-query-filter-form-3"
 					value="news"
-					data-wp-on--change="actions.updateFilters"
+					data-wp-on--change="pikari/gutenberg-query-filter::actions.change"
 				/>
 				<span class="wp-block-pikari-gutenberg-query-filter__checkbox-text"
 					>News</span
@@ -80,6 +81,15 @@ A taxonomy filter (`category`) with the **Checkbox** display type renders:
 			<!-- …one <label> per term… -->
 		</div>
 	</fieldset>
+	<noscript>
+		<button
+			type="submit"
+			form="pikari-gutenberg-query-filter-form-3"
+			class="wp-block-pikari-gutenberg-query-filter__submit"
+		>
+			Apply filters
+		</button>
+	</noscript>
 </div>
 ```
 
@@ -101,6 +111,55 @@ The block label is a `<legend>` for radio and checkbox filters and a `<label>` f
 | Option `<label>`, unique | `{key}_{slug}` — see [Option Classes](#option-classes)           |
 | Option text              | `wp-block-pikari-gutenberg-query-filter__{radio,checkbox}-text`  |
 | Dropdown                 | `wp-block-pikari-gutenberg-query-filter__select`                 |
+| Injected loop form       | `wp-block-pikari-gutenberg-query-filter__form`                   |
+| No-JS submit button      | `wp-block-pikari-gutenberg-query-filter__submit`                 |
+
+See [Form and Controls](#form-and-controls) for the injected `<form>`, the `name` / `form` attributes on each control, and the no-JS `<noscript>` button.
+
+---
+
+## Form and Controls
+
+Every filter and sort control lives inside a real `<form>`, so the block works with JavaScript off. `BlockFilters::render_block_query()` scans the rendered Query Loop after every inner block has rendered; if it finds any control carrying a matching `form` attribute, it injects the loop's hidden `<form class="wp-block-pikari-gutenberg-query-filter__form">` as the **last child** of the Query wrapper. A control whose `form` attribute doesn't match means no form is injected at all — the `name` and `form` attributes below are not cosmetic, they're what makes a control submit.
+
+The form itself is `hidden`, has an inline `style="display:none"`, and takes no layout space. It carries the loop's page-number key, whether the loop is inherited, and the rewrite's pagination base as `data-query-*` attributes, plus a hidden input for every other parameter already on the URL (language, UTM params, etc.) so a no-JS submit doesn't drop them.
+
+### Control attributes
+
+Every control gets a `name` and a `form="pikari-gutenberg-query-filter-form-{id}"` (`…-form-inherit` for inherited loops):
+
+| Control           | `name`                                 |
+| ----------------- | -------------------------------------- |
+| Select filter     | `query-3-category`                     |
+| Radio filter      | `query-3-category`                     |
+| Checkbox filter   | `query-3-category[]`                   |
+| Sort select       | `query-3-sort`                         |
+| Core Search input | `query-3-s` (custom) / `s` (inherited) |
+
+**The radio group's `name` is the query parameter, not the block's own ID.** That's what lets a radio filter submit through a plain `<form>`. One consequence: two Query Filter blocks in the same loop filtering the same taxonomy share one `name` and therefore merge into a single radio group — selecting an option in one visually separate block also selects it in the other. This is accepted, not a bug.
+
+Every plugin directive value on a control is namespaced, for example `data-wp-on--change="pikari/gutenberg-query-filter::actions.change"`, because inside a loop the nearest `data-wp-interactive` ancestor may belong to `core/query` rather than to this plugin.
+
+**The `<input>` remains outside all filterable markup.** `view.js` depends on a control's `name`, `form`, and `value` attributes — not on a `queryVar` from `data-wp-context`, which the Filter and Sort block wrappers no longer carry.
+
+### The no-JS Apply button
+
+Each Query Filter and Sort block ends its wrapper with:
+
+```html
+<noscript>
+	<button
+		type="submit"
+		form="pikari-gutenberg-query-filter-form-3"
+		class="wp-block-pikari-gutenberg-query-filter__submit"
+	>
+		Apply filters
+	</button>
+</noscript>
+```
+
+- It renders only when JavaScript is off, so JavaScript users never see it, not even briefly.
+- A loop with four filter/sort blocks shows four buttons without JavaScript, and clicking any one of them submits every filter and sort control in the loop, because they all share the same `form`.
 
 ---
 
@@ -315,7 +374,7 @@ Filters the markup inside each radio or checkbox option's `<label>`, after the `
 **Return:** `string` — Markup to render.
 
 - The returned markup is passed through `wp_kses_post()`. Tags and attributes allowed in post content survive, including `<span>`, `<strong>`, `<img>`, `class`, and `style`. `<script>`, `<svg>`, `<input>`, and inline event handlers are stripped. For icons, use an `<img>` or a CSS background on a class.
-- The `<input>` is not part of this markup and cannot be changed. The frontend script relies on its `value` and `data-wp-on--change` attributes.
+- The `<input>` is not part of this markup and cannot be changed. The frontend script relies on its `name`, `form`, and `value` attributes; see [Form and Controls](#form-and-controls).
 
 #### Example: Append the post count to taxonomy options
 

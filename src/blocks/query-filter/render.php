@@ -17,16 +17,8 @@ $id               = 'pikari-gutenberg-query-filter-' . wp_generate_uuid4();
 $display_type     = $attributes['displayType'] ?? 'select';
 $layout_direction = $attributes['layoutDirection'] ?? 'vertical';
 
-$params   = QueryParams::from_block( $block );
-$page_var = $params->page_key();
-
-// An inherited loop paginates through a trailing path segment on pretty
-// permalinks (/category/news/page/2/), not just the `paged` query var, so
-// view.js needs the rewrite's own pagination base to strip it on a filter
-// change (spec §3.3). $wp_rewrite isn't always available (some CLI
-// contexts), so fall back to core's own default.
-global $wp_rewrite;
-$pagination_base = ( $wp_rewrite instanceof WP_Rewrite ) ? $wp_rewrite->pagination_base : 'page';
+$params  = QueryParams::from_block( $block );
+$form_id = $params->form_id();
 
 // Get configuration based on filter type
 switch ( $filter_type ) {
@@ -77,24 +69,7 @@ if ( empty( $options ) ) {
 }
 
 // Get current selection.
-// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Filtering parameters don't require nonces; sanitized below via sanitize_text_field() or sanitize_title_for_query(), depending on $filter_type.
-$raw_value = isset( $_GET[ $query_var ] ) && is_scalar( $_GET[ $query_var ] ) ? wp_unslash( $_GET[ $query_var ] ) : '';
-
-if ( 'author' === $filter_type || 'taxonomy' === $filter_type ) {
-    // Author nicenames and taxonomy term slugs are both stored percent-
-    // encoded by WordPress for a value it can't transliterate (spec §3.2).
-    // sanitize_text_field() strips those octets, so each comma-separated
-    // value is sanitized on its own with sanitize_title_for_query() instead,
-    // matching Url\FilterState::resolve_author_ids() and
-    // Url\FilterState::resolve_taxonomies(). Running the whole string through
-    // it at once would also strip the commas separating multiple values.
-    $current_value = implode(
-        ',',
-        array_map( 'sanitize_title_for_query', explode( ',', $raw_value ) )
-    );
-} else {
-    $current_value = sanitize_text_field( $raw_value );
-}
+$current_value = FilterHelper::current_value( $query_var, $filter_type );
 
 // Prepare template variables
 $label_text    = $attributes['label'] ?? $default_label;
@@ -110,24 +85,12 @@ $wrapper_attributes = get_block_wrapper_attributes(
 );
 ?>
 
-<div <?php echo wp_kses_post( $wrapper_attributes ); ?> data-wp-interactive="pikari/gutenberg-query-filter" data-wp-context='
-<?php
-echo wp_json_encode(
-    array(
-        'queryVar' => $query_var,
-        'pageVar' => $page_var,
-        'filterType' => $filter_type,
-        'taxonomy' => $filter_type === 'taxonomy' ? $taxonomy : '',
-        'paginationBase' => $pagination_base,
-    )
-);
-?>
-'>
+<div <?php echo wp_kses_post( $wrapper_attributes ); ?> data-wp-interactive="pikari/gutenberg-query-filter">
     <?php if ( $display_type === 'select' ) : ?>
         <label class="wp-block-pikari-gutenberg-query-filter__label<?php echo esc_attr( $label_class ); ?>" for="<?php echo esc_attr( $id ); ?>">
         <?php echo esc_html( $label_text ); ?>
         </label>
-        <select class="wp-block-pikari-gutenberg-query-filter__select" id="<?php echo esc_attr( $id ); ?>" data-wp-on--change="actions.handleSelect">
+        <select class="wp-block-pikari-gutenberg-query-filter__select" id="<?php echo esc_attr( $id ); ?>" name="<?php echo esc_attr( $query_var ); ?>" form="<?php echo esc_attr( $form_id ); ?>" data-wp-on--change="pikari/gutenberg-query-filter::actions.change">
             <option value=""><?php echo esc_html( $empty_label ); ?></option>
         <?php foreach ( $options as $option ) : ?>
             <option value="<?php echo esc_attr( $option['value'] ); ?>" <?php selected( $current_value, $option['value'] ); ?>>
@@ -142,7 +105,7 @@ echo wp_json_encode(
         <div class="wp-block-pikari-gutenberg-query-filter__radio-group<?php echo esc_attr( $layout_class ); ?>">
         <?php foreach ( array_merge( array( FilterHelper::get_all_option( $empty_label ) ), $options ) as $option ) : ?>
             <label class="<?php echo esc_attr( implode( ' ', FilterHelper::get_option_classes( $option, $attributes ) ) ); ?>">
-                <input type="radio" name="<?php echo esc_attr( $id ); ?>" value="<?php echo esc_attr( $option['value'] ); ?>" <?php checked( $current_value, $option['value'] ); ?> data-wp-on--change="actions.handleSelect">
+                <input type="radio" name="<?php echo esc_attr( $query_var ); ?>" form="<?php echo esc_attr( $form_id ); ?>" value="<?php echo esc_attr( $option['value'] ); ?>" <?php checked( $current_value, $option['value'] ); ?> data-wp-on--change="pikari/gutenberg-query-filter::actions.change">
             <?php echo FilterHelper::get_option_label_html( $option, $attributes ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitized with wp_kses_post() in get_option_label_html(). ?>
             </label>
         <?php endforeach; ?>
@@ -159,11 +122,16 @@ echo wp_json_encode(
             $is_checked = in_array( (string) $option['value'], $selected_values, true );
             ?>
             <label class="<?php echo esc_attr( implode( ' ', FilterHelper::get_option_classes( $option, $attributes ) ) ); ?>">
-                <input type="checkbox" value="<?php echo esc_attr( $option['value'] ); ?>" <?php checked( $is_checked ); ?> data-wp-on--change="actions.updateFilters">
+                <input type="checkbox" name="<?php echo esc_attr( $query_var ); ?>[]" form="<?php echo esc_attr( $form_id ); ?>" value="<?php echo esc_attr( $option['value'] ); ?>" <?php checked( $is_checked ); ?> data-wp-on--change="pikari/gutenberg-query-filter::actions.change">
             <?php echo FilterHelper::get_option_label_html( $option, $attributes ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitized with wp_kses_post() in get_option_label_html(). ?>
             </label>
         <?php endforeach; ?>
         </div>
         </fieldset>
     <?php endif; ?>
+    <noscript>
+        <button type="submit" form="<?php echo esc_attr( $form_id ); ?>" class="wp-block-pikari-gutenberg-query-filter__submit">
+            <?php esc_html_e( 'Apply filters', 'pikari-gutenberg-query-filter' ); ?>
+        </button>
+    </noscript>
 </div>

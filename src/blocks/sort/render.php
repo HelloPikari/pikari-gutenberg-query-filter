@@ -10,15 +10,7 @@ $id = 'query-filter-' . wp_generate_uuid4();
 // Get query parameter names.
 $params   = QueryParams::from_block( $block );
 $sort_var = $params->key( 'sort' );
-$page_var = $params->page_key();
-
-// An inherited loop paginates through a trailing path segment on pretty
-// permalinks (/category/news/page/2/), not just the `paged` query var, so
-// view.js needs the rewrite's own pagination base to strip it on a filter
-// change (spec §3.3). $wp_rewrite isn't always available (some CLI
-// contexts), so fall back to core's own default.
-global $wp_rewrite;
-$pagination_base = ( $wp_rewrite instanceof WP_Rewrite ) ? $wp_rewrite->pagination_base : 'page';
+$form_id  = $params->form_id();
 
 // Resolve the requested sort key against the allowlist (spec §3.2).
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Filtering parameters don't require nonces.
@@ -52,22 +44,12 @@ $wrapper_attributes = get_block_wrapper_attributes(
 );
 ?>
 
-<div <?php echo wp_kses_post( $wrapper_attributes ); ?> data-wp-interactive="pikari/gutenberg-query-filter" data-wp-context='
-<?php
-echo wp_json_encode(
-    array(
-        'sortVar' => $sort_var,
-        'pageVar' => $page_var,
-        'paginationBase' => $pagination_base,
-    )
-);
-?>
-'>
+<div <?php echo wp_kses_post( $wrapper_attributes ); ?> data-wp-interactive="pikari/gutenberg-query-filter">
     <label class="wp-block-pikari-gutenberg-query-filter-sort__label wp-block-pikari-gutenberg-query-filter__label<?php echo esc_attr( $label_class ); ?>" for="<?php echo esc_attr( $id ); ?>">
         <?php echo esc_html( $label_text ); ?>
     </label>
 
-    <select class="wp-block-pikari-gutenberg-query-filter-sort__select wp-block-pikari-gutenberg-query-filter__select" id="<?php echo esc_attr( $id ); ?>" data-wp-on--change="actions.handleSort">
+    <select class="wp-block-pikari-gutenberg-query-filter-sort__select wp-block-pikari-gutenberg-query-filter__select" id="<?php echo esc_attr( $id ); ?>" name="<?php echo esc_attr( $sort_var ); ?>" form="<?php echo esc_attr( $form_id ); ?>" data-wp-on--change="pikari/gutenberg-query-filter::actions.change">
         <?php if ( null === $default_option ) : ?>
             <option value="" <?php selected( null === $requested ); ?>><?php echo esc_html( $empty_label ); ?></option>
         <?php endif; ?>
@@ -82,4 +64,10 @@ echo wp_json_encode(
             </option>
         <?php endforeach; ?>
     </select>
+
+    <noscript>
+        <button type="submit" form="<?php echo esc_attr( $form_id ); ?>" class="wp-block-pikari-gutenberg-query-filter__submit">
+            <?php esc_html_e( 'Apply filters', 'pikari-gutenberg-query-filter' ); ?>
+        </button>
+    </noscript>
 </div>
