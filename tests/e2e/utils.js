@@ -49,18 +49,23 @@ const param = (page, name) => new URL(page.url()).searchParams.get(name);
  *
  * Submitting the form without JavaScript writes `name[]=a&name[]=b`;
  * buildUrl() writes `name=a,b`. Both are valid (spec §3.2), so specs that
- * run both ways compare the normalized form.
+ * run both ways compare the normalized form. A radio group's "All" option
+ * has `value=""`, so a no-JS submit with it selected writes `name=` — an
+ * empty value is treated the same as an absent one, so a cleared filter
+ * reads as null either way.
  *
  * @param {import('@playwright/test').Page} page Page.
  * @param {string}                          name Parameter name, without `[]`.
- * @return {string|null} Comma-joined value, or null when absent.
+ * @return {string|null} Comma-joined value, or null when absent or empty.
  */
 const ownedParam = (page, name) => {
 	const search = new URL(page.url()).searchParams;
 	const values = [
 		...search.getAll(name),
 		...search.getAll(`${name}[]`),
-	].flatMap((value) => value.split(','));
+	]
+		.flatMap((value) => value.split(','))
+		.filter((value) => value !== '');
 
 	return values.length ? values.join(',') : null;
 };

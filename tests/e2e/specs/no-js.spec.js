@@ -66,6 +66,7 @@ test.describe('Filters without JavaScript', () => {
 
 		expect(param(page, 'utm_source')).toBe('newsletter');
 		expect(param(page, 'lang')).toBe('fr');
+		expect(ownedParam(page, 'query-1-category')).toBe('news');
 	});
 
 	test('resets pagination when a filter changes', async ({ page }) => {
@@ -89,6 +90,14 @@ test.describe('Filters without JavaScript', () => {
 
 		expect(new URL(page.url()).pathname).toBe('/category/news/');
 		expect(ownedParam(page, 'query-author')).toBe('jane-doe');
+		// Jane Doe's News posts (Kiwi, Lemon, Mango), newest first.
+		expect(await resultTitles(page)).toEqual(['Mango', 'Lemon', 'Kiwi']);
+
+		// Known, accepted divergence (B3): the loop form carries core's `s`, so a
+		// no-JS Apply with an empty search box submits `s=`, and core renders the
+		// search template instead of the archive. The results stay correct. The JS
+		// path never writes `s`, because buildUrl() skips empty values.
+		expect(param(page, 's')).toBe('');
 	});
 
 	test('filters by a term whose slug is percent-encoded', async ({
