@@ -208,69 +208,42 @@ class BlockFilters {
         // Enqueue our interactivity script to ensure the store is available.
         wp_enqueue_script_module( 'pikari-gutenberg-query-filter-query-filter-view-script-module' );
 
-        // Determine the search query variable based on query context.
         $params    = QueryParams::from_block( $instance );
         $query_var = $params->key( 's' );
-        $page_var  = $params->page_key();
-
-        // An inherited loop paginates through a trailing path segment on
-        // pretty permalinks (/category/news/page/2/), not just the `paged`
-        // query var, so view.js needs the rewrite's own pagination base to
-        // strip it on a filter change (spec §3.3). $wp_rewrite isn't always
-        // available (some CLI contexts), so fall back to core's own default.
-        global $wp_rewrite;
-        $pagination_base = ( $wp_rewrite instanceof \WP_Rewrite ) ? $wp_rewrite->pagination_base : 'page';
-
-        // Build the form action URL, removing pagination.
-        $current_page = get_query_var( 'paged', 1 );
-        $action       = str_replace( '/page/' . $current_page, '', add_query_arg( array( $query_var => '' ) ) );
+        $form_id   = $params->form_id();
 
         // Get and sanitize the current search value.
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Search forms don't require nonces for GET requests.
         $value = isset( $_GET[ $query_var ] ) ? sanitize_text_field( wp_unslash( $_GET[ $query_var ] ) ) : '';
 
-        // Set interactivity state for the search value.
-        wp_interactivity_state(
-            'pikari/gutenberg-query-filter',
-            array(
-                'searchValue' => $value,
-            )
-        );
-
-        // Modify the search form HTML to add interactivity.
-        $processor = new \WP_HTML_Tag_Processor( $block_content );
-
-        // Update the form element.
-        if ( $processor->next_tag( array( 'tag_name' => 'form' ) ) ) {
-            $processor->set_attribute( 'action', $action );
-            $processor->set_attribute( 'data-wp-interactive', 'pikari/gutenberg-query-filter' );
-            $processor->set_attribute( 'data-wp-on--submit', 'actions.search' );
-            $context_data = wp_json_encode(
-                array(
-                    'searchValue'    => $value,
-                    'queryVar'       => $query_var,
-                    'pageVar'        => $page_var,
-                    'paginationBase' => $pagination_base,
-                )
-            );
-
-            // Only set context if JSON encoding succeeded.
-            if ( false !== $context_data ) {
-                $processor->set_attribute( 'data-wp-context', $context_data );
-            }
+        $context = wp_json_encode( array( 'searchValue' => $value ) );
+        if ( false === $context ) {
+            $context = '{}';
         }
 
-        // Update the input element.
-        if ( $processor->next_tag(
-            array(
-                'tag_name'   => 'input',
-                'class_name' => 'wp-block-search__input',
-            )
-        ) ) {
-            $processor->set_attribute( 'name', $query_var );
-            $processor->set_attribute( 'value', $value );
-            $processor->set_attribute( 'data-wp-bind--value', 'context.searchValue' );
-            $processor->set_attribute( 'data-wp-on--input', 'actions.search' );
+        // Only the input and the submit button change. Core's <form>, and any
+        // data-wp-* core put on it, are left exactly as they are: the loop
+        // form is what submits, and the input joins it by id (spec §5.3).
+        $processor = new \WP_HTML_Tag_Processor( $block_content );
+
+        while ( $processor->next_tag() ) {
+            if ( 'INPUT' === $processor->get_tag() && $processor->has_class( 'wp-block-search__input' ) ) {
+                $processor->set_attribute( 'name', $query_var );
+                $processor->set_attribute( 'value', $value );
+                $processor->set_attribute( 'form', $form_id );
+                $processor->set_attribute( 'data-wp-context', 'pikari/gutenberg-query-filter::' . $context );
+                $processor->set_attribute( 'data-wp-bind--value', 'pikari/gutenberg-query-filter::context.searchValue' );
+                $processor->set_attribute( 'data-wp-on--input', 'pikari/gutenberg-query-filter::actions.change' );
+                $processor->set_attribute( 'data-wp-on--compositionend', 'pikari/gutenberg-query-filter::actions.change' );
+                // Ends a typing burst, so the next search pushes a history
+                // entry instead of replacing one (spec §6.2).
+                $processor->set_attribute( 'data-wp-on--blur', 'pikari/gutenberg-query-filter::actions.endBurst' );
+                continue;
+            }
+
+            if ( 'BUTTON' === $processor->get_tag() && $processor->has_class( 'wp-block-search__button' ) ) {
+                $processor->set_attribute( 'form', $form_id );
+            }
         }
 
         return $processor->get_updated_html();

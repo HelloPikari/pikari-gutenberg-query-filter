@@ -40,6 +40,7 @@ class BlockFiltersTest extends TestCase {
     protected function tearDown(): void {
         unset( $GLOBALS['wp_rewrite'] );
         unset( $_SERVER['QUERY_STRING'], $_SERVER['REQUEST_URI'] );
+        $_GET = array();
         parent::tearDown();
     }
 
@@ -324,66 +325,124 @@ class BlockFiltersTest extends TestCase {
     }
 
     /**
-     * An inherited loop's search form sends the site's actual pagination
-     * base, read from $wp_rewrite, not a hardcoded 'page' (spec §3.3).
-     * view.js needs it to strip a trailing pretty-permalink pagination
-     * segment on a filter change.
+     * Render a core/search block inside a loop.
+     *
+     * @param array $context Block context.
+     * @return string Rendered HTML.
      */
-    public function test_render_block_search_sends_pagination_base_for_an_inherited_loop(): void {
+    private function render_search( array $context ): string {
         $this->stub_search_render_functions();
-        $_GET = array();
-
-        $GLOBALS['wp_rewrite']                  = Mockery::mock( 'WP_Rewrite' );
-        $GLOBALS['wp_rewrite']->pagination_base = 'seite';
 
         $instance          = Mockery::mock( 'WP_Block' );
-        $instance->context = array(
-            'query' => array( 'inherit' => true ),
-        );
+        $instance->context = $context;
 
-        $html = ( new BlockFilters() )->render_block_search(
-            '<form><input type="search" class="wp-block-search__input"></form>',
+        return ( new BlockFilters() )->render_block_search(
+            '<form role="search" method="get" action="/" class="wp-block-search">'
+            . '<input class="wp-block-search__input" type="search" name="s" required value="" />'
+            . '<button type="submit" class="wp-block-search__button">Search</button>'
+            . '</form>',
             array(),
             $instance
         );
-
-        $processor = new \WP_HTML_Tag_Processor( $html );
-        $processor->next_tag( array( 'tag_name' => 'form' ) );
-        $context = json_decode( $processor->get_attribute( 'data-wp-context' ), true );
-
-        $this->assertSame( 'seite', $context['paginationBase'] );
     }
 
-    /**
-     * A custom loop's search form also sends a pagination base, falling back
-     * to core's own default when $wp_rewrite isn't available (some CLI
-     * contexts). It doesn't currently need it — only an inherited loop's
-     * pagination lives in the path — but the context is built once for every
-     * loop type, and the fallback is what protects a request with no
-     * $wp_rewrite at all from a fatal.
-     */
-    public function test_render_block_search_sends_pagination_base_for_a_custom_loop(): void {
-        $this->stub_search_render_functions();
-        $_GET = array();
-        unset( $GLOBALS['wp_rewrite'] );
-
-        $instance          = Mockery::mock( 'WP_Block' );
-        $instance->context = array(
-            'queryId' => 3,
-            'query'   => array( 'inherit' => false ),
-        );
-
-        $html = ( new BlockFilters() )->render_block_search(
-            '<form><input type="search" class="wp-block-search__input"></form>',
-            array(),
-            $instance
+    public function test_render_block_search_leaves_cores_form_alone(): void {
+        $html = $this->render_search(
+            array(
+                'queryId' => 3,
+                'query'   => array( 'inherit' => false ),
+            )
         );
 
         $processor = new \WP_HTML_Tag_Processor( $html );
         $processor->next_tag( array( 'tag_name' => 'form' ) );
-        $context = json_decode( $processor->get_attribute( 'data-wp-context' ), true );
 
-        $this->assertSame( 'page', $context['paginationBase'] );
+        $this->assertSame( '/', $processor->get_attribute( 'action' ) );
+        $this->assertNull( $processor->get_attribute( 'data-wp-interactive' ) );
+        $this->assertNull( $processor->get_attribute( 'data-wp-context' ) );
+        $this->assertNull( $processor->get_attribute( 'data-wp-on--submit' ) );
+    }
+
+    public function test_render_block_search_joins_the_input_to_the_loop_form(): void {
+        $_GET = array( 'query-3-s' => 'cats' );
+
+        $html      = $this->render_search(
+            array(
+                'queryId' => 3,
+                'query'   => array( 'inherit' => false ),
+            )
+        );
+        $processor = new \WP_HTML_Tag_Processor( $html );
+        $processor->next_tag( array( 'tag_name' => 'input' ) );
+
+        $this->assertSame( 'query-3-s', $processor->get_attribute( 'name' ) );
+        $this->assertSame( 'cats', $processor->get_attribute( 'value' ) );
+        $this->assertSame( 'pikari-gutenberg-query-filter-form-3', $processor->get_attribute( 'form' ) );
+        $this->assertSame(
+            'pikari/gutenberg-query-filter::{"searchValue":"cats"}',
+            $processor->get_attribute( 'data-wp-context' )
+        );
+        $this->assertSame(
+            'pikari/gutenberg-query-filter::context.searchValue',
+            $processor->get_attribute( 'data-wp-bind--value' )
+        );
+        $this->assertSame(
+            'pikari/gutenberg-query-filter::actions.change',
+            $processor->get_attribute( 'data-wp-on--input' )
+        );
+        $this->assertSame(
+            'pikari/gutenberg-query-filter::actions.change',
+            $processor->get_attribute( 'data-wp-on--compositionend' )
+        );
+        $this->assertSame(
+            'pikari/gutenberg-query-filter::actions.endBurst',
+            $processor->get_attribute( 'data-wp-on--blur' )
+        );
+    }
+
+    public function test_render_block_search_joins_the_submit_button_to_the_loop_form(): void {
+        $html      = $this->render_search(
+            array(
+                'queryId' => 3,
+                'query'   => array( 'inherit' => false ),
+            )
+        );
+        $processor = new \WP_HTML_Tag_Processor( $html );
+        $processor->next_tag( array( 'tag_name' => 'button' ) );
+
+        $this->assertSame( 'pikari-gutenberg-query-filter-form-3', $processor->get_attribute( 'form' ) );
+    }
+
+    public function test_render_block_search_uses_the_bare_s_in_an_inherited_loop(): void {
+        $html      = $this->render_search( array( 'query' => array( 'inherit' => true ) ) );
+        $processor = new \WP_HTML_Tag_Processor( $html );
+        $processor->next_tag( array( 'tag_name' => 'input' ) );
+
+        $this->assertSame( 's', $processor->get_attribute( 'name' ) );
+        $this->assertSame( 'pikari-gutenberg-query-filter-form-inherit', $processor->get_attribute( 'form' ) );
+    }
+
+    public function test_render_block_search_handles_a_loop_without_a_query_id(): void {
+        // A Query Loop with no queryId still provides `query` context; the
+        // Search block in it must join that loop's form (spec §5.3).
+        $html      = $this->render_search( array( 'query' => array( 'inherit' => false ) ) );
+        $processor = new \WP_HTML_Tag_Processor( $html );
+        $processor->next_tag( array( 'tag_name' => 'input' ) );
+
+        $this->assertSame( 'query-0-s', $processor->get_attribute( 'name' ) );
+        $this->assertSame( 'pikari-gutenberg-query-filter-form-0', $processor->get_attribute( 'form' ) );
+    }
+
+    public function test_render_block_search_ignores_a_block_outside_a_loop(): void {
+        $instance          = Mockery::mock( 'WP_Block' );
+        $instance->context = array();
+
+        $content = '<form class="wp-block-search"><input class="wp-block-search__input" name="s" /></form>';
+
+        $this->assertSame(
+            $content,
+            ( new BlockFilters() )->render_block_search( $content, array(), $instance )
+        );
     }
 
     /**
@@ -391,11 +450,8 @@ class BlockFiltersTest extends TestCase {
      */
     private function stub_search_render_functions(): void {
         Functions\when( 'wp_enqueue_script_module' )->justReturn( null );
-        Functions\when( 'get_query_var' )->justReturn( 1 );
-        Functions\when( 'add_query_arg' )->justReturn( 'http://example.com/' );
         Functions\when( 'sanitize_text_field' )->returnArg();
         Functions\when( 'wp_unslash' )->returnArg();
-        Functions\when( 'wp_interactivity_state' )->justReturn( null );
         Functions\when( 'wp_json_encode' )->alias( 'json_encode' );
     }
 
