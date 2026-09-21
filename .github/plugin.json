@@ -2,5 +2,8 @@
 	"plugin-slug": "pikari-gutenberg-query-filter",
 	"composer-name": "pikari-inc/pikari-gutenberg-query-filter",
 	"composer-description": "Filter controls for the query loop block, using the interactivity API",
-	"skip-sync": [".eslintrc.js"]
+	"skip-sync": [
+		".eslintrc.js",
+		"tests/unit/__mocks__/@wordpress/interactivity.js"
+	]
 }
