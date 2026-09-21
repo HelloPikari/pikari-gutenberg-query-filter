@@ -695,9 +695,14 @@ class FilterHelperTest extends TestCase {
     }
 
     public function test_current_value_uses_text_sanitization_for_post_types(): void {
-        $_GET = array( 'query-3-post_type' => 'post' );
+        // 'post' round-trips under either branch with this file's stubs, so
+        // it can't tell them apart: sanitize_text_field() only strips %xx,
+        // and sanitize_title_for_query() lowercases an already-lowercase
+        // string. A mixed-case fixture discriminates: sanitize_text_field()
+        // preserves case, sanitize_title_for_query() would lowercase it.
+        $_GET = array( 'query-3-post_type' => 'Post' );
 
-        $this->assertSame( 'post', FilterHelper::current_value( 'query-3-post_type', 'post-type' ) );
+        $this->assertSame( 'Post', FilterHelper::current_value( 'query-3-post_type', 'post-type' ) );
     }
 
     public function test_current_value_splits_a_comma_joined_scalar(): void {

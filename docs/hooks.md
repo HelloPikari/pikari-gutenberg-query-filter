@@ -136,7 +136,7 @@ Every control gets a `name` and a `form="pikari-gutenberg-query-filter-form-{id}
 | Sort select       | `query-3-sort`                         |
 | Core Search input | `query-3-s` (custom) / `s` (inherited) |
 
-**The radio group's `name` is the query parameter, not the block's own ID.** That's what lets a radio filter submit through a plain `<form>`. One consequence: two Query Filter blocks in the same loop filtering the same taxonomy share one `name` and therefore merge into a single radio group — selecting an option in one visually separate block also selects it in the other. This is accepted, not a bug.
+**The radio group's `name` is the query parameter, not the block's own ID.** That's what lets a radio filter submit through a plain `<form>`. One consequence: two Query Filter blocks in the same loop filtering the same taxonomy share one `name` and therefore merge into a single radio group — selecting an option in one visually separate block also selects it in the other. This is accepted, not a bug. Because they share a `name`, arrow-key navigation and assistive-technology announcements ("1 of 8") span both `<fieldset>`s even though each shows only 4 options, and if both blocks render an "All" choice only one of the two identical-`name` radios can ever be checked.
 
 Every plugin directive value on a control is namespaced, for example `data-wp-on--change="pikari/gutenberg-query-filter::actions.change"`, because inside a loop the nearest `data-wp-interactive` ancestor may belong to `core/query` rather than to this plugin.
 
