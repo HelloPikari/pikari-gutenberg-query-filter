@@ -250,7 +250,11 @@ class BlockFiltersTest extends TestCase {
             'lang=fr'
         );
 
-        $this->assertStringContainsString( '<input type="hidden" name="lang" value="fr"', $html );
+        $this->assertSame(
+            2,
+            substr_count( $html, 'name="lang"' ),
+            'the nested form\'s literal input, plus the injected form\'s own'
+        );
     }
 
     public function test_render_block_query_still_marks_the_router_region_when_it_injects(): void {
