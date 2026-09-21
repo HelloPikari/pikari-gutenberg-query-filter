@@ -106,6 +106,25 @@ class QueryParams {
     }
 
     /**
+     * Get the id of the loop's hidden filter form.
+     *
+     * Every control that filters this loop carries it as a `form` attribute,
+     * and BlockFilters injects a form with this id when it finds one
+     * (spec §5.2). Inherited loops share a single id, as they share a single
+     * set of parameters.
+     *
+     * @return string `pikari-gutenberg-query-filter-form-3`, `…-form-0`, or
+     *                `…-form-inherit`.
+     */
+    public function form_id(): string {
+        if ( $this->inherit ) {
+            return 'pikari-gutenberg-query-filter-form-inherit';
+        }
+
+        return sprintf( 'pikari-gutenberg-query-filter-form-%d', $this->query_id ?? 0 );
+    }
+
+    /**
      * Whether the loop inherits the main query.
      *
      * @return bool

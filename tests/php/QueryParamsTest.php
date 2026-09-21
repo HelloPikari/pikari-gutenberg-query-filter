@@ -103,4 +103,43 @@ class QueryParamsTest extends TestCase {
 
         $this->assertFalse( QueryParams::from_block( $block )->is_inherit() );
     }
+
+    public function test_form_id_uses_the_query_id(): void {
+        $this->assertSame(
+            'pikari-gutenberg-query-filter-form-3',
+            ( new QueryParams( 3 ) )->form_id()
+        );
+    }
+
+    public function test_form_id_falls_back_to_zero_without_a_query_id(): void {
+        $this->assertSame(
+            'pikari-gutenberg-query-filter-form-0',
+            ( new QueryParams( null ) )->form_id()
+        );
+    }
+
+    public function test_form_id_is_shared_by_every_inherited_loop(): void {
+        $this->assertSame(
+            'pikari-gutenberg-query-filter-form-inherit',
+            ( new QueryParams( null, true ) )->form_id()
+        );
+    }
+
+    public function test_form_id_ignores_the_query_id_when_inheriting(): void {
+        // An inherited loop can still carry a queryId in block context; its
+        // parameters and its form are the main query's either way (spec §3.1).
+        $this->assertSame(
+            'pikari-gutenberg-query-filter-form-inherit',
+            ( new QueryParams( 7, true ) )->form_id()
+        );
+    }
+
+    public function test_form_id_does_not_collide_between_loop_3_and_loop_30(): void {
+        // BlockFilters matches the form attribute exactly for this reason
+        // (spec §5.2); the IDs themselves must differ as plain strings too.
+        $this->assertNotSame(
+            ( new QueryParams( 3 ) )->form_id(),
+            ( new QueryParams( 30 ) )->form_id()
+        );
+    }
 }
