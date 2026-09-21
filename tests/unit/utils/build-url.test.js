@@ -88,13 +88,14 @@ describe( 'buildUrl', () => {
 	} );
 
 	it( 'leaves a parameter the form does not own', () => {
-		// Hidden inputs are submitted but never owned, so they pass through.
+		// Hidden inputs are submitted but never owned: buildUrl must not
+		// write them, even when the form carries a different value.
 		const url = buildUrl(
 			`${ BASE }?utm_source=newsletter&s=cats`,
 			options( {
 				entries: [
-					[ 'utm_source', 'newsletter' ],
-					[ 's', 'cats' ],
+					[ 'utm_source', 'hijacked' ],
+					[ 's', 'dogs' ],
 				],
 			} )
 		);
@@ -103,6 +104,15 @@ describe( 'buildUrl', () => {
 			utm_source: 'newsletter',
 			s: 'cats',
 		} );
+	} );
+
+	it( 'does not add a parameter the form does not own', () => {
+		const url = buildUrl(
+			BASE,
+			options( { entries: [ [ 'utm_source', 'newsletter' ] ] } )
+		);
+
+		expect( params( url ) ).toEqual( {} );
 	} );
 
 	it( 'resets the page key, page and cst', () => {
