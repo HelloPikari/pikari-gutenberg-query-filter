@@ -8,6 +8,7 @@
 namespace Pikari\GutenbergQueryFilter\Integrations;
 
 use Pikari\GutenbergQueryFilter\Url\QueryParams;
+use Pikari\GutenbergQueryFilter\Url\LoopForm;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -310,7 +311,112 @@ class BlockFilters {
             self::advance_unique_id( 'wp_unique_prefixed_id', 'wp-elements-', $start['elements'] + self::UNIQUE_ID_RESERVE );
         }
 
-        return $processor->get_updated_html();
+        return self::inject_loop_form( $processor->get_updated_html(), $block );
+    }
+
+    /**
+     * Add the loop's hidden filter form as the last child of its wrapper.
+     *
+     * Runs after the whole loop has rendered, so every control has emitted
+     * its `form` attribute and blocks hidden after rendering, fragment caches
+     * and render order are all irrelevant (spec §5.2).
+     *
+     * @param string $html  Rendered Query block.
+     * @param array  $block Parsed block.
+     * @return string HTML, with the form appended when a control claims it.
+     */
+    private static function inject_loop_form( string $html, array $block ): string {
+        // The Query block's own context is what it receives, not what it
+        // provides, so the queryId comes from its attributes.
+        $params = new QueryParams(
+            isset( $block['attrs']['queryId'] ) ? (int) $block['attrs']['queryId'] : null,
+            ! empty( $block['attrs']['query']['inherit'] )
+        );
+
+        $targets = self::form_targets( $html, $params->form_id() );
+        if ( ! $targets['found'] ) {
+            return $html;
+        }
+
+        global $wp_rewrite;
+        $pagination_base = ( $wp_rewrite instanceof \WP_Rewrite ) ? $wp_rewrite->pagination_base : 'page';
+
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Path only; escaped with esc_url() in LoopForm::render().
+        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '/';
+
+        $form = LoopForm::render(
+            $params,
+            LoopForm::action( $request_uri, $params->is_inherit(), $pagination_base ),
+            LoopForm::hidden_inputs(
+                LoopForm::query_string(),
+                array_merge( $targets['names'], LoopForm::reset_names( $params ) )
+            ),
+            $pagination_base
+        );
+
+        // render_block_core/query receives only this block's HTML, so the
+        // wrapper is its first tag and its close is the last matching one.
+        $tag = strtolower( self::wrapper_tag( $html ) );
+        if ( '' === $tag ) {
+            return $html;
+        }
+
+        $close    = '</' . $tag . '>';
+        $position = strripos( $html, $close );
+        if ( false === $position ) {
+            return $html;
+        }
+
+        return substr( $html, 0, $position ) . $form . substr( $html, $position );
+    }
+
+    /**
+     * The wrapper's tag name, which core lets a theme set to div, main, section or aside.
+     *
+     * @param string $html Rendered Query block.
+     * @return string Lowercase tag name, or '' when there is no tag.
+     */
+    private static function wrapper_tag( string $html ): string {
+        $processor = new \WP_HTML_Tag_Processor( $html );
+
+        return $processor->next_tag() ? (string) $processor->get_tag() : '';
+    }
+
+    /**
+     * Find the controls that claim a form id, and the base names they own.
+     *
+     * The comparison is by attribute value, never by substring, so
+     * `…-form-3` cannot claim `…-form-30`'s controls.
+     *
+     * @param string $html    Rendered Query block.
+     * @param string $form_id The loop's form id.
+     * @return array{found: bool, names: string[]} Whether any control claimed it, and their base names.
+     */
+    private static function form_targets( string $html, string $form_id ): array {
+        $found     = false;
+        $names     = array();
+        $processor = new \WP_HTML_Tag_Processor( $html );
+
+        while ( $processor->next_tag() ) {
+            if ( $form_id !== $processor->get_attribute( 'form' ) ) {
+                continue;
+            }
+
+            $found = true;
+
+            $name = $processor->get_attribute( 'name' );
+            if ( ! is_string( $name ) || '' === $name ) {
+                continue;
+            }
+
+            $bracket = strpos( $name, '[' );
+            $names[] = false === $bracket ? $name : substr( $name, 0, $bracket );
+        }
+
+        return array(
+            'found' => $found,
+            'names' => array_values( array_unique( $names ) ),
+        );
     }
 
     /**

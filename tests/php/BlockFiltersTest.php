@@ -34,10 +34,12 @@ class BlockFiltersTest extends TestCase {
                 return abs( (int) $value );
             }
         );
+        Functions\when( 'wp_unslash' )->returnArg();
     }
 
     protected function tearDown(): void {
         unset( $GLOBALS['wp_rewrite'] );
+        unset( $_SERVER['QUERY_STRING'], $_SERVER['REQUEST_URI'] );
         parent::tearDown();
     }
 
@@ -94,6 +96,172 @@ class BlockFiltersTest extends TestCase {
             'pikari/gutenberg-query-filter::callbacks.restoreInjectedStyles',
             $processor->get_attribute( 'data-wp-watch---pikari-gutenberg-query-filter' )
         );
+    }
+
+    /*
+     * render_block_query(): form injection
+     */
+
+    /**
+     * Render a Query block whose inner HTML is given, with the request set.
+     *
+     * @param string $inner        Inner HTML of the Query wrapper.
+     * @param array  $attrs        Query block attributes.
+     * @param string $query_string Raw query string for the request.
+     * @param string $tag          Wrapper tag name.
+     * @return string Rendered HTML.
+     */
+    private function render_query( string $inner, array $attrs = array( 'queryId' => 3 ), string $query_string = '', string $tag = 'div' ): string {
+        $_SERVER['QUERY_STRING'] = $query_string;
+        $_SERVER['REQUEST_URI']  = '/library/?' . $query_string;
+
+        return ( new BlockFilters() )->render_block_query(
+            sprintf( '<%1$s class="wp-block-query">%2$s</%1$s>', $tag, $inner ),
+            array( 'attrs' => $attrs )
+        );
+    }
+
+    public function test_render_block_query_injects_the_form_when_a_control_claims_it(): void {
+        $html = $this->render_query(
+            '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select>'
+        );
+
+        $this->assertStringContainsString( 'id="pikari-gutenberg-query-filter-form-3"', $html );
+    }
+
+    public function test_render_block_query_injects_the_form_as_the_last_child(): void {
+        $html = $this->render_query(
+            '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select><p>After</p>'
+        );
+
+        $this->assertMatchesRegularExpression( '#<p>After</p><form [^>]*id="pikari-gutenberg-query-filter-form-3"#', $html );
+        $this->assertStringEndsWith( '</form></div>', $html );
+    }
+
+    public function test_render_block_query_injects_before_a_non_div_wrapper_close(): void {
+        $html = $this->render_query(
+            '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select>',
+            array( 'queryId' => 3 ),
+            '',
+            'main'
+        );
+
+        $this->assertStringEndsWith( '</form></main>', $html );
+    }
+
+    public function test_render_block_query_injects_no_form_without_a_control(): void {
+        $html = $this->render_query( '<p>Just posts</p>' );
+
+        $this->assertStringNotContainsString( '<form', $html );
+    }
+
+    public function test_render_block_query_ignores_another_loops_control(): void {
+        // Loop 3 must not claim loop 30's select (spec §5.2).
+        $html = $this->render_query(
+            '<select name="query-30-category" form="pikari-gutenberg-query-filter-form-30"></select>'
+        );
+
+        $this->assertStringNotContainsString( '<form', $html );
+    }
+
+    public function test_render_block_query_owns_its_controls_names(): void {
+        $html = $this->render_query(
+            '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select>',
+            array( 'queryId' => 3 ),
+            'query-3-category=news&lang=fr'
+        );
+
+        $this->assertStringNotContainsString( '<input type="hidden" name="query-3-category"', $html );
+        $this->assertStringContainsString( '<input type="hidden" name="lang" value="fr"', $html );
+    }
+
+    public function test_render_block_query_owns_a_checkbox_name_in_array_form(): void {
+        $html = $this->render_query(
+            '<input type="checkbox" name="query-3-category[]" form="pikari-gutenberg-query-filter-form-3">',
+            array( 'queryId' => 3 ),
+            'query-3-category=news&lang=fr'
+        );
+
+        $this->assertStringNotContainsString( '<input type="hidden" name="query-3-category"', $html );
+        $this->assertStringContainsString( 'name="lang"', $html );
+    }
+
+    public function test_render_block_query_resets_the_page_key_and_cst(): void {
+        $html = $this->render_query(
+            '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select>',
+            array( 'queryId' => 3 ),
+            'query-3-page=2&page=4&cst=1&lang=fr'
+        );
+
+        $this->assertStringNotContainsString( 'name="query-3-page"', $html );
+        $this->assertStringNotContainsString( 'name="page"', $html );
+        $this->assertStringNotContainsString( 'name="cst"', $html );
+        $this->assertStringContainsString( 'name="lang"', $html );
+    }
+
+    public function test_render_block_query_uses_the_inherit_form_for_an_inherited_loop(): void {
+        $html = $this->render_query(
+            '<select name="query-category" form="pikari-gutenberg-query-filter-form-inherit"></select>',
+            array( 'query' => array( 'inherit' => true ) )
+        );
+
+        $this->assertStringContainsString( 'id="pikari-gutenberg-query-filter-form-inherit"', $html );
+        $this->assertStringContainsString( 'data-query-inherit="true"', $html );
+    }
+
+    public function test_render_block_query_gives_a_loop_without_a_query_id_the_same_form_id_its_controls_use(): void {
+        // The controls read queryId from block context, this filter from
+        // block attributes. Both paths must land on `…-form-0`, or the
+        // controls would point at a form that is never injected.
+        $params = new \Pikari\GutenbergQueryFilter\Url\QueryParams( null );
+        $html   = $this->render_query(
+            sprintf( '<select name="query-0-category" form="%s"></select>', $params->form_id() ),
+            array()
+        );
+
+        $this->assertStringContainsString( sprintf( 'id="%s"', $params->form_id() ), $html );
+        $this->assertStringContainsString( 'data-query-page-key="query-page"', $html );
+    }
+
+    public function test_render_block_query_gives_a_nested_loop_its_own_form(): void {
+        // The inner loop rendered first, so its form is already in the HTML.
+        // The outer loop must add its own and leave the inner one alone.
+        $inner = '<div class="wp-block-query">'
+            . '<select name="query-9-category" form="pikari-gutenberg-query-filter-form-9"></select>'
+            . '<form id="pikari-gutenberg-query-filter-form-9"><input type="hidden" name="lang" value="fr" /></form>'
+            . '</div>';
+
+        $html = $this->render_query(
+            '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select>' . $inner
+        );
+
+        $this->assertSame( 1, substr_count( $html, 'id="pikari-gutenberg-query-filter-form-9"' ) );
+        $this->assertSame( 1, substr_count( $html, 'id="pikari-gutenberg-query-filter-form-3"' ) );
+        $this->assertStringEndsWith( '</form></div>', $html );
+    }
+
+    public function test_render_block_query_does_not_own_a_hidden_input_of_a_nested_form(): void {
+        // The nested form's own hidden inputs carry a name but no `form`
+        // attribute, so the outer scan must not treat them as controls.
+        $html = $this->render_query(
+            '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select>'
+            . '<form id="pikari-gutenberg-query-filter-form-9"><input type="hidden" name="lang" value="fr" /></form>',
+            array( 'queryId' => 3 ),
+            'lang=fr'
+        );
+
+        $this->assertStringContainsString( '<input type="hidden" name="lang" value="fr"', $html );
+    }
+
+    public function test_render_block_query_still_marks_the_router_region_when_it_injects(): void {
+        $html = $this->render_query(
+            '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select>'
+        );
+
+        $processor = new \WP_HTML_Tag_Processor( $html );
+        $processor->next_tag();
+
+        $this->assertSame( 'query-3', $processor->get_attribute( 'data-wp-router-region' ) );
     }
 
     /*
