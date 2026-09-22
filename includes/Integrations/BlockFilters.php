@@ -252,11 +252,12 @@ class BlockFilters {
     /**
      * Add data attributes to the query block to describe the block query.
      *
-     * @param string $block_content Default query content.
-     * @param array  $block         Parsed block.
+     * @param string         $block_content Default query content.
+     * @param array          $block         Parsed block.
+     * @param \WP_Block|null $instance      Block instance, whose attributes core has prepared.
      * @return string Modified block content.
      */
-    public function render_block_query( $block_content, $block ): string {
+    public function render_block_query( $block_content, $block, ?\WP_Block $instance = null ): string {
 
         $processor = new \WP_HTML_Tag_Processor( $block_content );
         $processor->next_tag();
@@ -284,7 +285,7 @@ class BlockFilters {
             self::advance_unique_id( 'wp_unique_prefixed_id', 'wp-elements-', $start['elements'] + self::UNIQUE_ID_RESERVE );
         }
 
-        return self::inject_loop_form( $processor->get_updated_html(), $block );
+        return self::inject_loop_form( $processor->get_updated_html(), $block, $instance );
     }
 
     /**
@@ -294,17 +295,27 @@ class BlockFilters {
      * its `form` attribute and blocks hidden after rendering, fragment caches
      * and render order are all irrelevant (spec §5.2).
      *
-     * @param string $html  Rendered Query block.
-     * @param array  $block Parsed block.
+     * @param string         $html     Rendered Query block.
+     * @param array          $block    Parsed block.
+     * @param \WP_Block|null $instance Block instance, whose attributes core has prepared.
      * @return string HTML, with the form appended when a control claims it.
      */
-    private static function inject_loop_form( string $html, array $block ): string {
+    private static function inject_loop_form( string $html, array $block, ?\WP_Block $instance = null ): string {
         // The Query block's own context is what it receives, not what it
-        // provides, so the queryId comes from its attributes.
-        $params = new QueryParams(
-            isset( $block['attrs']['queryId'] ) ? (int) $block['attrs']['queryId'] : null,
-            ! empty( $block['attrs']['query']['inherit'] )
-        );
+        // provides, so its parameters come from its attributes — the prepared
+        // ones, which carry block.json's defaults, because those are what its
+        // controls read from context.
+        if ( $instance instanceof \WP_Block ) {
+            $params = QueryParams::from_query_block( $instance );
+        } else {
+            // No instance: a caller applied the filter with fewer arguments
+            // than core passes. The raw parsed attributes are then the only
+            // source there is, missing defaults and all.
+            $params = new QueryParams(
+                isset( $block['attrs']['queryId'] ) ? (int) $block['attrs']['queryId'] : null,
+                ! empty( $block['attrs']['query']['inherit'] )
+            );
+        }
 
         $targets = self::form_targets( $html, $params->form_id() );
         if ( ! $targets['found'] ) {

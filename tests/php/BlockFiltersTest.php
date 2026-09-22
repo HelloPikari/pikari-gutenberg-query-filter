@@ -14,6 +14,17 @@ use Brain\Monkey\Functions;
 
 class BlockFiltersTest extends TestCase {
 
+    /**
+     * A custom loop's serialized attributes.
+     *
+     * A loop with its own query settings always serializes `inherit => false`,
+     * because it differs from block.json's default, which is `true`.
+     */
+    private const CUSTOM_LOOP_ATTRS = array(
+        'queryId' => 3,
+        'query'   => array( 'inherit' => false ),
+    );
+
     protected function setUp(): void {
         parent::setUp();
 
@@ -107,19 +118,39 @@ class BlockFiltersTest extends TestCase {
      * Render a Query block whose inner HTML is given, with the request set.
      *
      * @param string $inner        Inner HTML of the Query wrapper.
-     * @param array  $attrs        Query block attributes.
+     * @param array  $attrs        Serialized Query block attributes.
      * @param string $query_string Raw query string for the request.
      * @param string $tag          Wrapper tag name.
      * @return string Rendered HTML.
      */
-    private function render_query( string $inner, array $attrs = array( 'queryId' => 3 ), string $query_string = '', string $tag = 'div' ): string {
+    private function render_query( string $inner, array $attrs = self::CUSTOM_LOOP_ATTRS, string $query_string = '', string $tag = 'div' ): string {
         $_SERVER['QUERY_STRING'] = $query_string;
         $_SERVER['REQUEST_URI']  = '/library/?' . $query_string;
 
         return ( new BlockFilters() )->render_block_query(
             sprintf( '<%1$s class="wp-block-query">%2$s</%1$s>', $tag, $inner ),
-            array( 'attrs' => $attrs )
+            array( 'attrs' => $attrs ),
+            self::query_block( $attrs )
         );
+    }
+
+    /**
+     * A Query block instance whose attributes core has prepared for render.
+     *
+     * `WP_Block::__get( 'attributes' )` runs prepare_attributes_for_render(),
+     * which fills `query` in from block.json's default — `inherit => true` —
+     * whenever the serialized block omits it. The loop's controls read that
+     * defaulted array from context, so the parsed attrs alone are not what
+     * they saw.
+     *
+     * @param array $attrs Serialized Query block attributes.
+     * @return \WP_Block Block instance.
+     */
+    private static function query_block( array $attrs ): \WP_Block {
+        $instance             = Mockery::mock( 'WP_Block' );
+        $instance->attributes = array_merge( array( 'query' => array( 'inherit' => true ) ), $attrs );
+
+        return $instance;
     }
 
     public function test_render_block_query_injects_the_form_when_a_control_claims_it(): void {
@@ -142,7 +173,7 @@ class BlockFiltersTest extends TestCase {
     public function test_render_block_query_injects_before_a_non_div_wrapper_close(): void {
         $html = $this->render_query(
             '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select>',
-            array( 'queryId' => 3 ),
+            self::CUSTOM_LOOP_ATTRS,
             '',
             'main'
         );
@@ -168,7 +199,7 @@ class BlockFiltersTest extends TestCase {
     public function test_render_block_query_owns_its_controls_names(): void {
         $html = $this->render_query(
             '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select>',
-            array( 'queryId' => 3 ),
+            self::CUSTOM_LOOP_ATTRS,
             'query-3-category=news&lang=fr'
         );
 
@@ -179,7 +210,7 @@ class BlockFiltersTest extends TestCase {
     public function test_render_block_query_owns_a_checkbox_name_in_array_form(): void {
         $html = $this->render_query(
             '<input type="checkbox" name="query-3-category[]" form="pikari-gutenberg-query-filter-form-3">',
-            array( 'queryId' => 3 ),
+            self::CUSTOM_LOOP_ATTRS,
             'query-3-category=news&lang=fr'
         );
 
@@ -190,7 +221,7 @@ class BlockFiltersTest extends TestCase {
     public function test_render_block_query_resets_the_page_key_and_cst(): void {
         $html = $this->render_query(
             '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select>',
-            array( 'queryId' => 3 ),
+            self::CUSTOM_LOOP_ATTRS,
             'query-3-page=2&page=4&cst=1&lang=fr'
         );
 
@@ -210,14 +241,31 @@ class BlockFiltersTest extends TestCase {
         $this->assertStringContainsString( 'data-query-inherit="true"', $html );
     }
 
+    public function test_render_block_query_uses_the_inherit_form_when_the_query_attribute_is_absent(): void {
+        // `<!-- wp:query {"queryId":3} -->` serializes no `query` attribute —
+        // the editor omits a value that deep-equals the default — so core
+        // fills in block.json's default, `inherit => true`, and the controls
+        // read that from context and emit `…-form-inherit`. Deriving inherit
+        // from the raw parsed attrs instead looked for `…-form-3`, found
+        // nothing, and injected no form at all.
+        $html = $this->render_query(
+            '<select name="query-category" form="pikari-gutenberg-query-filter-form-inherit"></select>',
+            array( 'queryId' => 3 )
+        );
+
+        $this->assertStringContainsString( 'id="pikari-gutenberg-query-filter-form-inherit"', $html );
+        $this->assertStringContainsString( 'data-query-page-key="paged"', $html );
+    }
+
     public function test_render_block_query_gives_a_loop_without_a_query_id_the_same_form_id_its_controls_use(): void {
-        // The controls read queryId from block context, this filter from
-        // block attributes. Both paths must land on `…-form-0`, or the
-        // controls would point at a form that is never injected.
+        // The controls read queryId from block context, this filter from the
+        // block's own prepared attributes — the array that context is built
+        // from. Both paths must land on `…-form-0`, or the controls would
+        // point at a form that is never injected.
         $params = new \Pikari\GutenbergQueryFilter\Url\QueryParams( null );
         $html   = $this->render_query(
             sprintf( '<select name="query-0-category" form="%s"></select>', $params->form_id() ),
-            array()
+            array( 'query' => array( 'inherit' => false ) )
         );
 
         $this->assertStringContainsString( sprintf( 'id="%s"', $params->form_id() ), $html );
@@ -247,7 +295,7 @@ class BlockFiltersTest extends TestCase {
         $html = $this->render_query(
             '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select>'
             . '<form id="pikari-gutenberg-query-filter-form-9"><input type="hidden" name="lang" value="fr" /></form>',
-            array( 'queryId' => 3 ),
+            self::CUSTOM_LOOP_ATTRS,
             'lang=fr'
         );
 
