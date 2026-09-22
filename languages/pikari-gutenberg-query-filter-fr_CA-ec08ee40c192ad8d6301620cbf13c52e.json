@@ -1,5 +1,5 @@
 {
-	"translation-revision-date": "2026-02-05T16:12:00+00:00",
+	"translation-revision-date": "2026-09-22T04:02:43+00:00",
 	"generator": "WP-CLI/2.12.0",
 	"source": "src/blocks/sort/edit.js",
 	"domain": "messages",
@@ -11,7 +11,7 @@
 				"plural-forms": "nplurals=2; plural=(n > 1);"
 			},
 			"Sort By": ["Trier par"],
-			"Date": ["Date"],
+			"Default": ["Par d\u00e9faut"],
 			"Date (Newest First)": ["Date (plus r\u00e9cent)"],
 			"Date (Oldest First)": ["Date (plus ancien)"],
 			"Title (A-Z)": ["Titre (A-Z)"],
