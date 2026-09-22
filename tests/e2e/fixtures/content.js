@@ -273,6 +273,19 @@ ${injectedStyleBlock}`,
 <!-- wp:pikari-gutenberg-query-filter/query-filter {"filterType":"taxonomy","taxonomy":"category","label":"Category","displayType":"radio"} /-->`
 		),
 	},
+	// A single filter block with layoutDirection: horizontal — no other fixture
+	// page sets it, and this one exists only for visual.spec.js's horizontal
+	// layout baseline (tests/e2e/specs/visual.spec.js).
+	horizontal: {
+		slug: 'e2e-horizontal',
+		path: '/e2e-horizontal/',
+		queryId: 5,
+		title: 'E2E horizontal layout',
+		content: queryBlock(
+			5,
+			'<!-- wp:pikari-gutenberg-query-filter/query-filter {"filterType":"taxonomy","taxonomy":"category","label":"Category","displayType":"radio","layoutDirection":"horizontal"} /-->'
+		),
+	},
 };
 
 module.exports = {

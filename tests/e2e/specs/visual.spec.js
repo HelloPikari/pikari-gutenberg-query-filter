@@ -65,22 +65,23 @@ test.describe('display types', () => {
 		});
 	});
 
-	// No fixture page sets layoutDirection: horizontal — checked PAGES.filters,
-	// PAGES.enhanced, PAGES.sortOnly and PAGES.buttonSearch in
-	// tests/e2e/fixtures/content.js. Adding it would mean adding a query-filter
-	// block to one of those pages (reshaping a shared fixture other specs
-	// depend on) or adding a new PAGES entry (which harness.spec.js iterates
-	// directly via `Object.entries(PAGES)`, so it would grow that spec's
-	// executed test count too, and need its own baseline). Smallest proposed
-	// addition, not applied here: a new `PAGES.horizontal` entry (queryId 5,
-	// slug `e2e-horizontal`) with a single `{"filterType":"taxonomy",
-	// "taxonomy":"category","displayType":"radio","layoutDirection":
-	// "horizontal"}` query-filter block.
-	test('horizontal layout', async () => {
-		test.skip(
-			true,
-			'No fixture page sets layoutDirection: horizontal — see the comment above this test.'
-		);
+	test('horizontal layout', async ({ page }) => {
+		await page.goto(PAGES.horizontal.path);
+
+		const category = page.locator(FILTER_BLOCK);
+
+		// has-layout-horizontal is what switches the radio group's
+		// flex-direction from column to row (style.scss); confirm it actually
+		// landed on the rendered markup before trusting the baseline below —
+		// a block that silently fell back to vertical would pin the wrong
+		// thing.
+		await expect(
+			category.locator('.wp-block-pikari-gutenberg-query-filter__radio-group')
+		).toHaveClass(/has-layout-horizontal/);
+
+		await expect(category).toHaveScreenshot('horizontal-display.png', {
+			animations: 'disabled',
+		});
 	});
 });
 
