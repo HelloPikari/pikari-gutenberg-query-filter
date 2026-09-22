@@ -178,7 +178,14 @@ See [docs/hooks.md](docs/hooks.md) for the full markup, class rules, filter para
 
 ### Page-Level Caching
 
-A full-page cache or CDN in front of the site **must include `query-*`, `s` and `paged` in its cache key**. These are ordinary URL query parameters to this plugin, but some caches strip parameters that look like tracking noise (UTM values and the like) before computing a cache key. If a cache strips `query-*`, `s` or `paged`, it can serve one visitor's filtered, sorted or searched results — including the hidden form inputs that reproduce their other query parameters — to a different visitor who requested the unfiltered page. Configure the cache to key on the full URL, or explicitly allowlist these parameters.
+A full-page cache or CDN in front of the site **must key on the whole query string**, not on a subset of it.
+
+Filter state lives in ordinary URL query parameters, and each loop's hidden `<form>` re-emits **every** parameter of the current request as a hidden input, so that submitting a filter without JavaScript doesn't drop the rest of the URL. Between them, any parameter a cache leaves out of its key can leak from one visitor's cached page into another visitor's form:
+
+- **A cache that ignores `query-*`, `s` or `paged`** can serve one visitor's filtered, sorted or searched results to a different visitor who asked for the unfiltered page.
+- **A cache that keys on those but strips what it treats as tracking noise** — `utm_*`, `fbclid`, `gclid`, which is the usual default — bakes visitor A's campaign parameters into the cached page's hidden inputs and serves them to visitor B, whose Apply then re-submits A's campaign as if it were their own.
+
+Configure the cache to key on the full URL, or explicitly allowlist every parameter it would otherwise drop.
 
 ## Development
 
@@ -296,7 +303,7 @@ pikari-gutenberg-query-filter/
 ### Browsers
 
 - **Modern Browsers**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-- **JavaScript**: Optional. With it, results update in place through the Interactivity API router. Without it, every filter, sort and search control still works — each block shows an "Apply filters" button that submits the loop as a normal GET request and reloads the page
+- **JavaScript**: Optional. With it, results update in place through the Interactivity API router. Without it, every filter, sort and search control still works — each Query Filter and Sort block shows an "Apply filters" button, and core's Search block uses its own submit button; either submits the whole loop as a normal GET request and reloads the page
 
 ## Troubleshooting
 

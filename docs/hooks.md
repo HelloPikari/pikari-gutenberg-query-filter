@@ -162,6 +162,12 @@ Each Query Filter and Sort block ends its wrapper with:
 - A loop with four filter/sort blocks shows four buttons without JavaScript, and clicking any one of them submits every filter and sort control in the loop, because they all share the same `form`.
 - Core's Search block needs no `<noscript>` button of its own: its own submit button already carries a `form` attribute pointing at the loop's form (see [Control attributes](#control-attributes)), so clicking it submits the loop's hidden `<form>` — not core's own `<form>`, whose `action` is left as-is but which nothing joins it to anymore.
 
+### Limitation: two inherited loops on one page
+
+Every inherited loop shares the form id `pikari-gutenberg-query-filter-form-inherit`, because inherited loops share one set of URL parameters. Two inherited loops on the same page therefore emit two `<form>` elements with the same DOM id, and HTML resolves a `form` attribute to the **first** element with that id — so every control on the page associates with the first loop's form.
+
+The two forms are not interchangeable. Each one's hidden inputs are built from the controls of its own loop, so the first form can carry a hidden input for a parameter that only the second loop's controls own. A submit usually still lands on the live value — the stale hidden copy comes first in tree order, the live control's value later, and the later value wins — but the duplicate id is observable markup, so don't script or style against it expecting one form per loop. The two loops read the same parameters in any case, so they filter each other; give one of them its own query settings if they need to filter independently.
+
 ---
 
 ## Option Classes

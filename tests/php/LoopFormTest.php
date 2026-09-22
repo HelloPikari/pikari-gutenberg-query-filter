@@ -127,7 +127,9 @@ class LoopFormTest extends TestCase {
     }
 
     public function test_hidden_inputs_preserves_a_value_containing_equals_sign(): void {
-        // A value like redirect=/a?b=c must be preserved whole, not split on the second =.
+        // The `?` and `=` inside this value arrive percent-encoded, so they
+        // must survive decoding as part of the value. What pins explode()'s
+        // limit of 2 is the next test, whose value carries a literal `=`.
         $this->assertSame(
             array( array( 'name' => 'redirect', 'value' => '/a?b=c' ) ),
             LoopForm::hidden_inputs( 'redirect=/a%3Fb%3Dc', array() )
