@@ -13,6 +13,10 @@
  * `/category/news/` — since forcing one on could trigger a canonical
  * redirect on a site whose permalinks omit it.
  *
+ * PHP strips the same segment in `LoopForm::action()`, for the no-JavaScript
+ * submit. The two must agree; `LoopFormTest` and `build-url.test.js` both
+ * cover a root-level `/page/2`, which is where they last diverged.
+ *
  * @param {string} pathname       URL pathname.
  * @param {string} paginationBase Rewrite pagination base, e.g. "page".
  * @return {string} Pathname with a trailing pagination segment removed.
@@ -32,10 +36,13 @@ const RESET_NAMES = [ 'page', 'cst' ];
 /**
  * The bare name of a control, without a trailing `[]`.
  *
+ * PHP applies the same rule in `LoopForm::bare_name()`, which both
+ * `LoopForm::hidden_inputs()` and `BlockFilters::form_targets()` call.
+ *
  * @param {string} name Control name.
  * @return {string} Bare name.
  */
-const bareName = ( name ) => name.replace( /\[\]$/, '' );
+export const bareName = ( name ) => name.replace( /\[\]$/, '' );
 
 /**
  * Build the URL a filter change should navigate to.

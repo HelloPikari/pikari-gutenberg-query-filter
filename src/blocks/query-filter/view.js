@@ -1,5 +1,5 @@
 import { store, getContext, withSyncEvent } from '@wordpress/interactivity';
-import { buildUrl, sameQuery } from '../../utils/build-url';
+import { bareName, buildUrl, sameQuery } from '../../utils/build-url';
 
 /*
  * The router disables every stylesheet that is not in the fetched page's HTML,
@@ -53,7 +53,8 @@ let searchBurst = false;
  * Everything buildUrl() needs, read from a loop form.
  *
  * form.elements is the browser's own answer to "what filters this loop?" —
- * controls join by their `form` attribute wherever they sit in the DOM.
+ * controls join by their `form` attribute rather than by nesting, though
+ * block.json's `ancestor` still keeps them inside the loop.
  * Hidden inputs are submitted but never owned, so they pass through untouched.
  *
  * @param {HTMLFormElement} form The loop form.
@@ -62,7 +63,7 @@ let searchBurst = false;
 const formOptions = ( form ) => {
 	const ownedNames = Array.from( form.elements )
 		.filter( ( element ) => element.name && element.type !== 'hidden' )
-		.map( ( element ) => element.name.replace( /\[\]$/, '' ) );
+		.map( ( element ) => bareName( element.name ) );
 
 	return {
 		entries: [ ...new FormData( form ) ],
@@ -139,9 +140,9 @@ store( NAMESPACE, {
 				getContext().searchValue = control.value;
 			}
 
-			const form = document.getElementById(
-				control.getAttribute( 'form' )
-			);
+			// The browser's own form-owner resolution: honours the `form`
+			// attribute, and is null when it names nothing or a non-form.
+			const form = control.form;
 			if ( ! form ) {
 				return;
 			}

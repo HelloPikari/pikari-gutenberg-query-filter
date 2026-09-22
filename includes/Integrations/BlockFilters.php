@@ -216,9 +216,9 @@ class BlockFilters {
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Search forms don't require nonces for GET requests.
         $value = isset( $_GET[ $query_var ] ) ? sanitize_text_field( wp_unslash( $_GET[ $query_var ] ) ) : '';
 
-        $context = wp_json_encode( array( 'searchValue' => $value ) );
-        if ( false === $context ) {
-            $context = '{}';
+        $context_json = wp_json_encode( array( 'searchValue' => $value ) );
+        if ( false === $context_json ) {
+            $context_json = '{}';
         }
 
         // Only the input and the submit button change. Core's <form>, and any
@@ -231,7 +231,7 @@ class BlockFilters {
                 $processor->set_attribute( 'name', $query_var );
                 $processor->set_attribute( 'value', $value );
                 $processor->set_attribute( 'form', $form_id );
-                $processor->set_attribute( 'data-wp-context', 'pikari/gutenberg-query-filter::' . $context );
+                $processor->set_attribute( 'data-wp-context', 'pikari/gutenberg-query-filter::' . $context_json );
                 $processor->set_attribute( 'data-wp-bind--value', 'pikari/gutenberg-query-filter::context.searchValue' );
                 $processor->set_attribute( 'data-wp-on--input', 'pikari/gutenberg-query-filter::actions.change' );
                 $processor->set_attribute( 'data-wp-on--compositionend', 'pikari/gutenberg-query-filter::actions.change' );
@@ -257,10 +257,15 @@ class BlockFilters {
      * @param \WP_Block|null $instance      Block instance, whose attributes core has prepared.
      * @return string Modified block content.
      */
-    public function render_block_query( $block_content, $block, ?\WP_Block $instance = null ): string {
+    public function render_block_query( $block_content, $block, \WP_Block $instance ): string {
 
         $processor = new \WP_HTML_Tag_Processor( $block_content );
         $processor->next_tag();
+
+        // The wrapper is this block's first tag — core lets a theme make it a
+        // div, main, section or aside. Read it here, while the processor is
+        // already sitting on it, rather than re-parsing to recover it later.
+        $wrapper_tag = strtolower( (string) $processor->get_tag() );
 
         // Always allow region updates on interactivity, use standard core region naming.
         $query_id = absint( $block['attrs']['queryId'] ?? 0 );
@@ -285,7 +290,7 @@ class BlockFilters {
             self::advance_unique_id( 'wp_unique_prefixed_id', 'wp-elements-', $start['elements'] + self::UNIQUE_ID_RESERVE );
         }
 
-        return self::inject_loop_form( $processor->get_updated_html(), $block, $instance );
+        return self::inject_loop_form( $processor->get_updated_html(), $instance, $wrapper_tag );
     }
 
     /**
@@ -295,29 +300,34 @@ class BlockFilters {
      * its `form` attribute and blocks hidden after rendering, fragment caches
      * and render order are all irrelevant (spec §5.2).
      *
-     * @param string         $html     Rendered Query block.
-     * @param array          $block    Parsed block.
-     * @param \WP_Block|null $instance Block instance, whose attributes core has prepared.
+     * @param string    $html        Rendered Query block.
+     * @param \WP_Block $instance    Block instance, whose attributes core has prepared.
+     * @param string    $wrapper_tag Lowercase tag name of the block's wrapper.
      * @return string HTML, with the form appended when a control claims it.
      */
-    private static function inject_loop_form( string $html, array $block, ?\WP_Block $instance = null ): string {
+    private static function inject_loop_form( string $html, \WP_Block $instance, string $wrapper_tag ): string {
+        if ( '' === $wrapper_tag ) {
+            return $html;
+        }
+
         // The Query block's own context is what it receives, not what it
         // provides, so its parameters come from its attributes — the prepared
         // ones, which carry block.json's defaults, because those are what its
         // controls read from context.
-        if ( $instance instanceof \WP_Block ) {
-            $params = QueryParams::from_query_block( $instance );
-        } else {
-            // No instance: a caller applied the filter with fewer arguments
-            // than core passes. The raw parsed attributes are then the only
-            // source there is, missing defaults and all.
-            $params = new QueryParams(
-                isset( $block['attrs']['queryId'] ) ? (int) $block['attrs']['queryId'] : null,
-                ! empty( $block['attrs']['query']['inherit'] )
-            );
+        $params  = QueryParams::from_query_block( $instance );
+        $form_id = $params->form_id();
+
+        // Most Query Loops on a site carry no filter controls at all. A literal
+        // scan rules those out before tokenizing the loop's entire rendered
+        // output, which can run to every post and inner block on the page.
+        // Deliberately looser than form_targets(): it matches the id anywhere,
+        // whatever the attribute quoting, so it can never skip a loop the walk
+        // would have claimed.
+        if ( ! str_contains( $html, $form_id ) ) {
+            return $html;
         }
 
-        $targets = self::form_targets( $html, $params->form_id() );
+        $targets = self::form_targets( $html, $form_id );
         if ( ! $targets['found'] ) {
             return $html;
         }
@@ -339,13 +349,8 @@ class BlockFilters {
         );
 
         // render_block_core/query receives only this block's HTML, so the
-        // wrapper is its first tag and its close is the last matching one.
-        $tag = strtolower( self::wrapper_tag( $html ) );
-        if ( '' === $tag ) {
-            return $html;
-        }
-
-        $close    = '</' . $tag . '>';
+        // wrapper's close is the last matching tag.
+        $close    = '</' . $wrapper_tag . '>';
         $position = strripos( $html, $close );
         if ( false === $position ) {
             return $html;
@@ -354,17 +359,6 @@ class BlockFilters {
         return substr( $html, 0, $position ) . $form . substr( $html, $position );
     }
 
-    /**
-     * The wrapper's tag name, which core lets a theme set to div, main, section or aside.
-     *
-     * @param string $html Rendered Query block.
-     * @return string Lowercase tag name, or '' when there is no tag.
-     */
-    private static function wrapper_tag( string $html ): string {
-        $processor = new \WP_HTML_Tag_Processor( $html );
-
-        return $processor->next_tag() ? (string) $processor->get_tag() : '';
-    }
 
     /**
      * Find the controls that claim a form id, and the base names they own.
@@ -393,8 +387,7 @@ class BlockFilters {
                 continue;
             }
 
-            $bracket = strpos( $name, '[' );
-            $names[] = false === $bracket ? $name : substr( $name, 0, $bracket );
+            $names[] = LoopForm::bare_name( $name );
         }
 
         return array(

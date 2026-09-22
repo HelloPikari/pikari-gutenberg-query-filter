@@ -61,6 +61,23 @@ class LoopForm {
     }
 
     /**
+     * A control's parameter name, without any `[]` suffix.
+     *
+     * `key[]=a` and `key=a` are the same parameter to this plugin: a no-JS
+     * checkbox group submits the bracketed form, a JavaScript filter change
+     * writes the comma-joined one. The JavaScript side applies the same rule
+     * in `bareName()` (`src/utils/build-url.js`).
+     *
+     * @param string $name Control name, as submitted.
+     * @return string Name up to the first `[`.
+     */
+    public static function bare_name( string $name ): string {
+        $bracket = strpos( $name, '[' );
+
+        return false === $bracket ? $name : substr( $name, 0, $bracket );
+    }
+
+    /**
      * Turn a raw query string into the form's hidden inputs.
      *
      * @param string   $query_string  Raw query string, without the leading `?`.
@@ -83,11 +100,7 @@ class LoopForm {
                 continue;
             }
 
-            // `key[]=a` and `key=a` are the same parameter to this plugin.
-            $bracket = strpos( $name, '[' );
-            $base    = false === $bracket ? $name : substr( $name, 0, $bracket );
-
-            if ( in_array( $base, $dropped_names, true ) ) {
+            if ( in_array( self::bare_name( $name ), $dropped_names, true ) ) {
                 continue;
             }
 
@@ -102,6 +115,10 @@ class LoopForm {
 
     /**
      * The form's action: the request path, and nothing else.
+     *
+     * JavaScript strips the same pagination segment in
+     * `stripInheritedPagination()` (`src/utils/build-url.js`); the two must
+     * agree, and a root-level `/page/2` is where they last diverged.
      *
      * A GET submit replaces the query string and drops the fragment, so
      * carrying either here would be misleading. An inherited loop's page

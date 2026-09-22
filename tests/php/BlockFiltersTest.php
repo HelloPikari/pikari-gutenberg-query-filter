@@ -62,7 +62,8 @@ class BlockFiltersTest extends TestCase {
     public function test_render_block_query_marks_router_region_as_interactive(): void {
         $html = ( new BlockFilters() )->render_block_query(
             '<div class="wp-block-query"><p>Posts</p></div>',
-            array( 'attrs' => array( 'queryId' => 3 ) )
+            array( 'attrs' => array( 'queryId' => 3 ) ),
+            self::query_block( array( 'queryId' => 3 ) )
         );
 
         $processor = new \WP_HTML_Tag_Processor( $html );
@@ -80,6 +81,12 @@ class BlockFiltersTest extends TestCase {
                     'queryId'            => 3,
                     'enhancedPagination' => true,
                 ),
+            ),
+            self::query_block(
+                array(
+                    'queryId'            => 3,
+                    'enhancedPagination' => true,
+                )
             )
         );
 
@@ -98,6 +105,12 @@ class BlockFiltersTest extends TestCase {
                     'queryId'            => 3,
                     'enhancedPagination' => true,
                 ),
+            ),
+            self::query_block(
+                array(
+                    'queryId'            => 3,
+                    'enhancedPagination' => true,
+                )
             )
         );
 
@@ -588,7 +601,7 @@ class BlockFiltersTest extends TestCase {
             wp_unique_prefixed_id( 'wp-elements-' );
         }
 
-        $filters->render_block_query( '<div class="wp-block-query"></div>', $block );
+        $filters->render_block_query( '<div class="wp-block-query"></div>', $block, self::query_block( $block['attrs'] ?? array() ) );
 
         $this->assertSame( 'is-style-eyebrow--1002', wp_unique_id( 'is-style-eyebrow--' ) );
         $this->assertSame( 'wp-elements-1002', wp_unique_prefixed_id( 'wp-elements-' ) );
