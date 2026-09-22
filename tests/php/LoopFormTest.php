@@ -220,6 +220,14 @@ class LoopFormTest extends TestCase {
         );
     }
 
+    public function test_action_cannot_be_made_protocol_relative(): void {
+        // esc_url() short-circuits its protocol check for anything starting
+        // with a slash, so a request for `//evil.com/x` would render
+        // `action="//evil.com/x"` and a no-JS submit would post the visitor's
+        // whole query string to that host.
+        $this->assertSame( '/evil.com/x', LoopForm::action( '//evil.com/x', false, 'page' ) );
+    }
+
     public function test_action_falls_back_to_the_site_root(): void {
         $this->assertSame( '/', LoopForm::action( '?s=cat', false, 'page' ) );
     }

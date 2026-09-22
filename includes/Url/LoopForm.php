@@ -120,13 +120,12 @@ class LoopForm {
             $path = (string) preg_replace( '#/' . $base . '/\d+(/?)$#', '$1', $path );
         }
 
-        // After the strip, not before: `/page/2` leaves nothing behind, and an
-        // empty action means the current document — page number included.
-        if ( '' === $path ) {
-            $path = '/';
-        }
-
-        return $path;
+        // Last, and always: stripping `/page/2` can leave nothing behind, and
+        // an empty action means the current document to a browser — page
+        // number included. A leading `//host` is worse: esc_url() waves
+        // through anything starting with a slash, so the form would point
+        // off-origin and a no-JS submit would post the query string there.
+        return '/' . ltrim( $path, '/' );
     }
 
     /**
