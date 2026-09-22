@@ -160,6 +160,7 @@ Each Query Filter and Sort block ends its wrapper with:
 
 - It renders only when JavaScript is off, so JavaScript users never see it, not even briefly.
 - A loop with four filter/sort blocks shows four buttons without JavaScript, and clicking any one of them submits every filter and sort control in the loop, because they all share the same `form`.
+- Core's Search block needs no `<noscript>` button of its own: its own submit button already carries a `form` attribute pointing at the loop's form (see [Control attributes](#control-attributes)), so clicking it submits the loop's hidden `<form>` — not core's own `<form>`, whose `action` is left as-is but which nothing joins it to anymore.
 
 ---
 
