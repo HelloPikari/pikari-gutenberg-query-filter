@@ -193,6 +193,19 @@ class LoopFormTest extends TestCase {
         );
     }
 
+    public function test_action_strips_a_root_level_pagination_segment(): void {
+        // A root-level inherited loop on page 2, on a site whose permalink
+        // structure omits the trailing slash. Nothing is left of the path,
+        // and an empty action means *the current document* to a browser — so
+        // a no-JS submit would keep the `/page/2` the strip exists to drop,
+        // against a filtered query that may have fewer pages (spec §5.2).
+        $this->assertSame( '/', LoopForm::action( '/page/2', true, 'page' ) );
+    }
+
+    public function test_action_strips_a_root_level_pagination_segment_with_a_trailing_slash(): void {
+        $this->assertSame( '/', LoopForm::action( '/page/2/', true, 'page' ) );
+    }
+
     public function test_action_honours_a_translated_pagination_base(): void {
         $this->assertSame(
             '/categorie/actualites/',

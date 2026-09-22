@@ -154,6 +154,24 @@ describe( 'buildUrl', () => {
 		expect( new URL( url ).pathname ).toBe( '/category/news' );
 	} );
 
+	it( 'strips a root-level inherited pagination segment', () => {
+		// The PHP side builds the same no-JS action for this request
+		// (LoopFormTest::test_action_strips_a_root_level_pagination_segment).
+		// Both must resolve `/page/2` to `/`, or filtering from page 2 of a
+		// root-level inherited loop keeps a page the filtered query may not
+		// have.
+		const url = buildUrl(
+			'https://example.com/page/2',
+			options( {
+				pageKey: 'paged',
+				inherit: true,
+				ownedNames: [ 'query-category' ],
+			} )
+		);
+
+		expect( new URL( url ).pathname ).toBe( '/' );
+	} );
+
 	it( 'leaves a custom loop path alone', () => {
 		const url = buildUrl( 'https://example.com/library/page/2/', options() );
 
@@ -251,6 +269,10 @@ describe( 'stripInheritedPagination', () => {
 		expect( stripInheritedPagination( '/page-two/', 'page' ) ).toBe(
 			'/page-two/'
 		);
+	} );
+
+	it( 'leaves nothing of a root-level paginated path', () => {
+		expect( stripInheritedPagination( '/page/2', 'page' ) ).toBe( '' );
 	} );
 
 	it( 'only strips a trailing segment, not one followed by more path', () => {

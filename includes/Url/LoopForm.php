@@ -115,13 +115,15 @@ class LoopForm {
     public static function action( string $request_uri, bool $inherit, string $pagination_base ): string {
         $path = explode( '#', explode( '?', $request_uri, 2 )[0], 2 )[0];
 
-        if ( '' === $path ) {
-            $path = '/';
-        }
-
         if ( $inherit ) {
             $base = preg_quote( $pagination_base, '#' );
             $path = (string) preg_replace( '#/' . $base . '/\d+(/?)$#', '$1', $path );
+        }
+
+        // After the strip, not before: `/page/2` leaves nothing behind, and an
+        // empty action means the current document — page number included.
+        if ( '' === $path ) {
+            $path = '/';
         }
 
         return $path;
