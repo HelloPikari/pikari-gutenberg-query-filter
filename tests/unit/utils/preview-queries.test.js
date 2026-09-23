@@ -16,7 +16,7 @@ describe( 'preview queries', () => {
 	it( 'should match AuthorHelper::get_filter_authors(), readable below Administrator', () => {
 		expect( AUTHOR_PREVIEW_QUERY ).toEqual( {
 			per_page: 100,
-			has_published_posts: true,
+			has_published_posts: [ 'post' ],
 			context: 'view',
 		} );
 	} );

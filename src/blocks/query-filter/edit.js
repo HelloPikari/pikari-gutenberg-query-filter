@@ -80,17 +80,19 @@ export default function Edit( {
 		}
 	}, [ filterType, taxonomy, taxonomies, setAttributes ] );
 
-	const { records: terms, hasResolved: termsResolved } = useEntityRecords(
+	const { records: terms, status: termsStatus } = useEntityRecords(
 		'taxonomy',
 		taxonomy || '',
 		TERM_PREVIEW_QUERY,
 		{ enabled: filterType === 'taxonomy' && !! taxonomy }
 	);
 
-	const { records: authors, hasResolved: authorsResolved } =
-		useEntityRecords( 'root', 'user', AUTHOR_PREVIEW_QUERY, {
-			enabled: filterType === 'author',
-		} );
+	const { records: authors, status: authorsStatus } = useEntityRecords(
+		'root',
+		'user',
+		AUTHOR_PREVIEW_QUERY,
+		{ enabled: filterType === 'author' }
+	);
 
 	const hasDuplicate = useSelect(
 		( select ) => hasDuplicateFilter( select( blockEditorStore ), clientId ),
@@ -161,9 +163,8 @@ export default function Edit( {
 	const notices = getFilterNotices( attributes, {
 		hasDuplicate,
 		optionsResolved:
-			{ taxonomy: termsResolved, author: authorsResolved }[
-				filterType
-			] ?? false,
+			{ taxonomy: termsStatus, author: authorsStatus }[ filterType ] ===
+			'SUCCESS',
 		optionCount: previewOptions.length,
 	} );
 	const blankNotices = notices.filter( ( key ) =>

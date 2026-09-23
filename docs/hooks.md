@@ -232,15 +232,15 @@ All three filters receive options as associative arrays:
 
 Each filter also receives the block's `$attributes`:
 
-| Key               | Type      | Values                                                   |
-| ----------------- | --------- | -------------------------------------------------------- |
-| `filterType`      | `string`  | `post-type`, `taxonomy`, or `author`                     |
-| `taxonomy`        | `string`  | Taxonomy name. Required when `filterType` is `taxonomy`. |
-| `displayType`     | `string`  | `select`, `radio`, or `checkbox`                         |
-| `layoutDirection` | `string`  | `vertical` or `horizontal`                               |
-| `label`           | `string`  | Block label text, if set in the editor                   |
-| `showLabel`       | `boolean` | Whether the block label is visible                       |
-| `emptyLabel`      | `string`  | Label for the "All" choice; empty means "All"            |
+| Key               | Type      | Values                                                                                       |
+| ----------------- | --------- | -------------------------------------------------------------------------------------------- |
+| `filterType`      | `string`  | `post-type`, `taxonomy`, or `author`                                                         |
+| `taxonomy`        | `string`  | Taxonomy name. Required when `filterType` is `taxonomy`.                                     |
+| `displayType`     | `string`  | `select`, `radio`, or `checkbox`                                                             |
+| `layoutDirection` | `string`  | `vertical` or `horizontal`                                                                   |
+| `label`           | `string`  | Block label text. Empty or missing means the default label; see `FilterHelper::get_label()`. |
+| `showLabel`       | `boolean` | Whether the block label is visible                                                           |
+| `emptyLabel`      | `string`  | Label for the "All" choice; empty means "All"                                                |
 
 ---
 
