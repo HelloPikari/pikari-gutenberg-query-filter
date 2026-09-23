@@ -122,15 +122,15 @@ Both blocks are dynamic, so they serialize as self-closing comments. Each Query 
 
 **Query Filter** (`pikari-gutenberg-query-filter/query-filter`):
 
-| Attribute         | Default     | Values                                                   |
-| ----------------- | ----------- | -------------------------------------------------------- |
-| `filterType`      | `post-type` | `post-type`, `taxonomy`, `author`                        |
-| `taxonomy`        | —           | Taxonomy name. Required when `filterType` is `taxonomy`. |
-| `displayType`     | `select`    | `select`, `radio`, `checkbox`                            |
-| `layoutDirection` | `vertical`  | `vertical`, `horizontal` (radio and checkbox only)       |
-| `label`           | Per type    | Label text; defaults to the filter type's name           |
-| `showLabel`       | `true`      | `false` keeps the label for screen readers only          |
-| `emptyLabel`      | `All`       | Text for the "All" choice                                |
+| Attribute         | Default     | Values                                                                 |
+| ----------------- | ----------- | ---------------------------------------------------------------------- |
+| `filterType`      | `post-type` | `post-type`, `taxonomy`, `author`                                      |
+| `taxonomy`        | —           | Taxonomy name. Required when `filterType` is `taxonomy`.               |
+| `displayType`     | `select`    | `select`, `radio`, `checkbox`                                          |
+| `layoutDirection` | `vertical`  | `vertical`, `horizontal` (radio and checkbox only)                     |
+| `label`           | Per type    | Label text. Empty uses the filter type's name; hide it with showLabel. |
+| `showLabel`       | `true`      | `false` keeps the label for screen readers only                        |
+| `emptyLabel`      | `All`       | Text for the "All" choice                                              |
 
 **Sort** (`pikari-gutenberg-query-filter/sort`): `label`, `showLabel`, `emptyLabel`.
 

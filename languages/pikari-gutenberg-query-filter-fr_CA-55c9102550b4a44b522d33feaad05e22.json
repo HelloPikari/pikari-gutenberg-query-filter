@@ -10,9 +10,6 @@
 				"lang": "fr_CA",
 				"plural-forms": "nplurals=2; plural=(n > 1);"
 			},
-			"Content Type": ["Type de contenu"],
-			"Filter by": ["Filtrer par"],
-			"Author": ["Auteur"],
 			"Post Type Filter": ["Filtre par type de publication"],
 			"Filter posts by post type": [
 				"Filtrer les publications par type de publication"

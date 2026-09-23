@@ -14,6 +14,31 @@
 			"Filter by": ["Filtrer par"],
 			"Author": ["Auteur"],
 			"All": ["Tous"],
+			"Display Type": ["Type d\u2019affichage"],
+			"Select (Dropdown)": ["S\u00e9lection (liste d\u00e9roulante)"],
+			"Radio (Single Choice)": ["Radio (choix unique)"],
+			"Checkbox (Multiple Choice)": ["Case \u00e0 cocher (choix multiple)"],
+			"Layout Direction": ["Direction de la mise en page"],
+			"Vertical": ["Vertical"],
+			"Horizontal": ["Horizontal"],
+			"Label": ["\u00c9tiquette"],
+			"Leave empty to use the default label.": [
+				"Laissez vide pour utiliser l\u2019\u00e9tiquette par d\u00e9faut."
+			],
+			"Show Label": ["Afficher l\u2019\u00e9tiquette"],
+			"Empty Choice Label": ["\u00c9tiquette du choix vide"],
+			"Another filter in this Query Loop filters by the same thing. Both use one URL parameter, so they act as one control. Remove one of them.": [
+				"Un autre filtre de cette boucle de requ\u00eate filtre selon le m\u00eame crit\u00e8re. Les deux utilisent un seul param\u00e8tre d\u2019URL et agissent donc comme un seul contr\u00f4le. Supprimez l\u2019un des deux."
+			],
+			"Choose a taxonomy. This filter displays nothing until you do.": [
+				"Choisissez une taxonomie. Ce filtre n\u2019affiche rien tant que vous ne l\u2019avez pas fait."
+			],
+			"This taxonomy has no terms with posts yet, so this filter displays nothing.": [
+				"Cette taxonomie n\u2019a encore aucun terme avec des publications, donc ce filtre n\u2019affiche rien."
+			],
+			"No authors have published posts yet, so this filter displays nothing.": [
+				"Aucun auteur n\u2019a encore de publications publi\u00e9es, donc ce filtre n\u2019affiche rien."
+			],
 			"Post Type Filter": ["Filtre par type de publication"],
 			"Filter posts by post type": [
 				"Filtrer les publications par type de publication"
@@ -25,22 +50,12 @@
 			"Author Filter": ["Filtre par auteur"],
 			"Filter posts by author": ["Filtrer les publications par auteur"],
 			"Filter": ["Filtre"],
+			"Options come from the page's query.": [
+				"Les options proviennent de la requ\u00eate de la page."
+			],
 			"Filter Settings": ["Param\u00e8tres du filtre"],
 			"Taxonomy": ["Taxonomie"],
-			"Select a taxonomy": ["S\u00e9lectionner une taxonomie"],
-			"Display Type": ["Type d\u2019affichage"],
-			"Select (Dropdown)": ["S\u00e9lection (liste d\u00e9roulante)"],
-			"Radio (Single Choice)": ["Radio (choix unique)"],
-			"Checkbox (Multiple Choice)": ["Case \u00e0 cocher (choix multiple)"],
-			"Layout Direction": ["Direction de la mise en page"],
-			"Vertical": ["Vertical"],
-			"Horizontal": ["Horizontal"],
-			"Label": ["\u00c9tiquette"],
-			"If empty then no label will be shown": [
-				"Si vide, aucune \u00e9tiquette ne sera affich\u00e9e"
-			],
-			"Show Label": ["Afficher l\u2019\u00e9tiquette"],
-			"Empty Choice Label": ["\u00c9tiquette du choix vide"]
+			"Select a taxonomy": ["S\u00e9lectionner une taxonomie"]
 		}
 	}
 }

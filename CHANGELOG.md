@@ -23,18 +23,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **`wp_interactivity_state( 'searchValue' )` is gone.** Search state now lives entirely in the input's own `data-wp-context`.
   - **The store actions `updateFilters`, `handleSelect`, `handleSort` and `search` are removed,** replaced by `actions.change`, `actions.submit`, `actions.endBurst` and `actions.navigate`. Any theme or plugin code that calls the old action names directly breaks.
   - **The injected loop `<form>` is `novalidate`.** Core marks its Search `<input>` `required`; without `novalidate`, a browser would block every filter submit whenever the search box is empty, since all controls now share one form. This is deliberate, but it means a no-JS submit with an empty search box no longer shows a native "please fill out this field" validation bubble the way core's own search form does on its own.
+- **The Sort block's `width` and `widthUnit` attributes are removed.** Nothing ever read them. Existing blocks that stored them still load and validate.
+- **An empty Label now shows the default label** on the frontend, as it already did in the editor, instead of an empty label or legend (a group with no accessible name). A site that cleared the Label field to hide it will now see the default label; turn off Show Label instead, which keeps the label for screen readers.
 
 ### Added
 
 - Filters, sorting and search now work in Query Loops that inherit the template's query, so archive, search and home templates can carry them, not just Query Loops with their own query settings. They use unnumbered parameters (`query-{taxonomy}`, `query-post_type`, `query-author`, `query-sort`), core's own `s` for search, and core's own pagination.
 - Filtering an inherited loop never changes what the page is: a post type filter is ignored on a post type archive, an author filter narrows an author archive to its own author instead of replacing it, and the archive's title, template and queried object stay put. An unknown term or a filtered date archive returns an empty result instead of a 404. Filtering, sorting or searching from page 2 returns to page 1.
 - Filters, sort and search now work **without JavaScript**. Each Query Filter and Sort block renders a `<noscript>` "Apply filters" button, and every control in a loop submits through one shared, hidden `<form>` as a plain GET request. See [docs/hooks.md](docs/hooks.md#form-and-controls) for the markup, and the README's Troubleshooting section for a known no-JS limitation on inherited loops with a Search block.
+- **Editor notices** when two filters in one Query Loop use the same URL parameter (they act as one control), and when a filter will display nothing: no taxonomy chosen, no terms with posts, or no authors with published posts.
+
+### Changed
+
+- **New filters no longer store a default label,** so the default follows the site's language and the chosen taxonomy. Existing blocks keep the label they saved.
 
 ### Fixed
 
 - Sticky posts no longer leak into filtered Query Loop results. A sticky post that doesn't match a taxonomy, author or search filter used to appear anyway; filtering now correctly excludes it.
 - A taxonomy filter no longer forces the loop's own taxonomy query to `relation => AND`. A Query Loop already configured with its own tax query (for example, its own `OR` relation) keeps that relation; the filter's terms are combined with it instead of overwriting it.
 - A post type filter no longer drops a loop's `post__in`. A loop built around a fixed list of posts (such as a "sticky only" loop) keeps that list when a post type filter is also applied.
+- **The editor preview now lists what the frontend shows:** up to 100 terms without empty ones (it showed the first 10, including empty ones), and only authors with published posts.
+- **The Author filter preview was empty for everyone below Administrator.**
 
 ## [0.3.4] - 2026-09-16
 

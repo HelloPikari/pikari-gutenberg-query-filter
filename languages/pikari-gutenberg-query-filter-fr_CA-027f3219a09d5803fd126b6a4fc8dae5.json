@@ -15,22 +15,12 @@
 			"Author": ["Auteur"],
 			"All": ["Tous"],
 			"Filter": ["Filtre"],
+			"Options come from the page's query.": [
+				"Les options proviennent de la requ\u00eate de la page."
+			],
 			"Filter Settings": ["Param\u00e8tres du filtre"],
 			"Taxonomy": ["Taxonomie"],
-			"Select a taxonomy": ["S\u00e9lectionner une taxonomie"],
-			"Display Type": ["Type d\u2019affichage"],
-			"Select (Dropdown)": ["S\u00e9lection (liste d\u00e9roulante)"],
-			"Radio (Single Choice)": ["Radio (choix unique)"],
-			"Checkbox (Multiple Choice)": ["Case \u00e0 cocher (choix multiple)"],
-			"Layout Direction": ["Direction de la mise en page"],
-			"Vertical": ["Vertical"],
-			"Horizontal": ["Horizontal"],
-			"Label": ["\u00c9tiquette"],
-			"If empty then no label will be shown": [
-				"Si vide, aucune \u00e9tiquette ne sera affich\u00e9e"
-			],
-			"Show Label": ["Afficher l\u2019\u00e9tiquette"],
-			"Empty Choice Label": ["\u00c9tiquette du choix vide"]
+			"Select a taxonomy": ["S\u00e9lectionner une taxonomie"]
 		}
 	}
 }

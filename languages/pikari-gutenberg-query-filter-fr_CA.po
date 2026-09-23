@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: Pikari Gutenberg Query Filter 0.1.6\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/pikari-gutenberg-"
 "query-filter\n"
-"POT-Creation-Date: 2026-09-22T04:02:43+00:00\n"
+"POT-Creation-Date: 2026-09-23T20:27:38+00:00\n"
 "PO-Revision-Date: 2026-09-22T04:02:43+00:00\n"
 "Last-Translator: Pikari Inc. <development@pikari.io>\n"
 "Language-Team: French (Canada)\n"
@@ -50,64 +50,63 @@ msgstr "https://pikari.io"
 
 #: build/blocks/query-filter/render.php:33
 #: src/blocks/query-filter/render.php:33 build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/edit.js:121 src/blocks/query-filter/variations.js:10
+#: src/blocks/query-filter/edit.js:125
 msgid "Content Type"
 msgstr "Type de contenu"
 
 #: build/blocks/query-filter/render.php:46
 #: src/blocks/query-filter/render.php:46 build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/edit.js:124 src/blocks/query-filter/edit.js:125
-#: src/blocks/query-filter/variations.js:23
+#: src/blocks/query-filter/edit.js:129
 msgid "Filter by"
 msgstr "Filtrer par"
 
 #: build/blocks/query-filter/render.php:58
 #: src/blocks/query-filter/render.php:58 build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/edit.js:127 src/blocks/query-filter/variations.js:35
+#: src/blocks/query-filter/edit.js:132
 msgid "Author"
 msgstr "Auteur"
 
 #: build/blocks/query-filter/render.php:76
 #: src/blocks/query-filter/render.php:76 build/blocks/query-filter/index.js:1
-#: build/blocks/sort/index.js:1 src/blocks/query-filter/edit.js:297
-#: src/blocks/query-filter/edit.js:321 src/blocks/query-filter/edit.js:355
+#: build/blocks/sort/index.js:1 src/blocks/query-filter/edit.js:263
+#: src/blocks/query-filter/edit.js:298
 #: src/components/FilterInspectorControls.js:87
 msgid "All"
 msgstr "Tous"
 
-#: build/blocks/query-filter/render.php:134 build/blocks/sort/render.php:70
-#: src/blocks/query-filter/render.php:134 src/blocks/sort/render.php:70
+#: build/blocks/query-filter/render.php:134 build/blocks/sort/render.php:71
+#: src/blocks/query-filter/render.php:134 src/blocks/sort/render.php:71
 msgid "Apply filters"
 msgstr "Appliquer les filtres"
 
-#: build/blocks/sort/render.php:35 src/blocks/sort/render.php:35
-#: build/blocks/sort/index.js:1 src/blocks/sort/edit.js:38
-#: src/blocks/sort/edit.js:45
+#: build/blocks/sort/render.php:36 src/blocks/sort/render.php:36
+#: build/blocks/sort/index.js:1 src/blocks/sort/edit.js:39
+#: src/blocks/sort/edit.js:48
 msgid "Sort By"
 msgstr "Trier par"
 
-#: build/blocks/sort/render.php:36 src/blocks/sort/render.php:36
-#: build/blocks/sort/index.js:1 src/blocks/sort/edit.js:54
+#: build/blocks/sort/render.php:37 src/blocks/sort/render.php:37
+#: build/blocks/sort/index.js:1 src/blocks/sort/edit.js:57
 msgid "Default"
 msgstr "Par défaut"
 
 #: includes/Query/SortOptions.php:40 build/blocks/sort/index.js:1
-#: src/blocks/sort/edit.js:14
+#: src/blocks/sort/edit.js:15
 msgid "Date (Newest First)"
 msgstr "Date (plus récent)"
 
 #: includes/Query/SortOptions.php:46 build/blocks/sort/index.js:1
-#: src/blocks/sort/edit.js:18
+#: src/blocks/sort/edit.js:19
 msgid "Date (Oldest First)"
 msgstr "Date (plus ancien)"
 
 #: includes/Query/SortOptions.php:52 build/blocks/sort/index.js:1
-#: src/blocks/sort/edit.js:22
+#: src/blocks/sort/edit.js:23
 msgid "Title (A-Z)"
 msgstr "Titre (A-Z)"
 
 #: includes/Query/SortOptions.php:58 build/blocks/sort/index.js:1
-#: src/blocks/sort/edit.js:26
+#: src/blocks/sort/edit.js:27
 msgid "Title (Z-A)"
 msgstr "Titre (Z-A)"
 
@@ -119,6 +118,87 @@ msgstr "Cette extension nécessite WordPress 6.8 ou une version supérieure."
 msgid "This plugin requires PHP 8.4 or higher."
 msgstr "Cette extension nécessite PHP 8.4 ou une version supérieure."
 
+#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
+#: src/components/FilterInspectorControls.js:18
+msgid "Display Type"
+msgstr "Type d’affichage"
+
+#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
+#: src/components/FilterInspectorControls.js:22
+msgid "Select (Dropdown)"
+msgstr "Sélection (liste déroulante)"
+
+#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
+#: src/components/FilterInspectorControls.js:29
+msgid "Radio (Single Choice)"
+msgstr "Radio (choix unique)"
+
+#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
+#: src/components/FilterInspectorControls.js:36
+msgid "Checkbox (Multiple Choice)"
+msgstr "Case à cocher (choix multiple)"
+
+#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
+#: src/components/FilterInspectorControls.js:49
+msgid "Layout Direction"
+msgstr "Direction de la mise en page"
+
+#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
+#: src/components/FilterInspectorControls.js:59
+msgid "Vertical"
+msgstr "Vertical"
+
+#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
+#: src/components/FilterInspectorControls.js:63
+msgid "Horizontal"
+msgstr "Horizontal"
+
+#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
+#: src/components/FilterInspectorControls.js:68
+msgid "Label"
+msgstr "Étiquette"
+
+#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
+#: src/components/FilterInspectorControls.js:71
+msgid "Leave empty to use the default label."
+msgstr "Laissez vide pour utiliser l’étiquette par défaut."
+
+#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
+#: src/components/FilterInspectorControls.js:78
+msgid "Show Label"
+msgstr "Afficher l’étiquette"
+
+#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
+#: src/components/FilterInspectorControls.js:85
+msgid "Empty Choice Label"
+msgstr "Étiquette du choix vide"
+
+#: build/blocks/query-filter/index.js:1 src/utils/filter-notices.js:114
+msgid ""
+"Another filter in this Query Loop filters by the same thing. Both use one "
+"URL parameter, so they act as one control. Remove one of them."
+msgstr ""
+"Un autre filtre de cette boucle de requête filtre selon le même critère. "
+"Les deux utilisent un seul paramètre d’URL et agissent donc comme un seul "
+"contrôle. Supprimez l’un des deux."
+
+#: build/blocks/query-filter/index.js:1 src/utils/filter-notices.js:118
+msgid "Choose a taxonomy. This filter displays nothing until you do."
+msgstr "Choisissez une taxonomie. Ce filtre n’affiche rien tant que vous ne l’avez pas fait."
+
+#: build/blocks/query-filter/index.js:1 src/utils/filter-notices.js:122
+msgid ""
+"This taxonomy has no terms with posts yet, so this filter displays nothing."
+msgstr ""
+"Cette taxonomie n’a encore aucun terme avec des publications, donc ce "
+"filtre n’affiche rien."
+
+#: build/blocks/query-filter/index.js:1 src/utils/filter-notices.js:126
+msgid "No authors have published posts yet, so this filter displays nothing."
+msgstr ""
+"Aucun auteur n’a encore de publications publiées, donc ce filtre n’affiche "
+"rien."
+
 #: build/blocks/query-filter/index.js:1 src/blocks/query-filter/variations.js:6
 msgid "Post Type Filter"
 msgstr "Filtre par type de publication"
@@ -128,108 +208,46 @@ msgid "Filter posts by post type"
 msgstr "Filtrer les publications par type de publication"
 
 #: build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/variations.js:19
+#: src/blocks/query-filter/variations.js:18
 msgid "Taxonomy Filter"
 msgstr "Filtre par taxonomie"
 
 #: build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/variations.js:20
+#: src/blocks/query-filter/variations.js:19
 msgid "Filter posts by taxonomy terms"
 msgstr "Filtrer les publications par termes de taxonomie"
 
 #: build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/variations.js:31
+#: src/blocks/query-filter/variations.js:29
 msgid "Author Filter"
 msgstr "Filtre par auteur"
 
 #: build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/variations.js:32
+#: src/blocks/query-filter/variations.js:30
 msgid "Filter posts by author"
 msgstr "Filtrer les publications par auteur"
 
-#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:129
+#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:134
 msgid "Filter"
 msgstr "Filtre"
 
-#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:174
+#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:187
+msgid "Options come from the page's query."
+msgstr "Les options proviennent de la requête de la page."
+
+#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:196
 msgid "Filter Settings"
 msgstr "Paramètres du filtre"
 
-#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:181
+#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:213
 msgid "Taxonomy"
 msgstr "Taxonomie"
 
-#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:188
+#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:220
 msgid "Select a taxonomy"
 msgstr "Sélectionner une taxonomie"
 
-#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
-#: src/blocks/query-filter/edit.js:205
-#: src/components/FilterInspectorControls.js:18
-msgid "Display Type"
-msgstr "Type d’affichage"
-
-#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
-#: src/blocks/query-filter/edit.js:212
-#: src/components/FilterInspectorControls.js:22
-msgid "Select (Dropdown)"
-msgstr "Sélection (liste déroulante)"
-
-#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
-#: src/blocks/query-filter/edit.js:219
-#: src/components/FilterInspectorControls.js:29
-msgid "Radio (Single Choice)"
-msgstr "Radio (choix unique)"
-
-#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
-#: src/blocks/query-filter/edit.js:226
-#: src/components/FilterInspectorControls.js:36
-msgid "Checkbox (Multiple Choice)"
-msgstr "Case à cocher (choix multiple)"
-
-#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
-#: src/blocks/query-filter/edit.js:240
-#: src/components/FilterInspectorControls.js:49
-msgid "Layout Direction"
-msgstr "Direction de la mise en page"
-
-#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
-#: src/blocks/query-filter/edit.js:255
-#: src/components/FilterInspectorControls.js:59
-msgid "Vertical"
-msgstr "Vertical"
-
-#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
-#: src/blocks/query-filter/edit.js:262
-#: src/components/FilterInspectorControls.js:63
-msgid "Horizontal"
-msgstr "Horizontal"
-
-#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
-#: src/blocks/query-filter/edit.js:270
-#: src/components/FilterInspectorControls.js:68
-msgid "Label"
-msgstr "Étiquette"
-
-#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
-#: src/blocks/query-filter/edit.js:273
-#: src/components/FilterInspectorControls.js:71
-msgid "If empty then no label will be shown"
-msgstr "Si vide, aucune étiquette ne sera affichée"
-
-#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
-#: src/blocks/query-filter/edit.js:282
-#: src/components/FilterInspectorControls.js:78
-msgid "Show Label"
-msgstr "Afficher l’étiquette"
-
-#: build/blocks/query-filter/index.js:1 build/blocks/sort/index.js:1
-#: src/blocks/query-filter/edit.js:292
-#: src/components/FilterInspectorControls.js:85
-msgid "Empty Choice Label"
-msgstr "Étiquette du choix vide"
-
-#: build/blocks/sort/index.js:1 src/blocks/sort/edit.js:34
+#: build/blocks/sort/index.js:1 src/blocks/sort/edit.js:35
 msgid "Sort Settings"
 msgstr "Paramètres de tri"
 
