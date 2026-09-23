@@ -23,7 +23,7 @@
   - PHP follows WordPress Coding Standards with **4 spaces, not tabs**. `phpcs.xml` skips `tests/`, so check each new or edited PHP test with `grep -c $'\t' <file>`, which must print 0.
   - JavaScript is formatted by ESLint, with tabs. `npm run lint:js` only covers `src/`, so run `npx wp-scripts lint-js <file>` on each new or edited file under `tests/unit/` yourself.
 - **Text domain** is `pikari-gutenberg-query-filter`. Every user-facing string is translated.
-- **Commits:** `type: Brief description`. No `Co-Authored-By` or "Generated with" trailers. Never `--no-verify`.
+- **Commits:** `type: Brief description`. No `Co-Authored-By` or "Generated with" trailers in commit messages (the PR body carries the session's "Generated with" line). Never `--no-verify`.
 - **TDD, with a mutation step:**
   - Every behaviour change starts with a failing test, and you must watch it fail for the right reason.
   - Once a test passes, **mutate the production line it covers** (delete it, or invert the condition) and confirm the test fails, then restore.
@@ -1083,12 +1083,12 @@ Add to `### Breaking changes`:
 
 ```markdown
 - **The Sort block's `width` and `widthUnit` attributes are removed.** Nothing ever read them. Existing blocks that stored them still load and validate.
+- **An empty Label now shows the default label** on the frontend, as it already did in the editor, instead of an empty label or legend (a group with no accessible name). A site that cleared the Label field to hide it will now see the default label; turn off Show Label instead, which keeps the label for screen readers.
 ```
 
 Add a `### Changed` section, if there isn't one, with:
 
 ```markdown
-- **An empty Label now shows the default label**, in the editor and on the frontend, instead of an empty label or legend. Use Show Label to hide a label; it stays available to screen readers.
 - **New filters no longer store a default label,** so the default follows the site's language and the chosen taxonomy. Existing blocks keep the label they saved.
 ```
 
