@@ -50,14 +50,41 @@ class QueryParams {
     /**
      * Build a QueryParams from a Query Loop block's context.
      *
-     * @param \WP_Block $block Query Loop block instance.
+     * @param \WP_Block $block Block instance inside a Query Loop.
      * @return self
      */
     public static function from_block( \WP_Block $block ): self {
-        $query_id = $block->context['queryId'] ?? null;
-        $inherit  = $block->context['query']['inherit'] ?? false;
+        return self::from_values( (array) $block->context );
+    }
 
-        return new self( $query_id, $inherit );
+    /**
+     * Build a QueryParams from a Query Loop block's own attributes.
+     *
+     * A loop's controls read `queryId` and `query` from context, which core
+     * builds from this block's attributes *after* filling in block.json's
+     * defaults — and `query` defaults to an array with `inherit => true`, so
+     * a loop that serializes no `query` attribute is an inherited one. Read
+     * from `WP_Block::$attributes`, never from the raw parsed attributes, or
+     * this block and its controls disagree about which loop they belong to.
+     *
+     * @param \WP_Block $block Query Loop block instance.
+     * @return self
+     */
+    public static function from_query_block( \WP_Block $block ): self {
+        return self::from_values( (array) $block->attributes );
+    }
+
+    /**
+     * Build a QueryParams from an array carrying `queryId` and `query`.
+     *
+     * @param array $values Block context, or a Query Loop's own attributes.
+     * @return self
+     */
+    private static function from_values( array $values ): self {
+        return new self(
+            $values['queryId'] ?? null,
+            ! empty( $values['query']['inherit'] )
+        );
     }
 
     /**
@@ -103,6 +130,25 @@ class QueryParams {
         }
 
         return $this->prefix() . 'page';
+    }
+
+    /**
+     * Get the id of the loop's hidden filter form.
+     *
+     * Every control that filters this loop carries it as a `form` attribute,
+     * and BlockFilters injects a form with this id when it finds one
+     * (spec §5.2). Inherited loops share a single id, as they share a single
+     * set of parameters.
+     *
+     * @return string `pikari-gutenberg-query-filter-form-3`, `…-form-0`, or
+     *                `…-form-inherit`.
+     */
+    public function form_id(): string {
+        if ( $this->inherit ) {
+            return 'pikari-gutenberg-query-filter-form-inherit';
+        }
+
+        return sprintf( 'pikari-gutenberg-query-filter-form-%d', $this->query_id ?? 0 );
     }
 
     /**

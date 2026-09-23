@@ -11,6 +11,7 @@ A WordPress plugin that adds advanced filtering capabilities to Query Loop block
 - **Sort Controls**: Sort by date or title
 - **Advanced Query Loop Support**: Works with both core Query Loop blocks and Advanced Query Loop by Ryan Welcher
 - **In-Place Updates**: Results update through the Interactivity API router, without a full page reload
+- **Works Without JavaScript**: Every filter, sort and search control lives inside a real `<form>`. With JavaScript off, each Query Filter and Sort block shows an "Apply filters" button that submits the whole loop as a plain GET request
 - **Custom and Inherited Query Loops**: Filters, sort and search apply to Query Loops with their own query settings, and to loops that inherit the template's query on home, archive and search templates
 - **URL-Based State**: Filter state persists in URLs for sharing and bookmarking
 - **Theme-Friendly Markup**: Unique classes on every radio and checkbox option, plus PHP filters for the option list, option classes, and label markup
@@ -19,7 +20,7 @@ A WordPress plugin that adds advanced filtering capabilities to Query Loop block
 
 - WordPress 6.8 or higher
 - PHP 8.4 or higher
-- Modern browser with JavaScript enabled
+- Any modern browser. JavaScript is optional — see [Compatibility](#browsers)
 
 ## Installation
 
@@ -175,6 +176,17 @@ See [docs/hooks.md](docs/hooks.md) for the full markup, class rules, filter para
 - **Client-Side Navigation**: No page reloads, uses WordPress Interactivity API
 - **Lazy Loading**: Scripts only enqueue when blocks are present
 
+### Page-Level Caching
+
+A full-page cache or CDN in front of the site **must key on the whole query string**, not on a subset of it.
+
+Filter state lives in ordinary URL query parameters, and each loop's hidden `<form>` re-emits **every** parameter of the current request as a hidden input, so that submitting a filter without JavaScript doesn't drop the rest of the URL. Between them, any parameter a cache leaves out of its key can leak from one visitor's cached page into another visitor's form:
+
+- **A cache that ignores `query-*`, `s` or `paged`** can serve one visitor's filtered, sorted or searched results to a different visitor who asked for the unfiltered page.
+- **A cache that keys on those but strips what it treats as tracking noise** — `utm_*`, `fbclid`, `gclid`, which is the usual default — bakes visitor A's campaign parameters into the cached page's hidden inputs and serves them to visitor B, whose Apply then re-submits A's campaign as if it were their own.
+
+Configure the cache to key on the full URL, or explicitly allowlist every parameter it would otherwise drop.
+
 ## Development
 
 ### Setup Development Environment
@@ -291,7 +303,7 @@ pikari-gutenberg-query-filter/
 ### Browsers
 
 - **Modern Browsers**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-- **JavaScript**: Filters and sort need JavaScript. Without it, only the Search block submits
+- **JavaScript**: Optional. With it, results update in place through the Interactivity API router. Without it, every filter, sort and search control still works — each Query Filter and Sort block shows an "Apply filters" button, and core's Search block uses its own submit button; either submits the whole loop as a normal GET request and reloads the page
 
 ## Troubleshooting
 
@@ -314,6 +326,12 @@ The Query Loop's own settings still apply once a filter is chosen, and an **offs
 A common way to hit this: a Query Loop uses an offset of 1 to skip the featured post shown above it. Filter it to a category with one post and it shows nothing; filter it to any other category and it silently drops that category's newest post.
 
 To keep a post from appearing twice, exclude it by ID instead of using an offset, for example by adding `post__not_in` in a `query_loop_block_query_vars` filter.
+
+### A No-JS Search Submit Lands on the Search Page, Not the Archive
+
+**Known limitation.** On an inherited loop (an archive or search template) that contains a core Search block, clicking "Apply filters" with JavaScript off and an empty search box submits `s=` along with the other filters. WordPress's template hierarchy checks `is_search` before `is_archive`, so the response renders the site's search template instead of the archive template the visitor started on. The filtered results themselves are still correct — only the page's template and identity change for that one request.
+
+This doesn't happen with JavaScript enabled: the plugin's `buildUrl()` omits empty values, so an empty search box never adds `s=` to the URL in the first place. There's no fix planned for the no-JS path short of a site-wide `request` filter that overrides core's own template selection, which is outside this plugin's scope.
 
 ### Performance Issues
 

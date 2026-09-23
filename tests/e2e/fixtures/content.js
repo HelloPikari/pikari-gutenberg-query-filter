@@ -26,6 +26,21 @@ const AUTHOR_SLUG = 'sam-the-editor';
 // A sticky post outside News and Events, older than every other post.
 const STICKY_TITLE = 'Quince';
 
+// A category and an author whose slugs WordPress stores percent-encoded.
+// sanitize_text_field() destroys those octets, which silently emptied the
+// filter in B1 and showed every author's posts; these fixtures make that
+// regression visible (roadmap #33).
+const NON_LATIN_CATEGORY = { name: '新闻' };
+const NON_LATIN_AUTHOR = {
+	username: 'yamada',
+	name: '山田太郎',
+	slug: '山田太郎',
+};
+
+// Older than every other post, and last alphabetically, so adding it changes
+// no existing expectation.
+const NON_LATIN_TITLE = 'Zucchini';
+
 const TITLES = [
 	'Kiwi',
 	'Apple',
@@ -55,7 +70,13 @@ const POSTS = TITLES.map((title, index) => ({
 	category: 'uncategorized',
 	author: 'jane-doe',
 	sticky: true,
-});
+})
+	.concat({
+		title: NON_LATIN_TITLE,
+		date: '2025-12-29T09:00:00',
+		category: 'nonLatin',
+		author: 'yamada',
+	});
 
 /**
  * Titles of the newest posts matching a predicate, newest first.
@@ -186,7 +207,8 @@ const TEMPLATES = {
 		slug: 'category',
 		content: `<!-- wp:query-title {"type":"archive"} /-->
 ${inheritedQueryBlock(
-	`<!-- wp:pikari-gutenberg-query-filter/query-filter {"filterType":"taxonomy","taxonomy":"category","label":"Category","displayType":"checkbox"} /-->
+	`<!-- wp:search {"label":"Search","buttonText":"Search"} /-->
+<!-- wp:pikari-gutenberg-query-filter/query-filter {"filterType":"taxonomy","taxonomy":"category","label":"Category","displayType":"checkbox"} /-->
 <!-- wp:pikari-gutenberg-query-filter/query-filter {"filterType":"author","label":"Author"} /-->
 <!-- wp:pikari-gutenberg-query-filter/sort {"label":"Sort by"} /-->`
 )}`,
@@ -240,6 +262,30 @@ ${injectedStyleBlock}`,
 			'<!-- wp:pikari-gutenberg-query-filter/sort {"label":"Sort by"} /-->'
 		),
 	},
+	buttonSearch: {
+		slug: 'e2e-button-search',
+		path: '/e2e-button-search/',
+		queryId: 4,
+		title: 'E2E button-only search',
+		content: queryBlock(
+			4,
+			`<!-- wp:search {"label":"Search","buttonText":"Search","buttonPosition":"button-only","isSearchFieldHidden":true} /-->
+<!-- wp:pikari-gutenberg-query-filter/query-filter {"filterType":"taxonomy","taxonomy":"category","label":"Category","displayType":"radio"} /-->`
+		),
+	},
+	// A single filter block with layoutDirection: horizontal — no other fixture
+	// page sets it, and this one exists only for visual.spec.js's horizontal
+	// layout baseline (tests/e2e/specs/visual.spec.js).
+	horizontal: {
+		slug: 'e2e-horizontal',
+		path: '/e2e-horizontal/',
+		queryId: 5,
+		title: 'E2E horizontal layout',
+		content: queryBlock(
+			5,
+			'<!-- wp:pikari-gutenberg-query-filter/query-filter {"filterType":"taxonomy","taxonomy":"category","label":"Category","displayType":"radio","layoutDirection":"horizontal"} /-->'
+		),
+	},
 };
 
 module.exports = {
@@ -247,6 +293,9 @@ module.exports = {
 	AUTHORS,
 	CATEGORIES,
 	INJECTED_COLOR,
+	NON_LATIN_AUTHOR,
+	NON_LATIN_CATEGORY,
+	NON_LATIN_TITLE,
 	PAGES,
 	POSTS,
 	STICKY_TITLE,

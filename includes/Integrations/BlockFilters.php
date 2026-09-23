@@ -8,6 +8,7 @@
 namespace Pikari\GutenbergQueryFilter\Integrations;
 
 use Pikari\GutenbergQueryFilter\Url\QueryParams;
+use Pikari\GutenbergQueryFilter\Url\LoopForm;
 
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -207,69 +208,42 @@ class BlockFilters {
         // Enqueue our interactivity script to ensure the store is available.
         wp_enqueue_script_module( 'pikari-gutenberg-query-filter-query-filter-view-script-module' );
 
-        // Determine the search query variable based on query context.
         $params    = QueryParams::from_block( $instance );
         $query_var = $params->key( 's' );
-        $page_var  = $params->page_key();
-
-        // An inherited loop paginates through a trailing path segment on
-        // pretty permalinks (/category/news/page/2/), not just the `paged`
-        // query var, so view.js needs the rewrite's own pagination base to
-        // strip it on a filter change (spec §3.3). $wp_rewrite isn't always
-        // available (some CLI contexts), so fall back to core's own default.
-        global $wp_rewrite;
-        $pagination_base = ( $wp_rewrite instanceof \WP_Rewrite ) ? $wp_rewrite->pagination_base : 'page';
-
-        // Build the form action URL, removing pagination.
-        $current_page = get_query_var( 'paged', 1 );
-        $action       = str_replace( '/page/' . $current_page, '', add_query_arg( array( $query_var => '' ) ) );
+        $form_id   = $params->form_id();
 
         // Get and sanitize the current search value.
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Search forms don't require nonces for GET requests.
         $value = isset( $_GET[ $query_var ] ) ? sanitize_text_field( wp_unslash( $_GET[ $query_var ] ) ) : '';
 
-        // Set interactivity state for the search value.
-        wp_interactivity_state(
-            'pikari/gutenberg-query-filter',
-            array(
-                'searchValue' => $value,
-            )
-        );
-
-        // Modify the search form HTML to add interactivity.
-        $processor = new \WP_HTML_Tag_Processor( $block_content );
-
-        // Update the form element.
-        if ( $processor->next_tag( array( 'tag_name' => 'form' ) ) ) {
-            $processor->set_attribute( 'action', $action );
-            $processor->set_attribute( 'data-wp-interactive', 'pikari/gutenberg-query-filter' );
-            $processor->set_attribute( 'data-wp-on--submit', 'actions.search' );
-            $context_data = wp_json_encode(
-                array(
-                    'searchValue'    => $value,
-                    'queryVar'       => $query_var,
-                    'pageVar'        => $page_var,
-                    'paginationBase' => $pagination_base,
-                )
-            );
-
-            // Only set context if JSON encoding succeeded.
-            if ( false !== $context_data ) {
-                $processor->set_attribute( 'data-wp-context', $context_data );
-            }
+        $context_json = wp_json_encode( array( 'searchValue' => $value ) );
+        if ( false === $context_json ) {
+            $context_json = '{}';
         }
 
-        // Update the input element.
-        if ( $processor->next_tag(
-            array(
-                'tag_name'   => 'input',
-                'class_name' => 'wp-block-search__input',
-            )
-        ) ) {
-            $processor->set_attribute( 'name', $query_var );
-            $processor->set_attribute( 'value', $value );
-            $processor->set_attribute( 'data-wp-bind--value', 'context.searchValue' );
-            $processor->set_attribute( 'data-wp-on--input', 'actions.search' );
+        // Only the input and the submit button change. Core's <form>, and any
+        // data-wp-* core put on it, are left exactly as they are: the loop
+        // form is what submits, and the input joins it by id (spec §5.3).
+        $processor = new \WP_HTML_Tag_Processor( $block_content );
+
+        while ( $processor->next_tag() ) {
+            if ( 'INPUT' === $processor->get_tag() && $processor->has_class( 'wp-block-search__input' ) ) {
+                $processor->set_attribute( 'name', $query_var );
+                $processor->set_attribute( 'value', $value );
+                $processor->set_attribute( 'form', $form_id );
+                $processor->set_attribute( 'data-wp-context', 'pikari/gutenberg-query-filter::' . $context_json );
+                $processor->set_attribute( 'data-wp-bind--value', 'pikari/gutenberg-query-filter::context.searchValue' );
+                $processor->set_attribute( 'data-wp-on--input', 'pikari/gutenberg-query-filter::actions.change' );
+                $processor->set_attribute( 'data-wp-on--compositionend', 'pikari/gutenberg-query-filter::actions.change' );
+                // Ends a typing burst, so the next search pushes a history
+                // entry instead of replacing one (spec §6.2).
+                $processor->set_attribute( 'data-wp-on--blur', 'pikari/gutenberg-query-filter::actions.endBurst' );
+                continue;
+            }
+
+            if ( 'BUTTON' === $processor->get_tag() && $processor->has_class( 'wp-block-search__button' ) ) {
+                $processor->set_attribute( 'form', $form_id );
+            }
         }
 
         return $processor->get_updated_html();
@@ -278,14 +252,20 @@ class BlockFilters {
     /**
      * Add data attributes to the query block to describe the block query.
      *
-     * @param string $block_content Default query content.
-     * @param array  $block         Parsed block.
+     * @param string         $block_content Default query content.
+     * @param array          $block         Parsed block.
+     * @param \WP_Block|null $instance      Block instance, whose attributes core has prepared.
      * @return string Modified block content.
      */
-    public function render_block_query( $block_content, $block ): string {
+    public function render_block_query( $block_content, $block, \WP_Block $instance ): string {
 
         $processor = new \WP_HTML_Tag_Processor( $block_content );
         $processor->next_tag();
+
+        // The wrapper is this block's first tag — core lets a theme make it a
+        // div, main, section or aside. Read it here, while the processor is
+        // already sitting on it, rather than re-parsing to recover it later.
+        $wrapper_tag = strtolower( (string) $processor->get_tag() );
 
         // Always allow region updates on interactivity, use standard core region naming.
         $query_id = absint( $block['attrs']['queryId'] ?? 0 );
@@ -310,7 +290,110 @@ class BlockFilters {
             self::advance_unique_id( 'wp_unique_prefixed_id', 'wp-elements-', $start['elements'] + self::UNIQUE_ID_RESERVE );
         }
 
-        return $processor->get_updated_html();
+        return self::inject_loop_form( $processor->get_updated_html(), $instance, $wrapper_tag );
+    }
+
+    /**
+     * Add the loop's hidden filter form as the last child of its wrapper.
+     *
+     * Runs after the whole loop has rendered, so every control has emitted
+     * its `form` attribute and blocks hidden after rendering, fragment caches
+     * and render order are all irrelevant (spec §5.2).
+     *
+     * @param string    $html        Rendered Query block.
+     * @param \WP_Block $instance    Block instance, whose attributes core has prepared.
+     * @param string    $wrapper_tag Lowercase tag name of the block's wrapper.
+     * @return string HTML, with the form appended when a control claims it.
+     */
+    private static function inject_loop_form( string $html, \WP_Block $instance, string $wrapper_tag ): string {
+        if ( '' === $wrapper_tag ) {
+            return $html;
+        }
+
+        // The Query block's own context is what it receives, not what it
+        // provides, so its parameters come from its attributes — the prepared
+        // ones, which carry block.json's defaults, because those are what its
+        // controls read from context.
+        $params  = QueryParams::from_query_block( $instance );
+        $form_id = $params->form_id();
+
+        // Most Query Loops on a site carry no filter controls at all. A literal
+        // scan rules those out before tokenizing the loop's entire rendered
+        // output, which can run to every post and inner block on the page.
+        // Deliberately looser than form_targets(): it matches the id anywhere,
+        // whatever the attribute quoting, so it can never skip a loop the walk
+        // would have claimed.
+        if ( ! str_contains( $html, $form_id ) ) {
+            return $html;
+        }
+
+        $targets = self::form_targets( $html, $form_id );
+        if ( ! $targets['found'] ) {
+            return $html;
+        }
+
+        global $wp_rewrite;
+        $pagination_base = ( $wp_rewrite instanceof \WP_Rewrite ) ? $wp_rewrite->pagination_base : 'page';
+
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Path only; escaped with esc_url() in LoopForm::render().
+        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '/';
+
+        $form = LoopForm::render(
+            $params,
+            LoopForm::action( $request_uri, $params->is_inherit(), $pagination_base ),
+            LoopForm::hidden_inputs(
+                LoopForm::query_string(),
+                array_merge( $targets['names'], LoopForm::reset_names( $params ) )
+            ),
+            $pagination_base
+        );
+
+        // render_block_core/query receives only this block's HTML, so the
+        // wrapper's close is the last matching tag.
+        $close    = '</' . $wrapper_tag . '>';
+        $position = strripos( $html, $close );
+        if ( false === $position ) {
+            return $html;
+        }
+
+        return substr( $html, 0, $position ) . $form . substr( $html, $position );
+    }
+
+
+    /**
+     * Find the controls that claim a form id, and the base names they own.
+     *
+     * The comparison is by attribute value, never by substring, so
+     * `…-form-3` cannot claim `…-form-30`'s controls.
+     *
+     * @param string $html    Rendered Query block.
+     * @param string $form_id The loop's form id.
+     * @return array{found: bool, names: string[]} Whether any control claimed it, and their base names.
+     */
+    private static function form_targets( string $html, string $form_id ): array {
+        $found     = false;
+        $names     = array();
+        $processor = new \WP_HTML_Tag_Processor( $html );
+
+        while ( $processor->next_tag() ) {
+            if ( $form_id !== $processor->get_attribute( 'form' ) ) {
+                continue;
+            }
+
+            $found = true;
+
+            $name = $processor->get_attribute( 'name' );
+            if ( ! is_string( $name ) || '' === $name ) {
+                continue;
+            }
+
+            $names[] = LoopForm::bare_name( $name );
+        }
+
+        return array(
+            'found' => $found,
+            'names' => array_values( array_unique( $names ) ),
+        );
     }
 
     /**

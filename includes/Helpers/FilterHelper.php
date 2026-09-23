@@ -269,4 +269,45 @@ class FilterHelper {
         // The default markup is escaped already; only markup a filter changed needs sanitizing.
         return $html === $default_html ? $html : wp_kses_post( $html );
     }
+
+    /**
+     * Read a filter's current value(s) from the request, sanitized.
+     *
+     * A JS-driven or hand-built URL sends a comma-joined scalar
+     * (`query-3-category=news,events`); a no-JS checkbox submit sends an
+     * array instead, because checkboxes are named `query-3-category[]`.
+     * Without this widening, `render.php`'s old `is_scalar()` guard would
+     * empty the value and every checkbox would render unchecked on a page
+     * whose results are correctly filtered.
+     *
+     * @param string $query_var   URL parameter name.
+     * @param string $filter_type `post-type`, `taxonomy`, or `author`.
+     * @return string Comma-joined, sanitized value(s); '' when absent.
+     */
+    public static function current_value( string $query_var, string $filter_type ): string {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Filtering parameters don't require nonces; sanitized below via sanitize_text_field() or sanitize_title_for_query(), depending on $filter_type.
+        $raw_value = isset( $_GET[ $query_var ] ) ? wp_unslash( $_GET[ $query_var ] ) : '';
+
+        // A scalar is a comma-joined list; an array (a no-JS checkbox
+        // submit) already has one value per member.
+        $values = is_array( $raw_value ) ? $raw_value : explode( ',', (string) $raw_value );
+        $values = array_filter( $values, 'is_scalar' );
+
+        if ( 'author' === $filter_type || 'taxonomy' === $filter_type ) {
+            // Author nicenames and taxonomy term slugs are both stored
+            // percent-encoded by WordPress for a value it can't
+            // transliterate (spec §3.2). sanitize_text_field() strips those
+            // octets, so each value is sanitized on its own with
+            // sanitize_title_for_query() instead, matching
+            // Url\FilterState::resolve_author_ids() and
+            // Url\FilterState::resolve_taxonomies(). Running the whole
+            // string through it at once would also strip the commas
+            // separating multiple values.
+            $values = array_map( 'sanitize_title_for_query', $values );
+        } else {
+            $values = array_map( 'sanitize_text_field', $values );
+        }
+
+        return implode( ',', $values );
+    }
 }

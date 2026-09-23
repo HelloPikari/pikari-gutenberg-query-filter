@@ -249,7 +249,7 @@ If checksums or ZIP files are missing:
 
 ### Example 1: Feature Release
 
-```
+```text
 PR: "Add dark mode toggle to settings panel" (labeled: feature)
 Result: v1.0.0 → v1.1.0
 Changelog: Listed under "🎉 New Features"
@@ -257,7 +257,7 @@ Changelog: Listed under "🎉 New Features"
 
 ### Example 2: Bug Fix Release
 
-```
+```text
 PR: "Fix accordion collapse animation timing" (labeled: bug)
 Result: v1.1.0 → v1.1.1
 Changelog: Listed under "🐛 Bug Fixes"
@@ -265,7 +265,7 @@ Changelog: Listed under "🐛 Bug Fixes"
 
 ### Example 3: Breaking Change Release
 
-```
+```text
 PR: "Restructure block attributes for better performance" (labeled: breaking)
 Result: v1.1.1 → v2.0.0
 Changelog: Listed under "🚨 Breaking Changes"

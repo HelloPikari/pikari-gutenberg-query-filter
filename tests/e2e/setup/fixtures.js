@@ -6,11 +6,14 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const { request } = require('@playwright/test');
 const { RequestUtils } = require('@wordpress/e2e-test-utils-playwright');
 const {
 	AUTHORS,
 	CATEGORIES,
+	NON_LATIN_AUTHOR,
+	NON_LATIN_CATEGORY,
 	PAGES,
 	POSTS,
 	TEMPLATES,
@@ -90,6 +93,17 @@ module.exports = async function fixtures(config) {
 	});
 	categoryIds.uncategorized = uncategorized.id;
 
+	// Created from a name alone, so WordPress generates the slug rather than
+	// this file assuming one — the path that produces a percent-encoded
+	// slug (roadmap #33). 'nonLatin' is only the lookup key below, not the
+	// generated slug itself; specs read the real slug from the DOM.
+	const nonLatinTerm = await requestUtils.rest({
+		method: 'POST',
+		path: '/wp/v2/categories',
+		data: { name: NON_LATIN_CATEGORY.name },
+	});
+	categoryIds.nonLatin = nonLatinTerm.id;
+
 	const authorIds = {};
 	for (const { username, name, slug } of AUTHORS) {
 		const user = await requestUtils.rest({
@@ -106,6 +120,48 @@ module.exports = async function fixtures(config) {
 		});
 		authorIds[username] = user.id;
 	}
+
+	// wp_insert_user() runs every user_nicename through sanitize_user(…,
+	// true) before sanitize_title() ever sees it (wp-includes/user.php),
+	// and that strict pass strips non-ASCII bytes and percent-encoded
+	// octets alike — proven directly:
+	//   sanitize_user( '山田太郎', true )                    === ''
+	//   sanitize_user( sanitize_title( '山田太郎' ), true )   === ''
+	// So no REST call or wp-cli command can produce a non-Latin nicename;
+	// every such nicename in production is legacy, imported, or written to
+	// the users table directly. This fixture does the same, over wp-env's
+	// tests-cli container — a dependency this file already has (the
+	// build/blocks check above, and the tests instance baseURL).
+	const nonLatinAuthor = await requestUtils.rest({
+		method: 'POST',
+		path: '/wp/v2/users',
+		data: {
+			username: NON_LATIN_AUTHOR.username,
+			name: NON_LATIN_AUTHOR.name,
+			email: `${NON_LATIN_AUTHOR.username}@example.com`,
+			password: 'password',
+			roles: ['author'],
+		},
+	});
+	authorIds[NON_LATIN_AUTHOR.username] = nonLatinAuthor.id;
+
+	execFileSync(
+		'npx',
+		[
+			'wp-env',
+			'run',
+			'tests-cli',
+			'--',
+			'wp',
+			'eval',
+			`global $wpdb; $wpdb->update( $wpdb->users, array( 'user_nicename' => sanitize_title( ${JSON.stringify(
+				NON_LATIN_AUTHOR.slug
+			)} ) ), array( 'ID' => ${nonLatinAuthor.id} ) ); clean_user_cache( ${
+				nonLatinAuthor.id
+			} );`,
+		],
+		{ stdio: 'inherit' }
+	);
 
 	for (const post of POSTS) {
 		await requestUtils.rest({

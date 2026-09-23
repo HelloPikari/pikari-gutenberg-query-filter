@@ -45,6 +45,32 @@ const isSameDocument = (page) =>
 const param = (page, name) => new URL(page.url()).searchParams.get(name);
 
 /**
+ * A filter parameter of the current page, however the form wrote it.
+ *
+ * Submitting the form without JavaScript writes `name[]=a&name[]=b`;
+ * buildUrl() writes `name=a,b`. Both are valid (spec §3.2), so specs that
+ * run both ways compare the normalized form. A radio group's "All" option
+ * has `value=""`, so a no-JS submit with it selected writes `name=` — an
+ * empty value is treated the same as an absent one, so a cleared filter
+ * reads as null either way.
+ *
+ * @param {import('@playwright/test').Page} page Page.
+ * @param {string}                          name Parameter name, without `[]`.
+ * @return {string|null} Comma-joined value, or null when absent or empty.
+ */
+const ownedParam = (page, name) => {
+	const search = new URL(page.url()).searchParams;
+	const values = [
+		...search.getAll(name),
+		...search.getAll(`${name}[]`),
+	]
+		.flatMap((value) => value.split(','))
+		.filter((value) => value !== '');
+
+	return values.length ? values.join(',') : null;
+};
+
+/**
  * Wait until a URL parameter has a value, or is absent when value is null.
  *
  * Times out after 10s rather than the full test timeout, so a missed
@@ -62,6 +88,7 @@ const waitForParam = (page, name, value) =>
 module.exports = {
 	isSameDocument,
 	markDocument,
+	ownedParam,
 	param,
 	resultTitles,
 	visitor,

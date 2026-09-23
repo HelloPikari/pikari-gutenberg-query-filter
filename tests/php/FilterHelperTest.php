@@ -38,6 +38,26 @@ class FilterHelperTest extends TestCase {
             }
         );
 
+        Functions\when( 'wp_unslash' )->returnArg();
+
+        // Mirrors enough of WordPress core's sanitize_title_for_query() to
+        // discriminate real bugs: it keeps percent-encoded octets (unlike
+        // sanitize_text_field()) but still strips anything outside its
+        // allowed character set, commas included — so a caller that forgets
+        // to explode a comma-joined scalar before sanitizing loses the comma
+        // here too, exactly as it would with the real function.
+        Functions\when( 'sanitize_title_for_query' )->alias(
+            fn( $v ) => preg_replace( '/[^%a-z0-9 _-]/', '', strtolower( (string) $v ) )
+        );
+
+        // sanitize_text_field() strips percent-encoded octets (%xx). That is
+        // the one real behaviour that matters here: it's how a non-Latin
+        // taxonomy/author value is stored, and running it through
+        // sanitize_text_field() would silently empty the filter.
+        Functions\when( 'sanitize_text_field' )->alias(
+            fn( $v ) => preg_replace( '/%[0-9a-f]{2}/i', '', (string) $v )
+        );
+
         global $wp_query;
         $this->original_wp_query = $wp_query;
 
@@ -49,6 +69,8 @@ class FilterHelperTest extends TestCase {
         $wp_query = $this->original_wp_query;
 
         MainQueryFilter::reset_for_tests();
+
+        $_GET = array();
 
         parent::tearDown();
     }
@@ -618,5 +640,78 @@ class FilterHelperTest extends TestCase {
                 array( 'displayType' => 'checkbox' )
             )
         );
+    }
+
+    /*
+     * current_value()
+     */
+
+    public function test_current_value_reads_a_scalar(): void {
+        $_GET = array( 'query-3-category' => 'news' );
+
+        $this->assertSame( 'news', FilterHelper::current_value( 'query-3-category', 'taxonomy' ) );
+    }
+
+    public function test_current_value_joins_an_array_from_a_no_js_submit(): void {
+        // Checkboxes are named `query-3-category[]`, so a form GET returns an
+        // array. Without this, every checkbox renders unchecked on a page
+        // whose results are correctly filtered.
+        $_GET = array( 'query-3-category' => array( 'news', 'events' ) );
+
+        $this->assertSame( 'news,events', FilterHelper::current_value( 'query-3-category', 'taxonomy' ) );
+    }
+
+    public function test_current_value_is_empty_when_absent(): void {
+        $_GET = array();
+
+        $this->assertSame( '', FilterHelper::current_value( 'query-3-category', 'taxonomy' ) );
+    }
+
+    public function test_current_value_keeps_a_percent_encoded_slug(): void {
+        // sanitize_text_field() strips %xx octets, which is how WordPress
+        // stores a non-Latin slug; taxonomy and author values are sanitized
+        // one at a time with sanitize_title_for_query() instead.
+        $_GET = array( 'query-3-category' => '%e6%96%b0%e9%97%bb' );
+
+        $this->assertSame(
+            '%e6%96%b0%e9%97%bb',
+            FilterHelper::current_value( 'query-3-category', 'taxonomy' )
+        );
+    }
+
+    public function test_current_value_sanitizes_each_value_of_an_array_separately(): void {
+        $_GET = array( 'query-3-author' => array( 'jane-doe', '%e5%b1%b1%e7%94%b0' ) );
+
+        $this->assertSame(
+            'jane-doe,%e5%b1%b1%e7%94%b0',
+            FilterHelper::current_value( 'query-3-author', 'author' )
+        );
+    }
+
+    public function test_current_value_drops_a_nested_array(): void {
+        $_GET = array( 'query-3-category' => array( array( 'news' ) ) );
+
+        $this->assertSame( '', FilterHelper::current_value( 'query-3-category', 'taxonomy' ) );
+    }
+
+    public function test_current_value_uses_text_sanitization_for_post_types(): void {
+        // 'post' round-trips under either branch with this file's stubs, so
+        // it can't tell them apart: sanitize_text_field() only strips %xx,
+        // and sanitize_title_for_query() lowercases an already-lowercase
+        // string. A mixed-case fixture discriminates: sanitize_text_field()
+        // preserves case, sanitize_title_for_query() would lowercase it.
+        $_GET = array( 'query-3-post_type' => 'Post' );
+
+        $this->assertSame( 'Post', FilterHelper::current_value( 'query-3-post_type', 'post-type' ) );
+    }
+
+    public function test_current_value_splits_a_comma_joined_scalar(): void {
+        // A scalar GET value (the JS path, and a hand-built URL) joins
+        // multiple values with a comma; each must be sanitized on its own,
+        // not the whole string at once, or the comma sanitize_title_for_query()
+        // would strip is never restored.
+        $_GET = array( 'query-3-category' => 'news,events' );
+
+        $this->assertSame( 'news,events', FilterHelper::current_value( 'query-3-category', 'taxonomy' ) );
     }
 }

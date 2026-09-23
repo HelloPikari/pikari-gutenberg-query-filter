@@ -25,13 +25,51 @@
  */
 
 const store = jest.fn( ( storeName, storeDefinition ) => {
+	if ( storeDefinition ) {
+		registered.set( storeName, storeDefinition );
+	}
+
 	return storeDefinition ?? readStore( storeName );
 } );
+
+// Registered store definitions, by namespace. Derived from store.mock.calls
+// this would not survive jest.clearAllMocks(), which the monorepo's own
+// testing examples call in beforeEach — after which store( ns ).actions would
+// be undefined and every timer-driven test would throw.
+const registered = new Map();
 
 // Stores read by namespace alone, such as store( 'core/router' ).
 const readStores = new Map();
 
+// WordPress's store proxy scopes every function it hands out, which is what
+// makes `store( ns ).actions.go()` run a generator action.
+const scopeHandlers = {
+	get: ( target, key ) => {
+		const result = Reflect.get( target, key );
+
+		if ( typeof result === 'function' ) {
+			return withScope( result );
+		}
+
+		return result;
+	},
+};
+
 function readStore( storeName ) {
+	const definition = registered.get( storeName );
+
+	if ( definition ) {
+		return new Proxy( definition, {
+			get: ( target, key ) => {
+				const result = Reflect.get( target, key );
+
+				return result && typeof result === 'object'
+					? new Proxy( result, scopeHandlers )
+					: result;
+			},
+		} );
+	}
+
 	if ( ! readStores.has( storeName ) ) {
 		readStores.set( storeName, { state: {} } );
 	}
@@ -47,7 +85,8 @@ store.getLastStore = () => {
 	return calls[ calls.length - 1 ][ 1 ];
 };
 
-// Retrieve a store by name.
+// Retrieve a store by name. Always the raw definition — not scoped — so
+// existing tests can keep stepping generators by hand with .next().
 store.getStore = ( name ) => {
 	const call = store.mock.calls.find( ( c ) => c[ 0 ] === name );
 	if ( ! call ) {
@@ -64,7 +103,24 @@ const getElement = jest.fn( () => ( {
 
 const getConfig = jest.fn( () => ( {} ) );
 
-const withScope = jest.fn( ( callback ) => callback );
+const withScope = jest.fn( ( func ) => {
+	// WordPress returns non-generators untouched; the modals plugin passes
+	// plain arrow functions through here.
+	if ( func?.constructor?.name !== 'GeneratorFunction' ) {
+		return func;
+	}
+
+	return async ( ...args ) => {
+		const generator = func( ...args );
+		let result = generator.next();
+
+		while ( ! result.done ) {
+			result = generator.next( await result.value );
+		}
+
+		return result.value;
+	};
+} );
 
 const withSyncEvent = jest.fn( ( handler ) => handler );
 
