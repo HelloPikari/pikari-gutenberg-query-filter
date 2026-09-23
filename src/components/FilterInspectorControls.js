@@ -67,9 +67,9 @@ export default function FilterInspectorControls( { attributes, setAttributes, de
 			<TextControl
 				label={ __( 'Label', 'pikari-gutenberg-query-filter' ) }
 				value={ label }
-				defaultValue={ defaultLabel }
+				placeholder={ defaultLabel }
 				help={ __(
-					'If empty then no label will be shown',
+					'Leave empty to use the default label.',
 					'pikari-gutenberg-query-filter'
 				) }
 				onChange={ ( newLabel ) => setAttributes( { label: newLabel } ) }
