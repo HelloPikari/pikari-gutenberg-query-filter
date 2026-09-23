@@ -7,7 +7,6 @@ const variations = [
 		description: __( 'Filter posts by post type', 'pikari-gutenberg-query-filter' ),
 		attributes: {
 			filterType: 'post-type',
-			label: __( 'Content Type', 'pikari-gutenberg-query-filter' ),
 		},
 		isDefault: true,
 		scope: [ 'inserter', 'transform' ],
@@ -20,7 +19,6 @@ const variations = [
 		description: __( 'Filter posts by taxonomy terms', 'pikari-gutenberg-query-filter' ),
 		attributes: {
 			filterType: 'taxonomy',
-			label: __( 'Filter by', 'pikari-gutenberg-query-filter' ),
 		},
 		scope: [ 'inserter', 'transform' ],
 		isActive: ( blockAttributes ) => blockAttributes.filterType === 'taxonomy',
@@ -32,7 +30,6 @@ const variations = [
 		description: __( 'Filter posts by author', 'pikari-gutenberg-query-filter' ),
 		attributes: {
 			filterType: 'author',
-			label: __( 'Author', 'pikari-gutenberg-query-filter' ),
 		},
 		scope: [ 'inserter', 'transform' ],
 		isActive: ( blockAttributes ) => blockAttributes.filterType === 'author',

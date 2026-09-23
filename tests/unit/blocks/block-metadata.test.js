@@ -99,6 +99,15 @@ describe( 'block metadata', () => {
 		);
 	} );
 
+	// Nothing ever read them. Removing an attribute is breaking, so it
+	// happens before 1.0 or never.
+	it( 'should not declare the unused width attributes on the Sort block', () => {
+		const { attributes } = readMetadata( 'sort' );
+
+		expect( attributes ).not.toHaveProperty( 'width' );
+		expect( attributes ).not.toHaveProperty( 'widthUnit' );
+	} );
+
 	it.each( blockNames )(
 		'should not opt the site into view transitions from the %s stylesheet',
 		( block ) => {
