@@ -72,7 +72,7 @@ if ( empty( $options ) ) {
 $current_value = FilterHelper::current_value( $query_var, $filter_type );
 
 // Prepare template variables
-$label_text    = $attributes['label'] ?? $default_label;
+$label_text    = FilterHelper::get_label( $attributes, $default_label );
 $empty_label   = $attributes['emptyLabel'] ?: __( 'All', 'pikari-gutenberg-query-filter' );
 $show_label    = $attributes['showLabel'] ?? true;
 $label_class   = $show_label ? '' : ' screen-reader-text';

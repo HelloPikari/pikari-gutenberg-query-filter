@@ -1,22 +1,37 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
 import { __ } from '@wordpress/i18n';
-import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
-import classNames from 'classnames';
 import {
-	PanelBody,
-	SelectControl,
-	TextControl,
-	ToggleControl,
-	// eslint-disable-next-line @wordpress/no-unsafe-wp-apis
-	__experimentalToggleGroupControl as ToggleGroupControl,
-	// eslint-disable-next-line @wordpress/no-unsafe-wp-apis
-	__experimentalToggleGroupControlOption as ToggleGroupControlOption,
-} from '@wordpress/components';
+	useBlockProps,
+	InspectorControls,
+	Warning,
+	store as blockEditorStore,
+} from '@wordpress/block-editor';
+import classNames from 'classnames';
+import { Notice, PanelBody, SelectControl } from '@wordpress/components';
+import { useInstanceId } from '@wordpress/compose';
+import { useEntityRecords } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
+import { useEffect } from '@wordpress/element';
 import FilterInput from '../../components/FilterInput';
+import FilterInspectorControls from '../../components/FilterInspectorControls';
 import getOptionClassName from '../../utils/option-class-name';
+import {
+	RENDERS_NOTHING,
+	getFilterNotices,
+	getNoticeMessage,
+	hasDuplicateFilter,
+} from '../../utils/filter-notices';
+import {
+	AUTHOR_PREVIEW_QUERY,
+	TERM_PREVIEW_QUERY,
+} from '../../utils/preview-queries';
 
-export default function Edit( { attributes, setAttributes, context } ) {
+export default function Edit( {
+	attributes,
+	setAttributes,
+	context,
+	clientId,
+} ) {
 	const {
 		filterType,
 		taxonomy,
@@ -27,72 +42,65 @@ export default function Edit( { attributes, setAttributes, context } ) {
 		layoutDirection,
 	} = attributes;
 
-	const id = `query-filter-${ Math.random().toString( 36 ).substr( 2, 9 ) }`;
+	const id = useInstanceId( Edit, 'query-filter' );
 
-	// Get data for post-type filter
-	const allPostTypes = useSelect( ( select ) => {
-		if ( filterType !== 'post-type' ) {
-			return [];
-		}
-		return (
-			( select( 'core' ).getPostTypes( { per_page: 100 } ) || [] ).filter(
-				( type ) => type.viewable
-			) || []
-		);
-	}, [ filterType ] );
+	// An inherited loop's post types come from the page's main query, which
+	// the editor can't see; context.query.postType is only the default.
+	const isInherited = !! context.query?.inherit;
 
-	// Get data for taxonomy filter
+	const allPostTypes = useSelect(
+		( select ) => {
+			if ( filterType !== 'post-type' ) {
+				return [];
+			}
+			return (
+				select( 'core' ).getPostTypes( { per_page: 100 } ) || []
+			).filter( ( type ) => type.viewable );
+		},
+		[ filterType ]
+	);
+
 	const taxonomies = useSelect(
 		( select ) => {
 			if ( filterType !== 'taxonomy' ) {
 				return [];
 			}
-			const results = (
+			return (
 				select( 'core' ).getTaxonomies( { per_page: 100 } ) || []
 			).filter( ( tax ) => tax.visibility.publicly_queryable );
-
-			if ( results && results.length > 0 && ! taxonomy ) {
-				setAttributes( {
-					taxonomy: results[ 0 ].slug,
-					label: results[ 0 ].name,
-				} );
-			}
-
-			return results;
 		},
-		[ filterType, taxonomy, setAttributes ]
+		[ filterType ]
 	);
 
-	const terms = useSelect(
-		( select ) => {
-			if ( filterType !== 'taxonomy' || ! taxonomy ) {
-				return [];
-			}
-			return (
-				select( 'core' ).getEntityRecords( 'taxonomy', taxonomy, {
-					number: 50,
-				} ) || []
-			);
-		},
-		[ filterType, taxonomy ]
-	);
-
-	// Get data for author filter
-	const authors = useSelect( ( select ) => {
-		if ( filterType !== 'author' ) {
-			return [];
+	// A new taxonomy filter starts on the first taxonomy. Only the taxonomy
+	// is stored; the label default is resolved at render.
+	useEffect( () => {
+		if ( filterType === 'taxonomy' && ! taxonomy && taxonomies.length ) {
+			setAttributes( { taxonomy: taxonomies[ 0 ].slug } );
 		}
-		return (
-			select( 'core' ).getUsers( {
-				who: 'authors',
-				per_page: 100,
-			} ) || []
-		);
-	}, [ filterType ] );
+	}, [ filterType, taxonomy, taxonomies, setAttributes ] );
 
-	// Process post types for display
+	const { records: terms, status: termsStatus } = useEntityRecords(
+		'taxonomy',
+		taxonomy || '',
+		TERM_PREVIEW_QUERY,
+		{ enabled: filterType === 'taxonomy' && !! taxonomy }
+	);
+
+	const { records: authors, status: authorsStatus } = useEntityRecords(
+		'root',
+		'user',
+		AUTHOR_PREVIEW_QUERY,
+		{ enabled: filterType === 'author' }
+	);
+
+	const hasDuplicate = useSelect(
+		( select ) => hasDuplicateFilter( select( blockEditorStore ), clientId ),
+		[ clientId ]
+	);
+
 	let contextPostTypes = [];
-	if ( filterType === 'post-type' && context.query ) {
+	if ( filterType === 'post-type' && context.query && ! isInherited ) {
 		contextPostTypes = ( context.query.postType || '' )
 			.split( ',' )
 			.map( ( type ) => type.trim() );
@@ -105,24 +113,23 @@ export default function Edit( { attributes, setAttributes, context } ) {
 		}
 	}
 
-	const postTypes = contextPostTypes.map( ( postType ) => {
-		return (
+	const postTypes = contextPostTypes.map(
+		( postType ) =>
 			allPostTypes.find( ( type ) => type.slug === postType ) || {
 				slug: postType,
 				name: postType,
 			}
-		);
-	} );
+	);
 
-	// Get default label based on filter type
 	const getDefaultLabel = () => {
 		switch ( filterType ) {
 			case 'post-type':
 				return __( 'Content Type', 'pikari-gutenberg-query-filter' );
 			case 'taxonomy':
-				return taxonomy && taxonomies.length > 0
-					? taxonomies.find( ( tax ) => tax.slug === taxonomy )?.name || __( 'Filter by', 'pikari-gutenberg-query-filter' )
-					: __( 'Filter by', 'pikari-gutenberg-query-filter' );
+				return (
+					taxonomies.find( ( tax ) => tax.slug === taxonomy )?.name ||
+					__( 'Filter by', 'pikari-gutenberg-query-filter' )
+				);
 			case 'author':
 				return __( 'Author', 'pikari-gutenberg-query-filter' );
 			default:
@@ -139,19 +146,30 @@ export default function Edit( { attributes, setAttributes, context } ) {
 				label: postType.name,
 				slug: postType.slug,
 			} ) ),
-			taxonomy: terms.map( ( term ) => ( {
+			taxonomy: ( terms || [] ).map( ( term ) => ( {
 				key: term.id,
 				value: term.slug,
 				label: term.name,
 				slug: term.slug,
 			} ) ),
-			author: authors.map( ( author ) => ( {
+			author: ( authors || [] ).map( ( author ) => ( {
 				key: author.id,
 				value: author.slug,
 				label: author.name,
 				slug: author.slug,
 			} ) ),
 		}[ filterType ] || [];
+
+	const notices = getFilterNotices( attributes, {
+		hasDuplicate,
+		optionsResolved:
+			{ taxonomy: termsStatus, author: authorsStatus }[ filterType ] ===
+			'SUCCESS',
+		optionCount: previewOptions.length,
+	} );
+	const blankNotices = notices.filter( ( key ) =>
+		RENDERS_NOTHING.includes( key )
+	);
 
 	const blockProps = useBlockProps( {
 		className: classNames( 'wp-block-pikari-gutenberg-query-filter', {
@@ -165,7 +183,12 @@ export default function Edit( { attributes, setAttributes, context } ) {
 			'screen-reader-text': ! showLabel,
 		}
 	);
-	const labelText = label || getDefaultLabel();
+	// Mirrors FilterHelper::get_label().
+	const labelText = label?.trim() ? label : getDefaultLabel();
+	const inheritedNote = __(
+		"Options come from the page's query.",
+		'pikari-gutenberg-query-filter'
+	);
 
 	return (
 		<>
@@ -176,6 +199,16 @@ export default function Edit( { attributes, setAttributes, context } ) {
 						'pikari-gutenberg-query-filter'
 					) }
 				>
+					{ notices.map( ( key ) => (
+						<Notice key={ key } status="warning" isDismissible={ false }>
+							{ getNoticeMessage( key ) }
+						</Notice>
+					) ) }
+					{ filterType === 'post-type' && isInherited && (
+						<Notice status="info" isDismissible={ false }>
+							{ inheritedNote }
+						</Notice>
+					) }
 					{ filterType === 'taxonomy' && (
 						<SelectControl
 							label={ __(
@@ -201,112 +234,22 @@ export default function Edit( { attributes, setAttributes, context } ) {
 							}
 						/>
 					) }
-					<SelectControl
-						label={ __(
-							'Display Type',
-							'pikari-gutenberg-query-filter'
-						) }
-						value={ displayType }
-						options={ [
-							{
-								label: __(
-									'Select (Dropdown)',
-									'pikari-gutenberg-query-filter'
-								),
-								value: 'select',
-							},
-							{
-								label: __(
-									'Radio (Single Choice)',
-									'pikari-gutenberg-query-filter'
-								),
-								value: 'radio',
-							},
-							{
-								label: __(
-									'Checkbox (Multiple Choice)',
-									'pikari-gutenberg-query-filter'
-								),
-								value: 'checkbox',
-							},
-						] }
-						onChange={ ( newDisplayType ) =>
-							setAttributes( { displayType: newDisplayType } )
-						}
-					/>
-					{ ( displayType === 'radio' ||
-						displayType === 'checkbox' ) && (
-						<ToggleGroupControl
-							label={ __(
-								'Layout Direction',
-								'pikari-gutenberg-query-filter'
-							) }
-							value={ layoutDirection }
-							onChange={ ( newLayoutDirection ) =>
-								setAttributes( {
-									layoutDirection: newLayoutDirection,
-								} )
-							}
-							isBlock
-							__nextHasNoMarginBottom
-						>
-							<ToggleGroupControlOption
-								value="vertical"
-								label={ __(
-									'Vertical',
-									'pikari-gutenberg-query-filter'
-								) }
-							/>
-							<ToggleGroupControlOption
-								value="horizontal"
-								label={ __(
-									'Horizontal',
-									'pikari-gutenberg-query-filter'
-								) }
-							/>
-						</ToggleGroupControl>
-					) }
-					<TextControl
-						label={ __( 'Label', 'pikari-gutenberg-query-filter' ) }
-						value={ label }
-						placeholder={ getDefaultLabel() }
-						help={ __(
-							'If empty then no label will be shown',
-							'pikari-gutenberg-query-filter'
-						) }
-						onChange={ ( newLabel ) =>
-							setAttributes( { label: newLabel } )
-						}
-					/>
-					<ToggleControl
-						label={ __(
-							'Show Label',
-							'pikari-gutenberg-query-filter'
-						) }
-						checked={ showLabel }
-						onChange={ ( newShowLabel ) =>
-							setAttributes( { showLabel: newShowLabel } )
-						}
-					/>
-					<TextControl
-						label={ __(
-							'Empty Choice Label',
-							'pikari-gutenberg-query-filter'
-						) }
-						value={ emptyLabel }
-						placeholder={ __(
-							'All',
-							'pikari-gutenberg-query-filter'
-						) }
-						onChange={ ( newEmptyLabel ) =>
-							setAttributes( { emptyLabel: newEmptyLabel } )
-						}
+					<FilterInspectorControls
+						attributes={ attributes }
+						setAttributes={ setAttributes }
+						defaultLabel={ getDefaultLabel() }
 					/>
 				</PanelBody>
 			</InspectorControls>
 
 			<div { ...blockProps }>
-				{ displayType === 'select' && (
+				{ blankNotices.length > 0 && (
+					<Warning>
+						{ blankNotices.map( getNoticeMessage ).join( ' ' ) }
+					</Warning>
+				) }
+
+				{ ! blankNotices.length && displayType === 'select' && (
 					<>
 						<label className={ labelClassName } htmlFor={ id }>
 							{ labelText }
@@ -329,7 +272,8 @@ export default function Edit( { attributes, setAttributes, context } ) {
 					</>
 				) }
 
-				{ ( displayType === 'radio' || displayType === 'checkbox' ) && (
+				{ ! blankNotices.length &&
+					( displayType === 'radio' || displayType === 'checkbox' ) && (
 					<fieldset className="wp-block-pikari-gutenberg-query-filter__fieldset">
 						<legend className={ labelClassName }>{ labelText }</legend>
 						<div
@@ -337,7 +281,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 								`wp-block-pikari-gutenberg-query-filter__${ displayType }-group`,
 								{
 									'has-layout-horizontal':
-										layoutDirection === 'horizontal',
+											layoutDirection === 'horizontal',
 								}
 							) }
 						>
@@ -352,7 +296,7 @@ export default function Edit( { attributes, setAttributes, context } ) {
 									) }
 								>
 									{ emptyLabel ||
-										__( 'All', 'pikari-gutenberg-query-filter' ) }
+											__( 'All', 'pikari-gutenberg-query-filter' ) }
 								</FilterInput>
 							) }
 							{ previewOptions.slice( 0, 3 ).map( ( option ) => (
@@ -371,6 +315,10 @@ export default function Edit( { attributes, setAttributes, context } ) {
 						</div>
 					</fieldset>
 				) }
+
+				{ ! blankNotices.length &&
+					filterType === 'post-type' &&
+					isInherited && <p>{ inheritedNote }</p> }
 			</div>
 		</>
 	);

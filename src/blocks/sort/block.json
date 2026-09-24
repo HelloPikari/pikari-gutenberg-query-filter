@@ -51,12 +51,6 @@
 		"showLabel": {
 			"type": "boolean",
 			"default": true
-		},
-		"width": {
-			"type": "number"
-		},
-		"widthUnit": {
-			"type": "string"
 		}
 	},
 	"textdomain": "pikari-gutenberg-query-filter",

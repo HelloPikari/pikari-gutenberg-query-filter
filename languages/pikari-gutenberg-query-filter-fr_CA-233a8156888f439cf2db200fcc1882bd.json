@@ -19,8 +19,8 @@
 			"Vertical": ["Vertical"],
 			"Horizontal": ["Horizontal"],
 			"Label": ["\u00c9tiquette"],
-			"If empty then no label will be shown": [
-				"Si vide, aucune \u00e9tiquette ne sera affich\u00e9e"
+			"Leave empty to use the default label.": [
+				"Laissez vide pour utiliser l\u2019\u00e9tiquette par d\u00e9faut."
 			],
 			"Show Label": ["Afficher l\u2019\u00e9tiquette"],
 			"Empty Choice Label": ["\u00c9tiquette du choix vide"]

@@ -1,5 +1,6 @@
 <?php
 
+use Pikari\GutenbergQueryFilter\Helpers\FilterHelper;
 use Pikari\GutenbergQueryFilter\Integrations\MainQueryFilter;
 use Pikari\GutenbergQueryFilter\Query\SortOptions;
 use Pikari\GutenbergQueryFilter\Url\QueryParams;
@@ -32,7 +33,7 @@ if ( $params->is_inherit() ) {
 $default_option = SortOptions::match( $default_orderby, $default_order );
 
 // Prepare template variables.
-$label_text  = $attributes['label'] ?? __( 'Sort By', 'pikari-gutenberg-query-filter' );
+$label_text  = FilterHelper::get_label( $attributes, __( 'Sort By', 'pikari-gutenberg-query-filter' ) );
 $empty_label = $attributes['emptyLabel'] ?: __( 'Default', 'pikari-gutenberg-query-filter' );
 $show_label  = $attributes['showLabel'] ?? true;
 $label_class = $show_label ? '' : ' screen-reader-text';

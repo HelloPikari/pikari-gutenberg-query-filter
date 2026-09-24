@@ -349,6 +349,34 @@ class FilterHelperTest extends TestCase {
     }
 
     /*
+     * get_label()
+     */
+
+    public function test_get_label_returns_the_stored_label(): void {
+        $this->assertSame( 'Topics', FilterHelper::get_label( array( 'label' => 'Topics' ), 'Category' ) );
+    }
+
+    public function test_get_label_falls_back_when_no_label_is_stored(): void {
+        $this->assertSame( 'Category', FilterHelper::get_label( array(), 'Category' ) );
+    }
+
+    /*
+     * A cleared Label field stores "". It must not print an empty <legend>:
+     * hiding the label is what showLabel is for.
+     */
+    public function test_get_label_falls_back_for_an_empty_label(): void {
+        $this->assertSame( 'Category', FilterHelper::get_label( array( 'label' => '' ), 'Category' ) );
+    }
+
+    public function test_get_label_falls_back_for_a_whitespace_label(): void {
+        $this->assertSame( 'Category', FilterHelper::get_label( array( 'label' => '   ' ), 'Category' ) );
+    }
+
+    public function test_get_label_ignores_a_non_string_label(): void {
+        $this->assertSame( 'Category', FilterHelper::get_label( array( 'label' => array( 'x' ) ), 'Category' ) );
+    }
+
+    /*
      * get_filter_options()
      */
 

@@ -353,6 +353,7 @@ This is the other half of the round trip: turning the URL parameters `render.php
 - The `{key}_{slug}` format is implemented twice: `FilterHelper::get_option_classes()` for the frontend and `src/utils/option-class-name.js` for the editor preview. Change both together, with their tests.
 - Existing BEM classes (`__radio-item`, `__checkbox-item`, `__radio-text`, `__checkbox-text`, `__*-group`, `__select`, `__label`) are public. Do not rename them.
 - The Sort block has no radios or checkboxes, so none of these three option filters apply to it. It has its own filter instead, `pikari_gutenberg_query_filter_sort_options` (see `docs/hooks.md`). The form contract does apply to it: its `<select>` carries a `name` and a `form` like any other control, and it renders a `<noscript>` submit button, so sorting works without JavaScript.
+- Label text is resolved by `FilterHelper::get_label()` in both `render.php` files, and mirrored by `label?.trim() ? label : default` in both `edit.js` files. Empty means default. Never store a default label as an attribute.
 
 ### Tests for this area
 
@@ -365,6 +366,9 @@ This is the other half of the round trip: turning the URL parameters `render.php
 - `tests/php/BlockFiltersTest.php` — core block integrations: router-region markup, Search block naming, block-style versioning, unique ID reservation.
 - `tests/unit/utils/option-class-name.test.js` — Jest. The `{key}_{slug}` option class format, mirrored from `FilterHelper::get_option_classes()`.
 - `tests/unit/blocks/block-metadata.test.js` — Jest. `block.json` fields match what the build actually produces.
+- `tests/unit/utils/filter-notices.test.js` — Jest. Which editor notices apply, and duplicate detection per Query Loop (nested loops are separate).
+- `tests/unit/utils/preview-queries.test.js` — Jest. The editor preview's REST queries match `FilterHelper` and `AuthorHelper`.
+- `tests/unit/blocks/query-filter/variations.test.js` — Jest. Variations store no `label`.
 - `tests/e2e/specs/` — Playwright, against a seeded wp-env. Filtering, sorting, sticky posts, author nicenames (including old numeric links), and injected styles surviving enhanced pagination.
 
 ## Git Workflow

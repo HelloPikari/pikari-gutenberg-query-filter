@@ -2,12 +2,13 @@
 import { __ } from '@wordpress/i18n';
 import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
 import { PanelBody } from '@wordpress/components';
+import { useInstanceId } from '@wordpress/compose';
 import FilterInspectorControls from '../../components/FilterInspectorControls';
 
 export default function Edit( { attributes, setAttributes } ) {
 	const { emptyLabel, label, showLabel } = attributes;
 
-	const id = `sort-${ Math.random().toString( 36 ).substr( 2, 9 ) }`;
+	const id = useInstanceId( Edit, 'sort' );
 
 	const sortOptions = [
 		{
@@ -42,7 +43,9 @@ export default function Edit( { attributes, setAttributes } ) {
 			<div { ...useBlockProps( { className: 'wp-block-pikari-gutenberg-query-filter' } ) }>
 				{ showLabel && (
 					<label htmlFor={ id } className="wp-block-pikari-gutenberg-query-filter-sort__label wp-block-pikari-gutenberg-query-filter__label">
-						{ label || __( 'Sort By', 'pikari-gutenberg-query-filter' ) }
+						{ label?.trim()
+							? label
+							: __( 'Sort By', 'pikari-gutenberg-query-filter' ) }
 					</label>
 				) }
 				<select

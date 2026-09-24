@@ -213,6 +213,23 @@ class FilterHelper {
     }
 
     /**
+     * Get the text for a block's label or legend.
+     *
+     * An empty or whitespace-only label means "use the default", as it does
+     * in the editor. A label is hidden with showLabel, which keeps it for
+     * screen readers, never by leaving it empty.
+     *
+     * @param array  $attributes    Block attributes.
+     * @param string $default_label Translated default for this block.
+     * @return string Label text.
+     */
+    public static function get_label( array $attributes, string $default_label ): string {
+        $label = $attributes['label'] ?? '';
+
+        return is_string( $label ) && '' !== trim( $label ) ? $label : $default_label;
+    }
+
+    /**
      * Get the classes for a radio or checkbox option's <label>.
      *
      * Adds a unique `{key}_{slug}` class, where key is the taxonomy name for

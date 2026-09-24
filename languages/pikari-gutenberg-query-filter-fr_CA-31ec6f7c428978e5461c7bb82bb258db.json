@@ -1,0 +1,27 @@
+{
+	"translation-revision-date": "2026-09-22T04:02:43+00:00",
+	"generator": "WP-CLI/2.12.0",
+	"source": "src/utils/filter-notices.js",
+	"domain": "messages",
+	"locale_data": {
+		"messages": {
+			"": {
+				"domain": "messages",
+				"lang": "fr_CA",
+				"plural-forms": "nplurals=2; plural=(n > 1);"
+			},
+			"Another filter in this Query Loop filters by the same thing. Both use one URL parameter, so they act as one control. Remove one of them.": [
+				"Un autre filtre de cette boucle de requ\u00eate filtre selon le m\u00eame crit\u00e8re. Les deux utilisent un seul param\u00e8tre d\u2019URL et agissent donc comme un seul contr\u00f4le. Supprimez l\u2019un des deux."
+			],
+			"Choose a taxonomy. This filter displays nothing until you do.": [
+				"Choisissez une taxonomie. Ce filtre n\u2019affiche rien tant que vous ne l\u2019avez pas fait."
+			],
+			"This taxonomy has no terms with posts yet, so this filter displays nothing.": [
+				"Cette taxonomie n\u2019a encore aucun terme avec des publications, donc ce filtre n\u2019affiche rien."
+			],
+			"No authors have published posts yet, so this filter displays nothing.": [
+				"Aucun auteur n\u2019a encore de publications publi\u00e9es, donc ce filtre n\u2019affiche rien."
+			]
+		}
+	}
+}
