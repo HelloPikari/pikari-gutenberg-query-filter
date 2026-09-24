@@ -20,18 +20,22 @@ class ResultCountTest extends TestCase {
     }
 
     /**
-     * A WP_Query stand-in whose get() answers for the loop var, carrying its
-     * own found_posts, the way the_posts sees it.
+     * A WP_Query stand-in whose get() answers for the loop var and for
+     * no_found_rows, carrying its own found_posts, the way the_posts sees it.
      *
-     * @param mixed $form_id     Value of the loop var, or null when absent.
-     * @param int   $found_posts The query's found_posts total.
+     * @param mixed $form_id      Value of the loop var, or null when absent.
+     * @param int   $found_posts  The query's found_posts total.
+     * @param bool  $no_found_rows Value of the query's no_found_rows flag.
      * @return \WP_Query
      */
-    private function query( $form_id, int $found_posts = 12 ): \WP_Query {
+    private function query( $form_id, int $found_posts = 12, bool $no_found_rows = false ): \WP_Query {
         $query = Mockery::mock( 'WP_Query' );
         $query->shouldReceive( 'get' )
             ->with( ResultCount::QUERY_VAR )
             ->andReturn( $form_id ?? '' );
+        $query->shouldReceive( 'get' )
+            ->with( 'no_found_rows' )
+            ->andReturn( $no_found_rows );
         $query->found_posts = $found_posts;
 
         return $query;
@@ -53,6 +57,12 @@ class ResultCountTest extends TestCase {
         ResultCount::record( array(), $this->query( 'pikari-gutenberg-query-filter-form-3', 0 ) );
 
         $this->assertSame( 0, ResultCount::for_form( 'pikari-gutenberg-query-filter-form-3' ) );
+    }
+
+    public function test_record_ignores_a_no_found_rows_query(): void {
+        ResultCount::record( array( 'a', 'b' ), $this->query( 'pikari-gutenberg-query-filter-form-3', 0, true ) );
+
+        $this->assertNull( ResultCount::for_form( 'pikari-gutenberg-query-filter-form-3' ) );
     }
 
     public function test_record_ignores_a_query_without_the_loop_var(): void {

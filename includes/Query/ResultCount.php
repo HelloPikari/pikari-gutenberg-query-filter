@@ -45,7 +45,8 @@ class ResultCount {
      * Record a tagged query's total. Hooked to the_posts.
      *
      * Core runs a loop's query several times per page, every run reporting the
-     * same total, so the last write wins.
+     * same total, so the last write wins. A no_found_rows query never computes
+     * found_posts, so it's skipped rather than wrongly recorded as 0.
      *
      * @param mixed $posts The retrieved posts, unused beyond passing through.
      * @param mixed $query The WP_Query.
@@ -53,6 +54,10 @@ class ResultCount {
      */
     public static function record( $posts, $query ) {
         if ( $query instanceof \WP_Query ) {
+            if ( $query->get( 'no_found_rows' ) ) {
+                return $posts;
+            }
+
             $form_id = $query->get( self::QUERY_VAR );
 
             if ( is_string( $form_id ) && '' !== $form_id ) {

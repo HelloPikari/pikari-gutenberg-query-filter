@@ -336,6 +336,7 @@ class BlockFiltersTest extends TestCase {
 
     public function test_render_block_query_stamps_a_custom_loops_recorded_count(): void {
         $query = Mockery::mock( 'WP_Query' );
+        $query->shouldReceive( 'get' )->with( 'no_found_rows' )->andReturn( false );
         $query->shouldReceive( 'get' )->with( ResultCount::QUERY_VAR )->andReturn( 'pikari-gutenberg-query-filter-form-3' );
         $query->found_posts = 12;
         ResultCount::record( array(), $query );
@@ -359,6 +360,7 @@ class BlockFiltersTest extends TestCase {
 
     public function test_render_block_query_does_not_use_another_loops_count(): void {
         $query = Mockery::mock( 'WP_Query' );
+        $query->shouldReceive( 'get' )->with( 'no_found_rows' )->andReturn( false );
         $query->shouldReceive( 'get' )->with( ResultCount::QUERY_VAR )->andReturn( 'pikari-gutenberg-query-filter-form-4' );
         $query->found_posts = 12;
         ResultCount::record( array(), $query );
@@ -371,8 +373,9 @@ class BlockFiltersTest extends TestCase {
     }
 
     public function test_render_block_query_stamps_an_inherited_loops_main_query_count(): void {
-        $main              = Mockery::mock( 'WP_Query' );
-        $main->found_posts = 5;
+        $main = Mockery::mock( 'WP_Query' );
+        $main->shouldReceive( 'get' )->with( 'no_found_rows' )->andReturn( false );
+        $main->found_posts   = 5;
         $GLOBALS['wp_query'] = $main;
 
         $html = $this->render_query(
@@ -381,6 +384,34 @@ class BlockFiltersTest extends TestCase {
         );
 
         $this->assertStringContainsString( 'data-query-found-posts="5"', $html );
+    }
+
+    public function test_render_block_query_stamps_an_inherited_loops_zero_result_count(): void {
+        $main = Mockery::mock( 'WP_Query' );
+        $main->shouldReceive( 'get' )->with( 'no_found_rows' )->andReturn( false );
+        $main->found_posts   = 0;
+        $GLOBALS['wp_query'] = $main;
+
+        $html = $this->render_query(
+            '<select name="query-category" form="pikari-gutenberg-query-filter-form-inherit"></select>',
+            array( 'query' => array( 'inherit' => true ) )
+        );
+
+        $this->assertStringContainsString( 'data-query-found-posts="0"', $html );
+    }
+
+    public function test_render_block_query_stamps_nothing_for_an_inherited_no_found_rows_query(): void {
+        $main = Mockery::mock( 'WP_Query' );
+        $main->shouldReceive( 'get' )->with( 'no_found_rows' )->andReturn( true );
+        $main->found_posts   = 0;
+        $GLOBALS['wp_query'] = $main;
+
+        $html = $this->render_query(
+            '<select name="query-category" form="pikari-gutenberg-query-filter-form-inherit"></select>',
+            array( 'query' => array( 'inherit' => true ) )
+        );
+
+        $this->assertStringNotContainsString( 'data-query-found-posts', $html );
     }
 
     /*

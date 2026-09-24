@@ -601,11 +601,11 @@ In `tests/unit/blocks/query-filter/view.test.js`:
 
 1. At the top of the file, below the header comment, add a virtual mock. `@wordpress/a11y` isn't installed, and `jest.config.js` is template-synced, so it isn't touched:
 
-```js
-jest.mock('@wordpress/a11y', () => ({ speak: jest.fn() }), {
-	virtual: true,
-});
-```
+   ```js
+   jest.mock('@wordpress/a11y', () => ({ speak: jest.fn() }), {
+   	virtual: true,
+   });
+   ```
 
 2. Add `let speak;` to the module-level `let`s. In the top-level `beforeEach`, after the router `require`, add `( { speak } = require( '@wordpress/a11y' ) );`.
 
@@ -769,53 +769,53 @@ In `src/blocks/query-filter/view.js`:
 
 1. Below `SEARCH_DELAY`, add:
 
-```js
-// The router's own "loading" cue fires after 400ms; this matches it, since
-// the router's announcements are turned off for this plugin's navigations.
-const LOADING_DELAY = 400;
+   ```js
+   // The router's own "loading" cue fires after 400ms; this matches it, since
+   // the router's announcements are turned off for this plugin's navigations.
+   const LOADING_DELAY = 400;
 
-// The router's localized loading text, read once per page.
-let loadingText;
+   // The router's localized loading text, read once per page.
+   let loadingText;
 
-/**
- * The router's localized "loading" text, as the router itself reads it.
- *
- * @return {string|null} Text, or null when the page doesn't carry it.
- */
-const routerLoadingText = () => {
-	if (undefined === loadingText) {
-		try {
-			loadingText =
-				JSON.parse(
-					document.getElementById(
-						'wp-script-module-data-@wordpress/interactivity-router'
-					)?.textContent ?? ''
-				)?.i18n?.loading ?? null;
-		} catch {
-			loadingText = null;
-		}
-	}
+   /**
+    * The router's localized "loading" text, as the router itself reads it.
+    *
+    * @return {string|null} Text, or null when the page doesn't carry it.
+    */
+   const routerLoadingText = () => {
+   	if (undefined === loadingText) {
+   		try {
+   			loadingText =
+   				JSON.parse(
+   					document.getElementById(
+   						'wp-script-module-data-@wordpress/interactivity-router'
+   					)?.textContent ?? ''
+   				)?.i18n?.loading ?? null;
+   		} catch {
+   			loadingText = null;
+   		}
+   	}
 
-	return loadingText;
-};
+   	return loadingText;
+   };
 
-/**
- * Speak a message politely, through core's shared live region.
- *
- * @param {string|null|undefined} message Message; nothing is spoken when empty.
- */
-const announce = (message) => {
-	if (!message) {
-		return;
-	}
+   /**
+    * Speak a message politely, through core's shared live region.
+    *
+    * @param {string|null|undefined} message Message; nothing is spoken when empty.
+    */
+   const announce = (message) => {
+   	if (!message) {
+   		return;
+   	}
 
-	import('@wordpress/a11y').then(
-		({ speak }) => speak(message),
-		// As the router does, ignore a module that fails to load.
-		() => {}
-	);
-};
-```
+   	import('@wordpress/a11y').then(
+   		({ speak }) => speak(message),
+   		// As the router does, ignore a module that fails to load.
+   		() => {}
+   	);
+   };
+   ```
 
 2. `run( url, isSearch )` becomes `run( url, isSearch, formId )`, and it calls `.actions.navigate( url, replace, formId )`. Update the JSDoc.
 

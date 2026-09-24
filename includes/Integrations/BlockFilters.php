@@ -403,7 +403,9 @@ class BlockFilters {
      *
      * A custom loop's total is recorded by ResultCount as core runs its query.
      * An inherited loop shows the main query, already filtered by
-     * MainQueryFilter by the time the template renders.
+     * MainQueryFilter by the time the template renders. When that query has
+     * no_found_rows set, WordPress never computes found_posts, so it stays 0
+     * even with visible posts; null is returned instead of that wrong 0.
      *
      * @param QueryParams $params  The loop's parameters.
      * @param string      $form_id The loop's form id.
@@ -413,7 +415,11 @@ class BlockFilters {
         if ( $params->is_inherit() ) {
             global $wp_query;
 
-            return ( $wp_query instanceof \WP_Query ) ? (int) $wp_query->found_posts : null;
+            if ( ! ( $wp_query instanceof \WP_Query ) || $wp_query->get( 'no_found_rows' ) ) {
+                return null;
+            }
+
+            return (int) $wp_query->found_posts;
         }
 
         return ResultCount::for_form( $form_id );
