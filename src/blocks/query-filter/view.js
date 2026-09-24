@@ -37,6 +37,52 @@ const NAMESPACE = 'pikari/gutenberg-query-filter';
 const FILTER_DELAY = 250;
 const SEARCH_DELAY = 400;
 
+// The router's own "loading" cue fires after 400ms; this matches it, since
+// the router's announcements are turned off for this plugin's navigations.
+const LOADING_DELAY = 400;
+
+// The router's localized loading text, read once per page.
+let loadingText;
+
+/**
+ * The router's localized "loading" text, as the router itself reads it.
+ *
+ * @return {string|null} Text, or null when the page doesn't carry it.
+ */
+const routerLoadingText = () => {
+	if ( undefined === loadingText ) {
+		try {
+			loadingText =
+				JSON.parse(
+					document.getElementById(
+						'wp-script-module-data-@wordpress/interactivity-router'
+					)?.textContent ?? ''
+				)?.i18n?.loading ?? null;
+		} catch {
+			loadingText = null;
+		}
+	}
+
+	return loadingText;
+};
+
+/**
+ * Speak a message politely, through core's shared live region.
+ *
+ * @param {string|null|undefined} message Message; nothing is spoken when empty.
+ */
+const announce = ( message ) => {
+	if ( ! message ) {
+		return;
+	}
+
+	import( '@wordpress/a11y' ).then(
+		( { speak } ) => speak( message ),
+		// As the router does, ignore a module that fails to load.
+		() => {}
+	);
+};
+
 // Pending debounce timers, keyed by form id, so two loops on one page don't
 // cancel each other.
 const timers = new Map();
@@ -91,15 +137,16 @@ const cancel = ( formId ) => {
  *
  * @param {string}  url      URL to navigate to.
  * @param {boolean} isSearch Whether a search keystroke triggered it.
+ * @param {string}  formId   Id of the loop form that triggered it.
  */
-const run = ( url, isSearch ) => {
+const run = ( url, isSearch, formId ) => {
 	const replace = isSearch && searchBurst;
 	searchBurst = isSearch;
 
 	// The store proxy scopes and runs the generator; a bare generator here
 	// would never execute. It reads no context or element, so it needs no scope.
 	store( NAMESPACE )
-		.actions.navigate( url, replace )
+		.actions.navigate( url, replace, formId )
 		.catch( () => {} );
 };
 
@@ -164,7 +211,7 @@ store( NAMESPACE, {
 			// A request is already out: go now and let the router discard the
 			// stale response, rather than leaving the newer choice waiting.
 			if ( inFlightUrl ) {
-				run( url, isSearch );
+				run( url, isSearch, form.id );
 				return;
 			}
 
@@ -173,7 +220,7 @@ store( NAMESPACE, {
 				setTimeout(
 					() => {
 						timers.delete( form.id );
-						run( url, isSearch );
+						run( url, isSearch, form.id );
 					},
 					isSearch ? SEARCH_DELAY : FILTER_DELAY
 				)
@@ -190,7 +237,11 @@ store( NAMESPACE, {
 			cancel( form.id );
 			searchBurst = false;
 
-			run( buildUrl( window.location.href, formOptions( form ) ), false );
+			run(
+				buildUrl( window.location.href, formOptions( form ) ),
+				false,
+				form.id
+			);
 		} ),
 
 		/**
@@ -201,22 +252,45 @@ store( NAMESPACE, {
 		},
 
 		/**
-		 * Navigate, keeping script-injected styles alive across the swap.
+		 * Navigate, keeping script-injected styles alive across the swap, and
+		 * announce the new result count (spec C/D §3.3).
 		 *
 		 * @param {string}  url     URL to navigate to.
 		 * @param {boolean} replace Whether to replace the history entry.
+		 * @param {string}  formId  Id of the loop form that triggered it.
 		 */
-		*navigate( url, replace ) {
+		*navigate( url, replace, formId ) {
 			captureInjectedStyles();
 			inFlightUrl = url;
+
+			const loading = setTimeout( () => {
+				if ( inFlightUrl === url ) {
+					announce( routerLoadingText() );
+				}
+			}, LOADING_DELAY );
 
 			try {
 				const { actions } = yield import(
 					'@wordpress/interactivity-router'
 				);
-				yield actions.navigate( url, replace ? { replace: true } : {} );
+				yield actions.navigate( url, {
+					...( replace ? { replace: true } : {} ),
+					screenReaderAnnouncement: false,
+				} );
 				enableInjectedStyles();
+
+				// The router returns without rendering when a newer navigation
+				// has taken over, so only the current one may announce. The
+				// form is looked up again: the swap replaced it.
+				if ( inFlightUrl === url ) {
+					announce(
+						document.getElementById( formId )?.dataset
+							.queryResultsMessage
+					);
+				}
 			} finally {
+				clearTimeout( loading );
+
 				// Only if no newer navigation has taken over.
 				if ( inFlightUrl === url ) {
 					inFlightUrl = null;

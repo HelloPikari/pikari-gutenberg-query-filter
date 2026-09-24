@@ -32,10 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Filtering an inherited loop never changes what the page is: a post type filter is ignored on a post type archive, an author filter narrows an author archive to its own author instead of replacing it, and the archive's title, template and queried object stay put. An unknown term or a filtered date archive returns an empty result instead of a 404. Filtering, sorting or searching from page 2 returns to page 1.
 - Filters, sort and search now work **without JavaScript**. Each Query Filter and Sort block renders a `<noscript>` "Apply filters" button, and every control in a loop submits through one shared, hidden `<form>` as a plain GET request. See [docs/hooks.md](docs/hooks.md#form-and-controls) for the markup, and the README's Troubleshooting section for a known no-JS limitation on inherited loops with a Search block.
 - **Editor notices** when two filters in one Query Loop use the same URL parameter (they act as one control), and when a filter will display nothing: no taxonomy chosen, no terms with posts, or no authors with published posts.
+- **Screen readers hear the result count after filtering,** for example "12 results found" or "No results found", in place of the router's generic "Page loaded.". The count is also on the loop's form as `data-query-found-posts`. See [docs/hooks.md](docs/hooks.md).
 
 ### Changed
 
 - **New filters no longer store a default label,** so the default follows the site's language and the chosen taxonomy. Existing blocks keep the label they saved.
+- **Filter, sort and search changes no longer announce "Page loaded."** They announce the result count instead. Core's own pagination still announces "Page loaded.".
 
 ### Fixed
 

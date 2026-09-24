@@ -12,11 +12,16 @@
  * re-enables those.
  */
 
+jest.mock( '@wordpress/a11y', () => ( { speak: jest.fn() } ), {
+	virtual: true,
+} );
+
 let actions;
 let callbacks;
 let getContext;
 let navigate;
 let routerState;
+let speak;
 let withSyncEvent;
 
 /**
@@ -103,6 +108,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 		( {
 			actions: { navigate },
 		} = require( '@wordpress/interactivity-router' ) );
+		( { speak } = require( '@wordpress/a11y' ) );
 		require( '../../../../src/blocks/query-filter/view' );
 		( { actions, callbacks } = store.getStore(
 			'pikari/gutenberg-query-filter'
@@ -211,7 +217,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			await jest.advanceTimersByTimeAsync( 1 );
 			expect( navigate ).toHaveBeenCalledWith(
 				'http://localhost/?query-3-category=news',
-				{}
+				{ screenReaderAnnouncement: false }
 			);
 		} );
 
@@ -225,7 +231,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			await jest.advanceTimersByTimeAsync( 150 );
 			expect( navigate ).toHaveBeenCalledWith(
 				'http://localhost/?query-3-s=mango',
-				{}
+				{ screenReaderAnnouncement: false }
 			);
 		} );
 
@@ -241,7 +247,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			expect( navigate ).toHaveBeenCalledTimes( 1 );
 			expect( navigate ).toHaveBeenCalledWith(
 				'http://localhost/?query-3-category=events',
-				{}
+				{ screenReaderAnnouncement: false }
 			);
 		} );
 
@@ -262,7 +268,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			await jest.advanceTimersByTimeAsync( 400 );
 			expect( navigate ).toHaveBeenCalledWith(
 				'http://localhost/?query-3-s=mango',
-				{}
+				{ screenReaderAnnouncement: false }
 			);
 		} );
 
@@ -324,13 +330,19 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			select.value = 'events';
 			fire( select, 'change' );
 
-			expect( jest.getTimerCount() ).toBe( 0 );
-
+			// It went out at once, not after a debounce delay: proven below by
+			// what it was called with, since a debounce timer would still be
+			// pending here alongside navigate()'s own loading-announcement timer.
 			await flush();
 			expect( navigate ).toHaveBeenLastCalledWith(
 				'http://localhost/?query-3-category=events',
-				{}
+				{ screenReaderAnnouncement: false }
 			);
+
+			// And it did not *also* schedule a debounce timer alongside the
+			// immediate call: nothing more arrives once one would have fired.
+			await jest.advanceTimersByTimeAsync( 250 );
+			expect( navigate ).toHaveBeenCalledTimes( 2 );
 		} );
 
 		it( 'submits at once, cancelling anything pending', async () => {
@@ -342,13 +354,17 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			actions.submit( { type: 'submit', target: form, preventDefault } );
 
 			expect( preventDefault ).toHaveBeenCalled();
-			expect( jest.getTimerCount() ).toBe( 0 );
+
+			// Proves it went out immediately, not after the cancelled debounce
+			// delay: a debounce timer never fires within a single flush().
+			await flush();
+			expect( navigate ).toHaveBeenCalledTimes( 1 );
 
 			await jest.advanceTimersByTimeAsync( 400 );
 			expect( navigate ).toHaveBeenCalledTimes( 1 );
 			expect( navigate ).toHaveBeenCalledWith(
 				'http://localhost/?query-3-category=news',
-				{}
+				{ screenReaderAnnouncement: false }
 			);
 		} );
 
@@ -364,7 +380,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			expect( navigate ).toHaveBeenNthCalledWith(
 				1,
 				'http://localhost/?query-3-s=man',
-				{}
+				{ screenReaderAnnouncement: false }
 			);
 
 			search.value = 'mango';
@@ -374,7 +390,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			expect( navigate ).toHaveBeenNthCalledWith(
 				2,
 				'http://localhost/?query-3-s=mango',
-				{ replace: true }
+				{ replace: true, screenReaderAnnouncement: false }
 			);
 		} );
 
@@ -392,7 +408,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			expect( navigate ).toHaveBeenNthCalledWith(
 				2,
 				'http://localhost/?query-3-s=mango',
-				{}
+				{ screenReaderAnnouncement: false }
 			);
 		} );
 
@@ -412,7 +428,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			expect( navigate ).toHaveBeenNthCalledWith(
 				3,
 				'http://localhost/?query-3-category=news&query-3-s=mango',
-				{}
+				{ screenReaderAnnouncement: false }
 			);
 		} );
 
@@ -426,8 +442,149 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 
 			expect( navigate ).toHaveBeenCalledWith(
 				'http://localhost/?query-3-category=news',
-				{}
+				{ screenReaderAnnouncement: false }
 			);
+		} );
+
+		describe( 'result announcements', () => {
+			/**
+			 * Make the router "render" a new page: replace the loop form, as the
+			 * router's region swap does, carrying the new page's message.
+			 *
+			 * @param {string|null} message New form's message, or null for none.
+			 */
+			const rendersPageWith = ( message ) => {
+				navigate.mockImplementationOnce( () => {
+					const next = form.cloneNode( true );
+					if ( null === message ) {
+						delete next.dataset.queryResultsMessage;
+					} else {
+						next.dataset.queryResultsMessage = message;
+					}
+					form.replaceWith( next );
+					return Promise.resolve();
+				} );
+			};
+
+			beforeEach( () => {
+				form.dataset.queryResultsMessage = '9 results found';
+			} );
+
+			it( 'turns off the router announcement', async () => {
+				select.value = 'news';
+				fire( select, 'change' );
+				await jest.advanceTimersByTimeAsync( 250 );
+
+				expect( navigate ).toHaveBeenCalledWith(
+					expect.any( String ),
+					expect.objectContaining( {
+						screenReaderAnnouncement: false,
+					} )
+				);
+			} );
+
+			it( 'speaks the new page form message, not the old one', async () => {
+				rendersPageWith( '3 results found' );
+				select.value = 'news';
+				fire( select, 'change' );
+				await jest.advanceTimersByTimeAsync( 250 );
+				await flush();
+
+				expect( speak ).toHaveBeenCalledWith( '3 results found' );
+				expect( speak ).not.toHaveBeenCalledWith( '9 results found' );
+			} );
+
+			it( 'announces after a submit too', async () => {
+				rendersPageWith( 'No results found' );
+				actions.submit( {
+					type: 'submit',
+					target: form,
+					preventDefault: () => {},
+				} );
+				await flush();
+
+				expect( speak ).toHaveBeenCalledWith( 'No results found' );
+			} );
+
+			it( 'stays silent when the new form has no message', async () => {
+				rendersPageWith( null );
+				select.value = 'news';
+				fire( select, 'change' );
+				await jest.advanceTimersByTimeAsync( 250 );
+				await flush();
+
+				expect( speak ).not.toHaveBeenCalled();
+			} );
+
+			it( 'stays silent when a newer navigation took over', async () => {
+				let finishFirst;
+				navigate.mockImplementationOnce(
+					() =>
+						new Promise( ( resolve ) => {
+							finishFirst = resolve;
+						} )
+				);
+				rendersPageWith( '1 result found' );
+
+				select.value = 'news';
+				fire( select, 'change' );
+				await jest.advanceTimersByTimeAsync( 250 );
+
+				// A second change while the first is in flight navigates at once.
+				select.value = 'events';
+				fire( select, 'change' );
+				await flush();
+				expect( speak ).toHaveBeenCalledWith( '1 result found' );
+
+				speak.mockClear();
+				finishFirst();
+				await flush();
+
+				expect( speak ).not.toHaveBeenCalled();
+			} );
+
+			it( 'speaks the router loading text only once 400ms have passed in flight', async () => {
+				document.body.insertAdjacentHTML(
+					'beforeend',
+					'<script type="application/json" id="wp-script-module-data-@wordpress/interactivity-router">{"i18n":{"loading":"Loading page…","loaded":"Page Loaded."}}</script>'
+				);
+				let finish;
+				navigate.mockImplementationOnce(
+					() =>
+						new Promise( ( resolve ) => {
+							finish = resolve;
+						} )
+				);
+
+				select.value = 'news';
+				fire( select, 'change' );
+				await jest.advanceTimersByTimeAsync( 250 );
+
+				await jest.advanceTimersByTimeAsync( 399 );
+				expect( speak ).not.toHaveBeenCalledWith( 'Loading page…' );
+
+				await jest.advanceTimersByTimeAsync( 1 );
+				expect( speak ).toHaveBeenCalledWith( 'Loading page…' );
+
+				finish();
+				await flush();
+			} );
+
+			it( 'does not speak the loading text for a fast navigation', async () => {
+				document.body.insertAdjacentHTML(
+					'beforeend',
+					'<script type="application/json" id="wp-script-module-data-@wordpress/interactivity-router">{"i18n":{"loading":"Loading page…"}}</script>'
+				);
+				rendersPageWith( '3 results found' );
+
+				select.value = 'news';
+				fire( select, 'change' );
+				await jest.advanceTimersByTimeAsync( 250 );
+				await flush();
+				await jest.advanceTimersByTimeAsync( 1000 );
+
+				expect( speak ).not.toHaveBeenCalledWith( 'Loading page…' );
+			} );
 		} );
 	} );
 } );

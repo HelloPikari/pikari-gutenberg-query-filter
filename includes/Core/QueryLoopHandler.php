@@ -8,6 +8,7 @@
 namespace Pikari\GutenbergQueryFilter\Core;
 
 use Pikari\GutenbergQueryFilter\Query\QueryArgs;
+use Pikari\GutenbergQueryFilter\Query\ResultCount;
 use Pikari\GutenbergQueryFilter\Url\FilterState;
 use Pikari\GutenbergQueryFilter\Url\QueryParams;
 
@@ -37,6 +38,11 @@ class QueryLoopHandler {
     private function register_hooks(): void {
         // Modify Query Loop block queries based on URL parameters.
         add_filter( 'query_loop_block_query_vars', array( $this, 'modify_query' ), 19, 3 );
+
+        // Record each tagged loop's total for the result announcement. Hooked
+        // to the_posts, not found_posts: found_posts is skipped for a
+        // zero-result query and for a query-cache hit (see ResultCount).
+        add_filter( 'the_posts', array( ResultCount::class, 'record' ), 10, 2 );
     }
 
     /**
@@ -58,6 +64,11 @@ class QueryLoopHandler {
             return $query_args;
         }
 
-        return QueryArgs::apply( $query_args, FilterState::for_loop( $params ) );
+        $query_args = QueryArgs::apply( $query_args, FilterState::for_loop( $params ) );
+
+        // Tag the query, so ResultCount can tell which loop a total is for.
+        $query_args[ ResultCount::QUERY_VAR ] = $params->form_id();
+
+        return $query_args;
     }
 }

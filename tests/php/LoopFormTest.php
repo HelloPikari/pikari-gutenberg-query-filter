@@ -293,4 +293,30 @@ class LoopFormTest extends TestCase {
 
         $this->assertStringNotContainsString( '<script>', $html );
     }
+
+    public function test_render_stamps_the_count_and_its_message(): void {
+        Functions\stubTranslationFunctions();
+        Functions\when( 'number_format_i18n' )->alias( 'strval' );
+
+        $html = LoopForm::render( new QueryParams( 3 ), '/', array(), 'page', 12 );
+
+        $this->assertStringContainsString( 'data-query-found-posts="12"', $html );
+        $this->assertStringContainsString( 'data-query-results-message="12 results found"', $html );
+    }
+
+    public function test_render_stamps_a_zero_count(): void {
+        Functions\stubTranslationFunctions();
+
+        $html = LoopForm::render( new QueryParams( 3 ), '/', array(), 'page', 0 );
+
+        $this->assertStringContainsString( 'data-query-found-posts="0"', $html );
+        $this->assertStringContainsString( 'data-query-results-message="No results found"', $html );
+    }
+
+    public function test_render_omits_both_attributes_without_a_count(): void {
+        $html = LoopForm::render( new QueryParams( 3 ), '/', array(), 'page' );
+
+        $this->assertStringNotContainsString( 'data-query-found-posts', $html );
+        $this->assertStringNotContainsString( 'data-query-results-message', $html );
+    }
 }

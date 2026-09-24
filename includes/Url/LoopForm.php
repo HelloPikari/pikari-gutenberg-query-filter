@@ -7,6 +7,8 @@
 
 namespace Pikari\GutenbergQueryFilter\Url;
 
+use Pikari\GutenbergQueryFilter\Query\ResultCount;
+
 // Prevent direct access.
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -152,9 +154,10 @@ class LoopForm {
      * @param string      $action          Action path, from action().
      * @param array       $hidden_inputs   Pairs, from hidden_inputs().
      * @param string      $pagination_base The rewrite's pagination base.
+     * @param int|null    $found_posts     Total results, when known; stamped for the result announcement.
      * @return string The `<form>` element.
      */
-    public static function render( QueryParams $params, string $action, array $hidden_inputs, string $pagination_base ): string {
+    public static function render( QueryParams $params, string $action, array $hidden_inputs, string $pagination_base, ?int $found_posts = null ): string {
         $inputs = '';
         foreach ( $hidden_inputs as $input ) {
             $inputs .= sprintf(
@@ -164,14 +167,25 @@ class LoopForm {
             );
         }
 
+        // Read by view.js after a navigation, from the new page's form (spec C/D §3.3).
+        $count = '';
+        if ( null !== $found_posts ) {
+            $count = sprintf(
+                ' data-query-found-posts="%1$d" data-query-results-message="%2$s"',
+                $found_posts,
+                esc_attr( ResultCount::message( $found_posts ) )
+            );
+        }
+
         return sprintf(
-            '<form hidden novalidate style="display:none" id="%1$s" class="wp-block-pikari-gutenberg-query-filter__form" method="get" action="%2$s" data-wp-interactive="pikari/gutenberg-query-filter" data-wp-on--submit="actions.submit" data-query-page-key="%3$s" data-query-inherit="%4$s" data-query-pagination-base="%5$s">%6$s</form>',
+            '<form hidden novalidate style="display:none" id="%1$s" class="wp-block-pikari-gutenberg-query-filter__form" method="get" action="%2$s" data-wp-interactive="pikari/gutenberg-query-filter" data-wp-on--submit="actions.submit" data-query-page-key="%3$s" data-query-inherit="%4$s" data-query-pagination-base="%5$s"%7$s>%6$s</form>',
             esc_attr( $params->form_id() ),
             esc_url( $action ),
             esc_attr( $params->page_key() ),
             $params->is_inherit() ? 'true' : 'false',
             esc_attr( $pagination_base ),
-            $inputs
+            $inputs,
+            $count
         );
     }
 }

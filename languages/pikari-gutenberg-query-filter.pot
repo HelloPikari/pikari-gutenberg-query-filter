@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-23T20:27:38+00:00\n"
+"POT-Creation-Date: 2026-09-24T14:44:15+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: pikari-gutenberg-query-filter\n"
@@ -42,21 +42,21 @@ msgstr ""
 #: build/blocks/query-filter/render.php:33
 #: src/blocks/query-filter/render.php:33
 #: build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/edit.js:125
+#: src/blocks/query-filter/edit.js:127
 msgid "Content Type"
 msgstr ""
 
 #: build/blocks/query-filter/render.php:46
 #: src/blocks/query-filter/render.php:46
 #: build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/edit.js:129
+#: src/blocks/query-filter/edit.js:131
 msgid "Filter by"
 msgstr ""
 
 #: build/blocks/query-filter/render.php:58
 #: src/blocks/query-filter/render.php:58
 #: build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/edit.js:132
+#: src/blocks/query-filter/edit.js:134
 msgid "Author"
 msgstr ""
 
@@ -64,8 +64,8 @@ msgstr ""
 #: src/blocks/query-filter/render.php:76
 #: build/blocks/query-filter/index.js:1
 #: build/blocks/sort/index.js:1
-#: src/blocks/query-filter/edit.js:263
-#: src/blocks/query-filter/edit.js:298
+#: src/blocks/query-filter/edit.js:264
+#: src/blocks/query-filter/edit.js:299
 #: src/components/FilterInspectorControls.js:87
 msgid "All"
 msgstr ""
@@ -91,6 +91,18 @@ msgstr ""
 #: src/blocks/sort/edit.js:57
 msgid "Default"
 msgstr ""
+
+#: includes/Query/ResultCount.php:84
+msgid "No results found"
+msgstr ""
+
+#. translators: %s: number of results.
+#: includes/Query/ResultCount.php:89
+#, php-format
+msgid "%s result found"
+msgid_plural "%s results found"
+msgstr[0] ""
+msgstr[1] ""
 
 #: includes/Query/SortOptions.php:40
 #: build/blocks/sort/index.js:1
@@ -241,27 +253,27 @@ msgid "Filter posts by author"
 msgstr ""
 
 #: build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/edit.js:134
+#: src/blocks/query-filter/edit.js:136
 msgid "Filter"
 msgstr ""
 
 #: build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/edit.js:187
+#: src/blocks/query-filter/edit.js:188
 msgid "Options come from the page's query."
 msgstr ""
 
 #: build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/edit.js:196
+#: src/blocks/query-filter/edit.js:197
 msgid "Filter Settings"
 msgstr ""
 
 #: build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/edit.js:213
+#: src/blocks/query-filter/edit.js:214
 msgid "Taxonomy"
 msgstr ""
 
 #: build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/edit.js:220
+#: src/blocks/query-filter/edit.js:221
 msgid "Select a taxonomy"
 msgstr ""
 
