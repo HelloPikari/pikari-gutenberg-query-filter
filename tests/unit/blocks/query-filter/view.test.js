@@ -338,6 +338,11 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 				'http://localhost/?query-3-category=events',
 				{ screenReaderAnnouncement: false }
 			);
+
+			// And it did not *also* schedule a debounce timer alongside the
+			// immediate call: nothing more arrives once one would have fired.
+			await jest.advanceTimersByTimeAsync( 250 );
+			expect( navigate ).toHaveBeenCalledTimes( 2 );
 		} );
 
 		it( 'submits at once, cancelling anything pending', async () => {
