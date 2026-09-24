@@ -10,6 +10,7 @@ namespace Pikari\Tests\GutenbergQueryFilter;
 use Mockery;
 use Pikari\Tests\TestCase;
 use Pikari\GutenbergQueryFilter\Integrations\BlockFilters;
+use Pikari\GutenbergQueryFilter\Query\ResultCount;
 use Brain\Monkey\Functions;
 
 class BlockFiltersTest extends TestCase {
@@ -46,12 +47,15 @@ class BlockFiltersTest extends TestCase {
             }
         );
         Functions\when( 'wp_unslash' )->returnArg();
+        Functions\when( 'number_format_i18n' )->alias( 'strval' );
     }
 
     protected function tearDown(): void {
         unset( $GLOBALS['wp_rewrite'] );
         unset( $_SERVER['QUERY_STRING'], $_SERVER['REQUEST_URI'] );
         $_GET = array();
+        ResultCount::reset();
+        unset( $GLOBALS['wp_query'] );
         parent::tearDown();
     }
 
@@ -328,6 +332,53 @@ class BlockFiltersTest extends TestCase {
         $processor->next_tag();
 
         $this->assertSame( 'query-3', $processor->get_attribute( 'data-wp-router-region' ) );
+    }
+
+    public function test_render_block_query_stamps_a_custom_loops_recorded_count(): void {
+        $query = Mockery::mock( 'WP_Query' );
+        $query->shouldReceive( 'get' )->with( ResultCount::QUERY_VAR )->andReturn( 'pikari-gutenberg-query-filter-form-3' );
+        ResultCount::record( 12, $query );
+
+        $html = $this->render_query(
+            '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select>'
+        );
+
+        $this->assertStringContainsString( 'data-query-found-posts="12"', $html );
+        $this->assertStringContainsString( 'data-query-results-message="12 results found"', $html );
+    }
+
+    public function test_render_block_query_stamps_nothing_when_no_count_was_recorded(): void {
+        $html = $this->render_query(
+            '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select>'
+        );
+
+        $this->assertStringContainsString( 'wp-block-pikari-gutenberg-query-filter__form', $html );
+        $this->assertStringNotContainsString( 'data-query-found-posts', $html );
+    }
+
+    public function test_render_block_query_does_not_use_another_loops_count(): void {
+        $query = Mockery::mock( 'WP_Query' );
+        $query->shouldReceive( 'get' )->with( ResultCount::QUERY_VAR )->andReturn( 'pikari-gutenberg-query-filter-form-4' );
+        ResultCount::record( 12, $query );
+
+        $html = $this->render_query(
+            '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select>'
+        );
+
+        $this->assertStringNotContainsString( 'data-query-found-posts', $html );
+    }
+
+    public function test_render_block_query_stamps_an_inherited_loops_main_query_count(): void {
+        $main              = Mockery::mock( 'WP_Query' );
+        $main->found_posts = 5;
+        $GLOBALS['wp_query'] = $main;
+
+        $html = $this->render_query(
+            '<select name="query-category" form="pikari-gutenberg-query-filter-form-inherit"></select>',
+            array( 'query' => array( 'inherit' => true ) )
+        );
+
+        $this->assertStringContainsString( 'data-query-found-posts="5"', $html );
     }
 
     /*
