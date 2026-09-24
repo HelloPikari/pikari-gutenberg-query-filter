@@ -143,8 +143,8 @@ class QueryLoopHandlerTest extends TestCase {
         $this->addToAssertionCount( 1 );
     }
 
-    public function test_constructor_records_loop_totals_on_found_posts(): void {
-        \Brain\Monkey\Filters\expectAdded( 'found_posts' )
+    public function test_constructor_records_loop_totals_on_the_posts(): void {
+        \Brain\Monkey\Filters\expectAdded( 'the_posts' )
             ->once()
             ->with( array( ResultCount::class, 'record' ), 10, 2 );
 

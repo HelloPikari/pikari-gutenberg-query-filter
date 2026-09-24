@@ -43,23 +43,6 @@ test('announces a count for a single search match', async ({ page }) => {
 });
 
 test('announces zero results', async ({ page }) => {
-	// Expected to fail: WP_Query::set_found_posts() (class-wp-query.php)
-	// returns before running the `found_posts` filter whenever `$this->posts`
-	// is an empty array, so ResultCount::record() never runs for a custom
-	// loop's zero-result query. ResultCount::for_form() then returns null,
-	// LoopForm::render() stamps neither data attribute, and view.js has
-	// nothing to announce. Confirmed live: `curl` against this exact page
-	// and search term shows no `data-query-found-posts` on the loop form,
-	// and a `wp eval` with a `found_posts` filter that sets a flag never
-	// sets it for a zero-result WP_Query. The inherited-loop path doesn't
-	// share this gap — BlockFilters::found_posts() reads
-	// `$wp_query->found_posts` directly there, which defaults to 0 — so
-	// `/category/news/?query-category=events` (no matches) does stamp
-	// `data-query-found-posts="0"`. The fix belongs in ResultCount, e.g.
-	// hooking `posts_results` or `the_posts` (both fire on an empty result
-	// set) instead of `found_posts`; that's outside this task's scope.
-	test.fail();
-
 	await page.goto(path);
 
 	// No fixture post's title contains this string.

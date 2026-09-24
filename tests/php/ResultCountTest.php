@@ -20,50 +20,63 @@ class ResultCountTest extends TestCase {
     }
 
     /**
-     * A WP_Query stand-in whose get() answers for the loop var only.
+     * A WP_Query stand-in whose get() answers for the loop var, carrying its
+     * own found_posts, the way the_posts sees it.
      *
-     * @param mixed $form_id Value of the loop var, or null when absent.
+     * @param mixed $form_id     Value of the loop var, or null when absent.
+     * @param int   $found_posts The query's found_posts total.
      * @return \WP_Query
      */
-    private function query( $form_id ): \WP_Query {
+    private function query( $form_id, int $found_posts = 12 ): \WP_Query {
         $query = Mockery::mock( 'WP_Query' );
         $query->shouldReceive( 'get' )
             ->with( ResultCount::QUERY_VAR )
             ->andReturn( $form_id ?? '' );
+        $query->found_posts = $found_posts;
 
         return $query;
     }
 
     public function test_record_stores_the_total_against_the_form_id(): void {
-        ResultCount::record( 12, $this->query( 'pikari-gutenberg-query-filter-form-3' ) );
+        ResultCount::record( array( 'a', 'b' ), $this->query( 'pikari-gutenberg-query-filter-form-3', 12 ) );
 
         $this->assertSame( 12, ResultCount::for_form( 'pikari-gutenberg-query-filter-form-3' ) );
     }
 
-    public function test_record_returns_the_total_unchanged(): void {
-        $this->assertSame( 12, ResultCount::record( 12, $this->query( 'pikari-gutenberg-query-filter-form-3' ) ) );
+    public function test_record_returns_the_posts_unchanged(): void {
+        $posts = array( 'a', 'b' );
+
+        $this->assertSame( $posts, ResultCount::record( $posts, $this->query( 'pikari-gutenberg-query-filter-form-3' ) ) );
+    }
+
+    public function test_zero_result_query_records_zero(): void {
+        ResultCount::record( array(), $this->query( 'pikari-gutenberg-query-filter-form-3', 0 ) );
+
+        $this->assertSame( 0, ResultCount::for_form( 'pikari-gutenberg-query-filter-form-3' ) );
     }
 
     public function test_record_ignores_a_query_without_the_loop_var(): void {
-        ResultCount::record( 99, $this->query( null ) );
+        ResultCount::record( array(), $this->query( null, 99 ) );
 
         $this->assertNull( ResultCount::for_form( '' ) );
     }
 
     public function test_record_ignores_something_that_is_not_a_query(): void {
-        $this->assertSame( 5, ResultCount::record( 5, null ) );
+        $posts = array( 'a' );
+
+        $this->assertSame( $posts, ResultCount::record( $posts, null ) );
     }
 
     public function test_the_last_run_of_a_loop_wins(): void {
-        ResultCount::record( 12, $this->query( 'pikari-gutenberg-query-filter-form-3' ) );
-        ResultCount::record( 7, $this->query( 'pikari-gutenberg-query-filter-form-3' ) );
+        ResultCount::record( array(), $this->query( 'pikari-gutenberg-query-filter-form-3', 12 ) );
+        ResultCount::record( array(), $this->query( 'pikari-gutenberg-query-filter-form-3', 7 ) );
 
         $this->assertSame( 7, ResultCount::for_form( 'pikari-gutenberg-query-filter-form-3' ) );
     }
 
     public function test_two_loops_keep_separate_totals(): void {
-        ResultCount::record( 12, $this->query( 'pikari-gutenberg-query-filter-form-3' ) );
-        ResultCount::record( 4, $this->query( 'pikari-gutenberg-query-filter-form-4' ) );
+        ResultCount::record( array(), $this->query( 'pikari-gutenberg-query-filter-form-3', 12 ) );
+        ResultCount::record( array(), $this->query( 'pikari-gutenberg-query-filter-form-4', 4 ) );
 
         $this->assertSame( 12, ResultCount::for_form( 'pikari-gutenberg-query-filter-form-3' ) );
         $this->assertSame( 4, ResultCount::for_form( 'pikari-gutenberg-query-filter-form-4' ) );
@@ -74,7 +87,7 @@ class ResultCountTest extends TestCase {
     }
 
     public function test_reset_forgets_every_total(): void {
-        ResultCount::record( 12, $this->query( 'pikari-gutenberg-query-filter-form-3' ) );
+        ResultCount::record( array(), $this->query( 'pikari-gutenberg-query-filter-form-3', 12 ) );
         ResultCount::reset();
 
         $this->assertNull( ResultCount::for_form( 'pikari-gutenberg-query-filter-form-3' ) );

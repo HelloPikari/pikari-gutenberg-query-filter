@@ -37,7 +37,7 @@ C and D were two words each ("editor UX", "frontend behaviour"). Scoped by that 
 
 Custom loops build their `WP_Query` inside core's post-template render, which the plugin can't reach directly.
 
-- **Custom loops.** `QueryLoopHandler::modify_query()` adds a private query var to the loop's arguments, carrying the loop's form id, for example `pikari_gutenberg_query_filter_loop => 'pikari-gutenberg-query-filter-form-3'`. A `found_posts` filter reads that var from the `WP_Query` it receives and records the count against the form id for the rest of the request.
+- **Custom loops.** `QueryLoopHandler::modify_query()` adds a private query var to the loop's arguments, carrying the loop's form id, for example `pikari_gutenberg_query_filter_loop => 'pikari-gutenberg-query-filter-form-3'`. A `the_posts` filter reads that var from the `WP_Query` it receives and records `$query->found_posts` against the form id for the rest of the request. It hooks `the_posts`, not `found_posts`: `WP_Query::set_found_posts()` returns before running the `found_posts` filter whenever `$this->posts` is an empty array, and a query-cache hit sets `found_posts` straight from the cache without running it either — `the_posts` runs on both paths.
   - Core builds a custom loop's query several times per page (post template, pagination, no-results). Every build returns the same total, so the last write wins.
   - The var goes on every custom loop, filtered or not, because an unfiltered loop still needs a count once a visitor starts filtering from it.
 - **Inherited loops.** The count is the main query's `found_posts`, read in `render_block_query()`. `MainQueryFilter` has already applied the filters by then.
@@ -72,7 +72,7 @@ In `view.js`:
 
 - **PHP (Brain\Monkey):**
   - `modify_query()` adds the loop var for custom loops and not for inherited ones.
-  - The `found_posts` filter records by form id, passes the count through unchanged, and ignores queries without the var.
+  - The `the_posts` filter records `$query->found_posts` by form id, passes the posts through unchanged, and ignores queries without the var.
   - `inject_loop_form()` stamps both attributes, uses the inherited loop's main-query count, and omits both when no count was recorded.
   - `_n()` is called with the count.
 - **Jest:**

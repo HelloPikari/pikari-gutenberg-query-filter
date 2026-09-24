@@ -337,7 +337,8 @@ class BlockFiltersTest extends TestCase {
     public function test_render_block_query_stamps_a_custom_loops_recorded_count(): void {
         $query = Mockery::mock( 'WP_Query' );
         $query->shouldReceive( 'get' )->with( ResultCount::QUERY_VAR )->andReturn( 'pikari-gutenberg-query-filter-form-3' );
-        ResultCount::record( 12, $query );
+        $query->found_posts = 12;
+        ResultCount::record( array(), $query );
 
         $html = $this->render_query(
             '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select>'
@@ -359,7 +360,8 @@ class BlockFiltersTest extends TestCase {
     public function test_render_block_query_does_not_use_another_loops_count(): void {
         $query = Mockery::mock( 'WP_Query' );
         $query->shouldReceive( 'get' )->with( ResultCount::QUERY_VAR )->andReturn( 'pikari-gutenberg-query-filter-form-4' );
-        ResultCount::record( 12, $query );
+        $query->found_posts = 12;
+        ResultCount::record( array(), $query );
 
         $html = $this->render_query(
             '<select name="query-3-category" form="pikari-gutenberg-query-filter-form-3"></select>'

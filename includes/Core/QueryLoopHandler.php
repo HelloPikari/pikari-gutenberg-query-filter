@@ -39,8 +39,10 @@ class QueryLoopHandler {
         // Modify Query Loop block queries based on URL parameters.
         add_filter( 'query_loop_block_query_vars', array( $this, 'modify_query' ), 19, 3 );
 
-        // Record each tagged loop's total for the result announcement.
-        add_filter( 'found_posts', array( ResultCount::class, 'record' ), 10, 2 );
+        // Record each tagged loop's total for the result announcement. Hooked
+        // to the_posts, not found_posts: found_posts is skipped for a
+        // zero-result query and for a query-cache hit (see ResultCount).
+        add_filter( 'the_posts', array( ResultCount::class, 'record' ), 10, 2 );
     }
 
     /**

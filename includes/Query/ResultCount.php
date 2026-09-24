@@ -17,8 +17,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * QueryLoopHandler tags each custom loop's query args with QUERY_VAR, set to
  * the loop's form id. Core builds the loop's WP_Query from those args, so the
- * found_posts filter can tell which loop a total belongs to. The loop form is
+ * the_posts filter can tell which loop a total belongs to. The loop form is
  * injected after the loop renders, by which time the total is known (spec C/D §3.2).
+ *
+ * Hooked to the_posts, not found_posts: WP_Query::set_found_posts() returns
+ * before running the found_posts filter whenever $this->posts is an empty
+ * array, so a zero-result loop would never record. A cache hit also sets
+ * found_posts straight from the object cache without running that filter.
+ * the_posts runs on both paths, after found_posts is final.
  */
 class ResultCount {
 
@@ -36,25 +42,25 @@ class ResultCount {
     private static array $counts = array();
 
     /**
-     * Record a tagged query's total. Hooked to found_posts.
+     * Record a tagged query's total. Hooked to the_posts.
      *
      * Core runs a loop's query several times per page, every run reporting the
      * same total, so the last write wins.
      *
-     * @param int|string $found_posts Total, as core computed it.
-     * @param mixed      $query       The WP_Query.
-     * @return int|string The total, unchanged.
+     * @param mixed $posts The retrieved posts, unused beyond passing through.
+     * @param mixed $query The WP_Query.
+     * @return mixed The posts, unchanged.
      */
-    public static function record( $found_posts, $query ) {
+    public static function record( $posts, $query ) {
         if ( $query instanceof \WP_Query ) {
             $form_id = $query->get( self::QUERY_VAR );
 
             if ( is_string( $form_id ) && '' !== $form_id ) {
-                self::$counts[ $form_id ] = (int) $found_posts;
+                self::$counts[ $form_id ] = (int) $query->found_posts;
             }
         }
 
-        return $found_posts;
+        return $posts;
     }
 
     /**
