@@ -20,6 +20,7 @@ use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
 use Mockery;
 use Pikari\GutenbergQueryFilter\Core\QueryLoopHandler;
+use Pikari\GutenbergQueryFilter\Query\ResultCount;
 use Pikari\GutenbergQueryFilter\Url\FilterState;
 use Pikari\Tests\TestCase;
 
@@ -142,6 +143,21 @@ class QueryLoopHandlerTest extends TestCase {
         $this->addToAssertionCount( 1 );
     }
 
+    public function test_constructor_records_loop_totals_on_found_posts(): void {
+        \Brain\Monkey\Filters\expectAdded( 'found_posts' )
+            ->once()
+            ->with( array( ResultCount::class, 'record' ), 10, 2 );
+
+        new QueryLoopHandler();
+        $this->addToAssertionCount( 1 );
+    }
+
+    public function test_custom_loop_args_carry_the_loop_form_id(): void {
+        $result = $this->filter( array(), array( 'post_type' => 'post' ) );
+
+        $this->assertSame( 'pikari-gutenberg-query-filter-form-3', $result[ ResultCount::QUERY_VAR ] );
+    }
+
     /*
      * No parameters
      */
@@ -152,14 +168,20 @@ class QueryLoopHandlerTest extends TestCase {
             'posts_per_page' => 5,
         );
 
-        $this->assertSame( $query_args, $this->filter( array(), $query_args ) );
+        $expected = $query_args;
+        $expected[ ResultCount::QUERY_VAR ] = 'pikari-gutenberg-query-filter-form-3';
+
+        $this->assertSame( $expected, $this->filter( array(), $query_args ) );
     }
 
     public function test_parameters_for_another_query_id_are_ignored(): void {
         $query_args = array( 'post_type' => 'post' );
 
+        $expected = $query_args;
+        $expected[ ResultCount::QUERY_VAR ] = 'pikari-gutenberg-query-filter-form-3';
+
         $this->assertSame(
-            $query_args,
+            $expected,
             $this->filter( array( 'query-30-category' => 'news' ), $query_args )
         );
     }
@@ -183,7 +205,10 @@ class QueryLoopHandlerTest extends TestCase {
     public function test_post_type_filter_is_ignored_when_no_type_is_valid(): void {
         $query_args = array( 'post_type' => 'post' );
 
-        $this->assertSame( $query_args, $this->filter( array( 'query-3-post_type' => 'wp_block,nope' ), $query_args ) );
+        $expected = $query_args;
+        $expected[ ResultCount::QUERY_VAR ] = 'pikari-gutenberg-query-filter-form-3';
+
+        $this->assertSame( $expected, $this->filter( array( 'query-3-post_type' => 'wp_block,nope' ), $query_args ) );
     }
 
     public function test_post_type_filter_ignores_sticky_posts_when_the_loop_has_not_decided(): void {
@@ -255,7 +280,10 @@ class QueryLoopHandlerTest extends TestCase {
 
         $query_args = array( 'post_type' => 'post' );
 
-        $this->assertSame( $query_args, $this->filter( array( 'query-3-language' => 'fr' ), $query_args, false ) );
+        $expected = $query_args;
+        $expected[ ResultCount::QUERY_VAR ] = 'pikari-gutenberg-query-filter-form-3';
+
+        $this->assertSame( $expected, $this->filter( array( 'query-3-language' => 'fr' ), $query_args, false ) );
     }
 
     /**
@@ -350,7 +378,10 @@ class QueryLoopHandlerTest extends TestCase {
             $query_args
         );
 
-        $this->assertSame( $query_args, $result );
+        $expected = $query_args;
+        $expected[ ResultCount::QUERY_VAR ] = 'pikari-gutenberg-query-filter-form-3';
+
+        $this->assertSame( $expected, $result );
     }
 
     /**
@@ -400,5 +431,6 @@ class QueryLoopHandlerTest extends TestCase {
         $result = ( new QueryLoopHandler() )->modify_query( $query_args, $this->block( array( 'inherit' => true ) ), 1 );
 
         $this->assertSame( $query_args, $result );
+        $this->assertArrayNotHasKey( ResultCount::QUERY_VAR, $result );
     }
 }
