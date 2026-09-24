@@ -15,6 +15,7 @@ A WordPress plugin that adds advanced filtering capabilities to Query Loop block
 - **Custom and Inherited Query Loops**: Filters, sort and search apply to Query Loops with their own query settings, and to loops that inherit the template's query on home, archive and search templates
 - **URL-Based State**: Filter state persists in URLs for sharing and bookmarking
 - **Theme-Friendly Markup**: Unique classes on every radio and checkbox option, plus PHP filters for the option list, option classes, and label markup
+- **Screen Reader Announcements**: Announces the number of results to screen readers after each filter change
 
 ## Requirements
 

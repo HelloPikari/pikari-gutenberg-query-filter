@@ -124,6 +124,8 @@ Every filter and sort control lives inside a real `<form>`, so the block works w
 
 The form itself is `hidden`, has an inline `style="display:none"`, and takes no layout space. It carries the loop's page-number key, whether the loop is inherited, and the rewrite's pagination base as `data-query-*` attributes, plus a hidden input for every other parameter already on the URL (language, UTM params, etc.) so a no-JS submit doesn't drop them.
 
+**Result count.** Once the loop has rendered, the injected form also carries `data-query-found-posts` (the loop's total result count, an integer) and `data-query-results-message` (the translated sentence announced to screen readers, for example "12 results found" or "No results found"). Both are absent when the count isn't known. After a filter, sort or search change, the plugin announces that message through WordPress's shared live region (`#a11y-speak-polite`) in place of the router's "Page loaded.". Core's own pagination keeps its "Page loaded." announcement. The total is WordPress's `found_posts`, so a loop with an `offset` counts the posts it skips, as core's Query Total block does.
+
 ### Control attributes
 
 Every control gets a `name` and a `form="pikari-gutenberg-query-filter-form-{id}"` (`…-form-inherit` for inherited loops):

@@ -332,6 +332,7 @@ When working with frontend code, always:
 4. Radio groups prepend `FilterHelper::get_all_option()`, the "All" choice, which stays outside the options filter. For each radio or checkbox option, `FilterHelper::get_option_classes()` builds the `<label>` classes, including the unique `{key}_{slug}` class, and applies `pikari_gutenberg_query_filter_option_classes`.
 5. `FilterHelper::get_option_label_html()` builds the markup after the `<input>`, applies `pikari_gutenberg_query_filter_option_label`, and sanitizes it with `wp_kses_post()`.
 6. Every control carries a `name` and a `form`, and `BlockFilters::render_block_query()` injects one hidden `<form>` per Query Loop through `Url\LoopForm`, so the browser's own form ownership answers "what filters this loop?". On a change, `src/blocks/query-filter/view.js` reads that form with `FormData` and `form.elements`, and `buildUrl()` (`src/utils/build-url.js`) rewrites only the names the form owns, leaving every other URL parameter untouched, before navigating with `@wordpress/interactivity-router`. The router only swaps in the new results because `BlockFilters::render_block_query()` gives the core/query wrapper both `data-wp-router-region` and `data-wp-interactive`. Without the interactive attribute the router fetches the filtered page and silently discards it — the URL changes, the results do not.
+7. `Core\QueryLoopHandler` tags each custom loop's query args with `Query\ResultCount::QUERY_VAR` (the form id), and `ResultCount::record()`, hooked to `the_posts`, records the loop's total from `$query->found_posts`. It hooks `the_posts`, not `found_posts`: `WP_Query` skips the `found_posts` filter for an empty result and for a query-cache hit, and `the_posts` runs on both paths. `BlockFilters::inject_loop_form()` stamps the total on the form as `data-query-found-posts` / `data-query-results-message` (inherited loops use the main query's `found_posts` instead). After a navigation, `view.js` reads the message from the **new** form and speaks it with `@wordpress/a11y`, having passed `screenReaderAnnouncement: false` to the router.
 
 ### Applying filters to the query
 
@@ -367,6 +368,8 @@ This is the other half of the round trip: turning the URL parameters `render.php
 - `tests/unit/utils/option-class-name.test.js` — Jest. The `{key}_{slug}` option class format, mirrored from `FilterHelper::get_option_classes()`.
 - `tests/unit/blocks/block-metadata.test.js` — Jest. `block.json` fields match what the build actually produces.
 - `tests/unit/utils/filter-notices.test.js` — Jest. Which editor notices apply, and duplicate detection per Query Loop (nested loops are separate).
+- `tests/php/ResultCountTest.php` — recording loop totals by form id, and the announced message.
+- `tests/e2e/specs/announcements.spec.js` — the polite live region after filtering, for custom and inherited loops, and the no-JS form attributes.
 - `tests/unit/utils/preview-queries.test.js` — Jest. The editor preview's REST queries match `FilterHelper` and `AuthorHelper`.
 - `tests/unit/blocks/query-filter/variations.test.js` — Jest. Variations store no `label`.
 - `tests/e2e/specs/` — Playwright, against a seeded wp-env. Filtering, sorting, sticky posts, author nicenames (including old numeric links), and injected styles surviving enhanced pagination.

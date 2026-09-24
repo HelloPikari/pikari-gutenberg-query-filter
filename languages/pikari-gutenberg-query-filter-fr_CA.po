@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: Pikari Gutenberg Query Filter 0.1.6\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/pikari-gutenberg-"
 "query-filter\n"
-"POT-Creation-Date: 2026-09-23T20:27:38+00:00\n"
+"POT-Creation-Date: 2026-09-24T14:44:15+00:00\n"
 "PO-Revision-Date: 2026-09-22T04:02:43+00:00\n"
 "Last-Translator: Pikari Inc. <development@pikari.io>\n"
 "Language-Team: French (Canada)\n"
@@ -50,26 +50,26 @@ msgstr "https://pikari.io"
 
 #: build/blocks/query-filter/render.php:33
 #: src/blocks/query-filter/render.php:33 build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/edit.js:125
+#: src/blocks/query-filter/edit.js:127
 msgid "Content Type"
 msgstr "Type de contenu"
 
 #: build/blocks/query-filter/render.php:46
 #: src/blocks/query-filter/render.php:46 build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/edit.js:129
+#: src/blocks/query-filter/edit.js:131
 msgid "Filter by"
 msgstr "Filtrer par"
 
 #: build/blocks/query-filter/render.php:58
 #: src/blocks/query-filter/render.php:58 build/blocks/query-filter/index.js:1
-#: src/blocks/query-filter/edit.js:132
+#: src/blocks/query-filter/edit.js:134
 msgid "Author"
 msgstr "Auteur"
 
 #: build/blocks/query-filter/render.php:76
 #: src/blocks/query-filter/render.php:76 build/blocks/query-filter/index.js:1
-#: build/blocks/sort/index.js:1 src/blocks/query-filter/edit.js:263
-#: src/blocks/query-filter/edit.js:298
+#: build/blocks/sort/index.js:1 src/blocks/query-filter/edit.js:264
+#: src/blocks/query-filter/edit.js:299
 #: src/components/FilterInspectorControls.js:87
 msgid "All"
 msgstr "Tous"
@@ -89,6 +89,18 @@ msgstr "Trier par"
 #: build/blocks/sort/index.js:1 src/blocks/sort/edit.js:57
 msgid "Default"
 msgstr "Par défaut"
+
+#: includes/Query/ResultCount.php:84
+msgid "No results found"
+msgstr "Aucun résultat trouvé"
+
+#. translators: %s: number of results.
+#: includes/Query/ResultCount.php:89
+#, php-format
+msgid "%s result found"
+msgid_plural "%s results found"
+msgstr[0] "%s résultat trouvé"
+msgstr[1] "%s résultats trouvés"
 
 #: includes/Query/SortOptions.php:40 build/blocks/sort/index.js:1
 #: src/blocks/sort/edit.js:15
@@ -178,20 +190,22 @@ msgid ""
 "Another filter in this Query Loop filters by the same thing. Both use one "
 "URL parameter, so they act as one control. Remove one of them."
 msgstr ""
-"Un autre filtre de cette boucle de requête filtre selon le même critère. "
-"Les deux utilisent un seul paramètre d’URL et agissent donc comme un seul "
+"Un autre filtre de cette boucle de requête filtre selon le même critère. Les "
+"deux utilisent un seul paramètre d’URL et agissent donc comme un seul "
 "contrôle. Supprimez l’un des deux."
 
 #: build/blocks/query-filter/index.js:1 src/utils/filter-notices.js:118
 msgid "Choose a taxonomy. This filter displays nothing until you do."
-msgstr "Choisissez une taxonomie. Ce filtre n’affiche rien tant que vous ne l’avez pas fait."
+msgstr ""
+"Choisissez une taxonomie. Ce filtre n’affiche rien tant que vous ne l’avez "
+"pas fait."
 
 #: build/blocks/query-filter/index.js:1 src/utils/filter-notices.js:122
 msgid ""
 "This taxonomy has no terms with posts yet, so this filter displays nothing."
 msgstr ""
-"Cette taxonomie n’a encore aucun terme avec des publications, donc ce "
-"filtre n’affiche rien."
+"Cette taxonomie n’a encore aucun terme avec des publications, donc ce filtre "
+"n’affiche rien."
 
 #: build/blocks/query-filter/index.js:1 src/utils/filter-notices.js:126
 msgid "No authors have published posts yet, so this filter displays nothing."
@@ -227,23 +241,23 @@ msgstr "Filtre par auteur"
 msgid "Filter posts by author"
 msgstr "Filtrer les publications par auteur"
 
-#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:134
+#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:136
 msgid "Filter"
 msgstr "Filtre"
 
-#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:187
+#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:188
 msgid "Options come from the page's query."
 msgstr "Les options proviennent de la requête de la page."
 
-#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:196
+#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:197
 msgid "Filter Settings"
 msgstr "Paramètres du filtre"
 
-#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:213
+#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:214
 msgid "Taxonomy"
 msgstr "Taxonomie"
 
-#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:220
+#: build/blocks/query-filter/index.js:1 src/blocks/query-filter/edit.js:221
 msgid "Select a taxonomy"
 msgstr "Sélectionner une taxonomie"
 

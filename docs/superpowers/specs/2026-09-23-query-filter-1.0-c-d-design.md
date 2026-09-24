@@ -173,5 +173,5 @@ Each is additive or a bug fix that doesn't change the contract. Each goes on the
 ## 8. To confirm in the plan, not assumed here
 
 - That `@wordpress/scripts`' module build treats a dynamic `import( '@wordpress/a11y' )` as an external script module, as it does `@wordpress/interactivity-router`. If it doesn't, the fallback is a `speak()` equivalent writing to the same `#a11y-speak-polite` region.
-- That the `found_posts` filter sees the post-template's `WP_Query` with the private var intact. It should, since `WP_Query` keeps unknown query vars, but prove it in a live wp-env before building on it.
+- That the `the_posts` filter sees the post-template's `WP_Query` with the private var intact, and `$query->found_posts` already final by then. It should, since `WP_Query` keeps unknown query vars, but prove it in a live wp-env before building on it.
 - That REST's users endpoint accepts `has_published_posts: true` for an editor-role user in the block editor.
