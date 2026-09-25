@@ -20,7 +20,7 @@ Sub-projects B–D documented their own changes as they went. E is the pass acro
 | --- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | 1   | Audit README and `docs/hooks.md` against the code and specs §3, §5, §7, §9          | Done. A subagent audit; findings fixed in this PR                             |
 | 2   | README "Upgrading to 1.0" (spec §10.3, generalised)                                 | Done                                                                          |
-| 3   | `CHANGELOG.md`: coherence across B–D; `[Unreleased]` → `[1.0.0]`                    | Done. Stamped 2026-09-24                                                      |
+| 3   | `CHANGELOG.md`: coherence across B–D; `[Unreleased]` → `[1.0.0]`                    | Done. Stamped 2026-09-25                                                      |
 | 4   | `readme.txt`: changelog 0.3.2–1.0.0, 1.0.0 upgrade notice, fake Screenshots section | Done                                                                          |
 | 5   | `docs/releases.md`                                                                  | Rewritten                                                                     |
 | 6   | Translations                                                                        | Checked. `fr_CA.po` has 0 untranslated and 0 fuzzy strings; E adds no strings |
@@ -30,7 +30,7 @@ Sub-projects B–D documented their own changes as they went. E is the pass acro
 ## Rulings
 
 1. **Bounded, not architectural.** There is no plan document; this file stands in for the in-chat design.
-2. **The CHANGELOG is stamped `2026-09-24`, not left `[Unreleased]`.** This follows the 0.3.4 precedent: the changelog was dated in a PR before publishing. If #529 publishes on a later day, correcting the date is a one-line docs PR.
+2. **The CHANGELOG is stamped `2026-09-25`, not left `[Unreleased]`.** This follows the 0.3.4 precedent: the changelog was dated in a PR before publishing. If #529 publishes on a later day, correcting the date is a one-line docs PR.
 3. **`Stable tag: trunk` stays.** The bump workflow deliberately leaves a non-numeric Stable tag alone. `release.yml` doesn't check it. The plugin isn't on wordpress.org.
 4. **`readme.txt`'s 1.0.0 upgrade notice is kept under 300 characters** (257). That is WordPress's display limit, and ZIP-installed sites see this text on their update row.
 5. **CCLF-specific notes stay out of the public docs.** The README states them generally: the Composer constraint and a renamed plugin folder. The site-specific steps stay in #478.

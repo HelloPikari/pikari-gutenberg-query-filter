@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-09-24
+## [1.0.0] - 2026-09-25
 
 1.0 freezes this plugin's public contract: URL parameters, markup and classes, block attributes, and PHP hooks, as documented in [docs/hooks.md](docs/hooks.md). Before upgrading a site, read [Upgrading to 1.0](README.md#upgrading-to-10).
 
