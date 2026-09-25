@@ -509,14 +509,14 @@ This is the other half of the round trip: turning the URL parameters `render.php
 - All PRs must pass CI checks (linting, tests, build)
 - The `build/` folder is gitignored but required for the plugin to function
 - Releases are built by `release.yml` from the tag on `main`; the ZIP asset it uploads is what both Composer and manual installs consume
-- Compatible with WordPress 6.0+
+- Requires WordPress 6.8+ (plugin header `Requires at least`)
 - Requires PHP 8.4+
 - Uses `@wordpress/scripts` for build tooling
 - Follow WordPress plugin/theme guidelines for wordpress.org submission
 
 ## Release Process
 
-See GitHub Releases for automated releases via Release Drafter
+See `docs/releases.md`: how the version is chosen and written, the pre-publish changelog step, and publishing.
 
 ## WordPress-Specific Guidelines
 
