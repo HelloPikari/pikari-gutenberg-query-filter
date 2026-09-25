@@ -27,11 +27,16 @@ A **custom loop with no `queryId`** — every Query Loop in Twenty Twenty-Five, 
 
 - **Multiple values** are a comma-separated list, for example `query-3-category=news,events`. Values are de-duplicated and capped at 50 per parameter; anything past the 50th is ignored. They're written in the order their controls appear on the page (DOM order), not the order they were selected — checking "News" then "Events" writes `events,news` if Events is listed first in the block.
 - **Empty values** are ignored.
-- **Taxonomy keys** must name a taxonomy that's publicly viewable (`is_taxonomy_viewable()`) — the same test the editor uses to offer it as a filter.
+- **Taxonomy keys** must name a taxonomy registered as `public` that also passes `is_taxonomy_viewable()`. A taxonomy that is `publicly_queryable` but not `public` can be chosen in the editor, but its parameter is ignored.
+- **Reserved names:** a taxonomy named `post_type`, `author`, `sort`, `s` or `page` collides with a built-in key and can't be filtered.
 - **Taxonomy values** are term slugs. A slug that matches no term returns no results for that taxonomy; it never falls back to showing everything.
 - **Post type values** must be viewable (`is_post_type_viewable()`). `attachment` is accepted only when attachment pages are enabled.
-- **Author values** are the user's nicename, for example `query-3-author=jane-doe`. A plain numeric value is still accepted and resolved by user ID, but a nicename match always wins over an ID match for the same value. An author value that matches no user returns no results — the same as an unknown taxonomy slug — rather than showing every author's posts.
+- **Author values** are the user's nicename, for example `query-3-author=jane-doe`. Nicenames are often the login name, so an Author filter shows them in its URLs and markup. Only members of the current site are matched. The Author filter lists only users with published posts of the `post` type. A plain numeric value is still accepted and resolved by user ID, but a nicename match always wins over an ID match for the same value. An author value that matches no user returns no results — the same as an unknown taxonomy slug — rather than showing every author's posts.
 - **Sort values** must be a key from [`pikari_gutenberg_query_filter_sort_options`](#pikari_gutenberg_query_filter_sort_options). An empty or unrecognized value means the loop's own default order.
+
+### What a change replaces
+
+A filter, sort or search change rewrites only the parameters the loop's form owns: the `name` of every control in that loop, plus the loop's page key. Every other parameter stays on the URL, including other loops' parameters, a search box outside the loop, and parameters such as `lang` or `utm_*`. The URL's `#fragment` is dropped.
 
 ### Inherited loops
 
@@ -39,10 +44,12 @@ A **custom loop with no `queryId`** — every Query Loop in Twenty Twenty-Five, 
 - **They never apply to** a single post or page, a 404, a feed, or the admin — a stray `?query-post_type=post` can't 404 a page.
 - **On a post type archive,** `query-post_type` is ignored; the archive is already that post type.
 - **On an author archive,** `query-author` is intersected with the archive's own author rather than replacing it. An author filter that doesn't include the archive's own author returns no results.
-- **A taxonomy name that starts with digits and a hyphen** (`2024-events`) can't be filtered in an inherited loop: its parameter, `query-2024-events`, reads like loop 2024's own `events` key and is ignored rather than read as a taxonomy filter.
+- **A taxonomy name that starts with digits and a hyphen** (`2024-events`) can't be filtered reliably in an inherited loop: its parameter, `query-2024-events`, reads like loop 2024's own `events` key. On its own it doesn't trigger inherited filtering. Alongside another inherited filter parameter it is applied. Don't rely on either.
 - **Filtering never changes what the page is.** Its title, template and queried object stay the same. An unknown taxonomy term shows an empty result rather than a 404, and a filtered date archive doesn't 404 either — unless a hand-built link also pages it past the end, which still 404s.
 - **Filtering, sorting or searching resets pagination.** A change made from `/page/2/` returns to page 1.
-- **The Sort block starts on "Default"** on an inherited loop's first, unfiltered load. This plugin only records the archive's own order once a filter parameter is already present in the request, so with nothing recorded yet, no sort option matches and the empty placeholder shows.
+- **The Sort block usually shows "Default"** on an inherited loop. An archive's default order isn't set as a query variable, so no sort option matches it. An option matches only when something set `orderby` and `order` explicitly, such as another `pre_get_posts` callback.
+- **Any `query-*` parameter filters the main query** on a home, archive or search request, whether or not the page has a filter block.
+- **Advanced Query Loop's inherited mode** rebuilds the main query itself, so the Sort block has no effect there.
 
 **Things to know:**
 
@@ -99,7 +106,52 @@ The **Radio** display type is the same shape with `radio` in place of `checkbox`
 
 The **Select** display type has no fieldset. It renders `<label class="wp-block-pikari-gutenberg-query-filter__label" for="…">` followed by a plain `<select class="wp-block-pikari-gutenberg-query-filter__select">`. Its `<option>` elements get no per-option classes and cannot contain HTML, so the class and label filters below do not apply to it.
 
-The block label is a `<legend>` for radio and checkbox filters and a `<label>` for select filters, so target it by class, not by element.
+The block label is a `<legend>` for radio and checkbox filters and a `<label>` for select filters, so target it by class, not by element. With **Show Label** off, the label also gets `screen-reader-text`, which keeps it for screen readers.
+
+The markup above is abbreviated: WordPress also adds its own block classes to the wrapper, such as `wp-block-pikari-gutenberg-query-filter-query-filter`.
+
+The gap between options is the CSS custom property `--pikari-gutenberg-query-filter-option-gap` (default `0.5rem`), set on the block wrapper.
+
+### Sort block
+
+The Sort block shares the wrapper class and renders a `<label>` and a `<select>`:
+
+```html
+<div
+	class="wp-block-pikari-gutenberg-query-filter"
+	data-wp-interactive="pikari/gutenberg-query-filter"
+>
+	<label
+		class="wp-block-pikari-gutenberg-query-filter-sort__label wp-block-pikari-gutenberg-query-filter__label"
+		for="…"
+		>Sort By</label
+	>
+	<select
+		class="wp-block-pikari-gutenberg-query-filter-sort__select wp-block-pikari-gutenberg-query-filter__select"
+		id="…"
+		name="query-3-sort"
+		form="pikari-gutenberg-query-filter-form-3"
+		data-wp-on--change="pikari/gutenberg-query-filter::actions.change"
+	>
+		<option value="">Default</option>
+		<option value="date-desc">Date (Newest First)</option>
+		<!-- …one <option> per sort option… -->
+	</select>
+	<noscript><!-- Apply filters button --></noscript>
+</div>
+```
+
+- **The "Default" choice** (`emptyLabel`, or "Default" when empty) appears only when the loop's own order matches no sort option.
+- **When the loop's own order matches an option,** that option is selected and rendered with `value=""`, so choosing it clears the parameter.
+
+### Query Loop wrapper
+
+The plugin also changes every `core/query` wrapper, with or without filter blocks inside:
+
+- `data-wp-router-region="query-{id}"` (`query-0` for inherited loops and loops with no `queryId`). The router replaces this region after a navigation.
+- `data-wp-interactive="pikari/gutenberg-query-filter"`, unless the wrapper already has a `data-wp-interactive` (enhanced pagination sets `core/query`). The router only updates regions on interactive elements.
+- `data-wp-watch---pikari-gutenberg-query-filter`, which restores stylesheets that other scripts added at runtime after a navigation.
+- The hidden loop `<form>`, as its **last child**, when the loop contains a control. A theme selector such as `.wp-block-query > :last-child` matches the form.
 
 | Element                  | Class                                                            |
 | ------------------------ | ---------------------------------------------------------------- |
@@ -122,9 +174,17 @@ See [Form and Controls](#form-and-controls) for the injected `<form>`, the `name
 
 Every filter and sort control lives inside a real `<form>`, so the block works with JavaScript off. `BlockFilters::render_block_query()` scans the rendered Query Loop after every inner block has rendered; if it finds any control carrying a matching `form` attribute, it injects the loop's hidden `<form class="wp-block-pikari-gutenberg-query-filter__form">` as the **last child** of the Query wrapper. A control whose `form` attribute doesn't match means no form is injected at all — the `name` and `form` attributes below are not cosmetic, they're what makes a control submit.
 
-The form itself is `hidden`, has an inline `style="display:none"`, and takes no layout space. It carries the loop's page-number key, whether the loop is inherited, and the rewrite's pagination base as `data-query-*` attributes, plus a hidden input for every other parameter already on the URL (language, UTM params, etc.) so a no-JS submit doesn't drop them.
+The form itself is `hidden`, has an inline `style="display:none"`, and takes no layout space. It has `method="get"`, `novalidate`, and an `action` of the current path; an inherited loop's `action` has its `/page/N/` removed. It carries these attributes:
 
-**Result count.** Once the loop has rendered, the injected form also carries `data-query-found-posts` (the loop's total result count, an integer) and `data-query-results-message` (the translated sentence announced to screen readers, for example "12 results found" or "No results found"). Both are absent when the count isn't known, including when the loop's query sets `no_found_rows` (WordPress then doesn't compute a total). After a filter, sort or search change, the plugin announces that message through WordPress's shared live region (`#a11y-speak-polite`) in place of the router's "Page loaded.". Core's own pagination keeps its "Page loaded." announcement. The total is WordPress's `found_posts`, so a loop with an `offset` counts the posts it skips, as core's Query Total block does. A custom loop's query args carry an internal `pikari_gutenberg_query_filter_loop` query var (the loop's form id), which a `query_loop_block_query_vars` callback will see; it isn't part of the public contract.
+- `id`: `pikari-gutenberg-query-filter-form-{id}`, `…-form-0` for a custom loop with no `queryId`, or `…-form-inherit`;
+- `data-query-page-key`: the loop's page parameter;
+- `data-query-inherit`: `"true"` or `"false"`;
+- `data-query-pagination-base`: the rewrite's pagination base;
+- `data-wp-on--submit`: the plugin's submit action.
+
+It also holds a hidden input for every other parameter already on the URL (language, UTM params, etc.) so a no-JS submit doesn't drop them. It leaves out the names its controls own, the loop's page key, and core's `page` and `cst`.
+
+**Result count.** Once the loop has rendered, the injected form also carries `data-query-found-posts` (the loop's total result count, an integer) and `data-query-results-message` (the translated sentence announced to screen readers, for example "12 results found" or "No results found"). Both are absent when the count isn't known, including when the loop's query sets `no_found_rows` (WordPress then doesn't compute a total). After a filter, sort or search change, the plugin announces that message through WordPress's shared live region (`#a11y-speak-polite`) in place of the router's "Page loaded.". Core's own pagination keeps its "Page loaded." announcement. The total is WordPress's `found_posts`, so a loop with an `offset` counts the posts it skips, as core's Query Total block does. A custom loop's query args carry an internal `pikari_gutenberg_query_filter_loop` query var (the loop's form id), which a `query_loop_block_query_vars` callback running after priority 19 will see; it isn't part of the public contract.
 
 ### Control attributes
 
@@ -322,7 +382,7 @@ add_filter( 'pikari_gutenberg_query_filter_options', 'my_theme_rename_posts_opti
 
 ### `pikari_gutenberg_query_filter_option_classes`
 
-Filters the classes on each radio or checkbox option's `<label>`, including the "All" radio. The default array holds the item class (`wp-block-pikari-gutenberg-query-filter__checkbox-item`) and the unique `{key}_{slug}` class.
+Filters the classes on each radio or checkbox option's `<label>`, including the "All" radio. The default array holds the item class (`wp-block-pikari-gutenberg-query-filter__radio-item` or `…__checkbox-item`) and the unique `{key}_{slug}` class.
 
 **Parameters:**
 
@@ -457,13 +517,13 @@ Filters the list of options offered by every Sort block, everywhere on the site.
 
 **Return:** `array[]` — The options to render and accept.
 
-| Key        | Type     | Description                                                         |
-| ---------- | -------- | ------------------------------------------------------------------- |
-| `key`      | `string` | Written to and read from the URL. Sanitized with `sanitize_key()`.  |
-| `label`    | `string` | Human-readable label shown in the Sort block's `<select>`.          |
-| `orderby`  | `string` | A `WP_Query` `orderby` value.                                       |
-| `order`    | `string` | `ASC` or `DESC`. Any case is accepted and uppercased automatically. |
-| `meta_key` | `string` | Required when `orderby` is `meta_value` or `meta_value_num`.        |
+| Key        | Type     | Description                                                            |
+| ---------- | -------- | ---------------------------------------------------------------------- |
+| `key`      | `string` | Written to and read from the URL. Sanitized with `sanitize_key()`.     |
+| `label`    | `string` | Human-readable label shown in the Sort block's `<select>`.             |
+| `orderby`  | `string` | A `WP_Query` `orderby` value.                                          |
+| `order`    | `string` | `ASC` or `DESC`, in any case. Missing or anything else becomes `DESC`. |
+| `meta_key` | `string` | Required when `orderby` is `meta_value` or `meta_value_num`.           |
 
 An option missing `key`, `label` or `orderby` is dropped, as is a `meta_value` / `meta_value_num` option with no `meta_key`.
 

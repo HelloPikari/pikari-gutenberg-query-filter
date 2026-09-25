@@ -7,10 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-24
+
+1.0 freezes this plugin's public contract: URL parameters, markup and classes, block attributes, and PHP hooks, as documented in [docs/hooks.md](docs/hooks.md). Before upgrading a site, read [Upgrading to 1.0](README.md#upgrading-to-10).
+
 ### Breaking changes
 
 - **Sort links use one URL parameter.** A loop's sort is now read from a single `query-{id}-sort` value (for example `query-3-sort=title-asc`), not the old pair of `orderby` and `order` parameters. Old bookmarked or shared sort links stop sorting; the loop falls back to its own default order.
 - **Author filter links use nicenames, not IDs.** Author options and links now write the user's nicename (`query-3-author=jane-doe`). A plain numeric author ID is still accepted and resolved, so links generated before this change keep working.
+- **`pikari_gutenberg_query_filter_options` passes an author option's nicename as its `value`,** not the user ID. A callback comparing `$option['value']` to a user ID stops matching; compare `$option['item']->ID` instead.
 - **An author value that matches nobody now shows no results,** instead of showing every author's posts. This matches how an unknown taxonomy term already behaved, and avoids revealing whether a given username exists.
 - **The Sort dropdown no longer shows a separate "Default" choice when the loop's own order already matches one of the sort options.** That option is selected instead, and choosing it keeps the URL clean.
 - **Internal helper classes are removed:** the `SortHelper` and `AbstractQueryHelper` classes, and the methods `FilterHelper::get_current_filter_value()`, `FilterHelper::get_*_filter_config()`, and `AuthorHelper::get_author_filter_config()`. These were never part of the documented `docs/hooks.md` contract, but any code calling them directly will need to move to `Url\QueryParams`, `Url\FilterState`, `Query\QueryArgs` and `Query\SortOptions`.
@@ -23,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **`wp_interactivity_state( 'searchValue' )` is gone.** Search state now lives entirely in the input's own `data-wp-context`.
   - **The store actions `updateFilters`, `handleSelect`, `handleSort` and `search` are removed,** replaced by `actions.change`, `actions.submit`, `actions.endBurst` and `actions.navigate`. Any theme or plugin code that calls the old action names directly breaks.
   - **The injected loop `<form>` is `novalidate`.** Core marks its Search `<input>` `required`; without `novalidate`, a browser would block every filter submit whenever the search box is empty, since all controls now share one form. This is deliberate, but it means a no-JS submit with an empty search box no longer shows a native "please fill out this field" validation bubble the way core's own search form does on its own.
+- **The Sort block's empty choice reads "Default"** when `emptyLabel` is empty; in 0.3.x it rendered with no text. It now appears only when the loop's own order matches no sort option.
+- **URL values are validated more strictly:** at most 50 values per parameter are read, a taxonomy must also pass `is_taxonomy_viewable()`, and `attachment` is accepted only when attachment pages are enabled.
+- **Any `query-*` parameter now filters the main query on home, archive and search pages,** whether or not the page has a filter block. In 0.3.x those parameters did nothing there.
 - **The Sort block's `width` and `widthUnit` attributes are removed.** Nothing ever read them. Existing blocks that stored them still load and validate.
 - **An empty Label now shows the default label** on the frontend, as it already did in the editor, instead of an empty label or legend (a group with no accessible name). A site that cleared the Label field to hide it will now see the default label; turn off Show Label instead, which keeps the label for screen readers.
 
@@ -120,9 +128,9 @@ Releases between 0.1.0 and 0.2.0 are listed on [GitHub Releases](https://github.
 ### Added
 
 - Initial release of pikari-gutenberg-query-filter
-- [Add initial features here]
 
-[Unreleased]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/compare/v0.3.4...HEAD
+[Unreleased]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v1.0.0
 [0.3.4]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v0.3.4
 [0.3.3]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v0.3.3
 [0.3.2]: https://github.com/HelloPikari/pikari-gutenberg-query-filter/releases/tag/v0.3.2

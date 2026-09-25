@@ -7,9 +7,9 @@ A WordPress plugin that adds advanced filtering capabilities to Query Loop block
 - **Search Integration**: WordPress core search blocks automatically work within Query Loop blocks
 - **Post Type Filtering**: Filter posts by one or multiple post types
 - **Taxonomy Filtering**: Filter by categories, tags, and custom taxonomies
-- **Author Filtering**: Filter posts by author with cached author lists
-- **Sort Controls**: Sort by date or title
-- **Advanced Query Loop Support**: Works with both core Query Loop blocks and Advanced Query Loop by Ryan Welcher
+- **Author Filtering**: Filter posts by author
+- **Sort Controls**: Sort by date or title, extensible with the `pikari_gutenberg_query_filter_sort_options` filter
+- **Advanced Query Loop**: Post type filters include the extra post types chosen in Advanced Query Loop by Ryan Welcher
 - **In-Place Updates**: Results update through the Interactivity API router, without a full page reload
 - **Works Without JavaScript**: Every filter, sort and search control lives inside a real `<form>`. With JavaScript off, each Query Filter and Sort block shows an "Apply filters" button that submits the whole loop as a plain GET request
 - **Custom and Inherited Query Loops**: Filters, sort and search apply to Query Loops with their own query settings, and to loops that inherit the template's query on home, archive and search templates
@@ -59,6 +59,23 @@ installed plugin already has its `build/` directory compiled. With
 `composer/installers` and an `installer-paths` entry for `type:wordpress-plugin`
 it lands in `wp-content/plugins/pikari-gutenberg-query-filter/`.
 
+## Upgrading to 1.0
+
+1.0 has breaking changes, listed in full in [CHANGELOG.md](CHANGELOG.md). Check these on a site before updating it:
+
+- **Composer constraint.** A `^0.3` constraint never resolves 1.0.0. Change it to `^1.0`.
+- **Plugin folder name.** Composer installs the plugin as `wp-content/plugins/pikari-gutenberg-query-filter/`. If the site had it in a folder with another name, WordPress sees a different plugin and it's left inactive. Reactivate it after deploying.
+- **Saved links.** Sort links that use `orderby` and `order` stop sorting, and fall back to the loop's own order. Author links with a numeric ID keep working.
+- **Empty labels.** A filter whose Label was cleared to hide it now shows the default label. Turn off **Show Label** instead; that keeps the label for screen readers.
+- **Duplicate filters.** Two radio filters for the same taxonomy in one Query Loop now share a name, so they act as one radio group. The editor shows a notice when a loop has two filters for the same parameter.
+- **Custom JavaScript.** The store actions `updateFilters`, `handleSelect`, `handleSort` and `search` are gone, and so are `queryVar` and `pageVar` in block context. Code that calls them needs updating; see [docs/hooks.md](docs/hooks.md#form-and-controls).
+- **Custom PHP.** In `pikari_gutenberg_query_filter_options`, an author option's `value` is now the nicename, not the user ID, so a callback comparing it to an ID stops matching. `SortHelper`, `AbstractQueryHelper` and several helper methods are removed. They were never documented, but code calling them breaks.
+- **Stray parameters on archives.** Any `query-*` parameter now filters the main query on home, archive and search pages, even on a page with no filter block. In 0.3.x those parameters did nothing there.
+- **Stricter URL values.** At most 50 values per parameter are read. A taxonomy must pass `is_taxonomy_viewable()`, and `attachment` is accepted only when attachment pages are enabled. Hand-built links that relied on anything else stop filtering.
+- **Page caches.** A full-page cache or CDN must key on the whole query string; see [Page-Level Caching](#page-level-caching).
+
+Theme CSS written against the documented classes is unaffected: the BEM classes and the `{key}_{slug}` option classes are unchanged. Structural selectors can change, though. The hidden loop `<form>` is now the Query Loop's last child, so `.wp-block-query > :last-child` matches it.
+
 ## Usage
 
 ### Basic Setup
@@ -75,7 +92,7 @@ The Query Filter block provides multiple filter types:
 
 - **Post Type Filter**: Choose which post types to include in the filter
 - **Taxonomy Filter**: Select taxonomies (categories, tags, custom taxonomies) to filter by
-- **Author Filter**: Enable author filtering with cached author lists
+- **Author Filter**: Lists authors with published posts; the list is cached for up to an hour
 
 Each filter has a **Display Type** — Select (dropdown), Radio (single choice), or Checkbox (multiple choice) — and radio and checkbox groups can be laid out vertically or horizontally.
 
@@ -131,9 +148,9 @@ Both blocks are dynamic, so they serialize as self-closing comments. Each Query 
 | `layoutDirection` | `vertical`  | `vertical`, `horizontal` (radio and checkbox only)                     |
 | `label`           | Per type    | Label text. Empty uses the filter type's name; hide it with showLabel. |
 | `showLabel`       | `true`      | `false` keeps the label for screen readers only                        |
-| `emptyLabel`      | `All`       | Text for the "All" choice                                              |
+| `emptyLabel`      | `""`        | Text for the "All" choice. Empty shows "All".                          |
 
-**Sort** (`pikari-gutenberg-query-filter/sort`): `label`, `showLabel`, `emptyLabel`.
+**Sort** (`pikari-gutenberg-query-filter/sort`): `label` (empty shows "Sort By"), `showLabel` (`true`), and `emptyLabel` (empty shows "Default"). The Default choice appears only when the loop's own order matches no sort option.
 
 ## Theming
 
@@ -143,6 +160,7 @@ Radio and checkbox options render as:
 <label
 	class="wp-block-pikari-gutenberg-query-filter__checkbox-item category_news"
 >
+	<!-- name, form and directives omitted; see docs/hooks.md -->
 	<input type="checkbox" value="news" />
 	<span class="wp-block-pikari-gutenberg-query-filter__checkbox-text"
 		>News</span
@@ -158,24 +176,25 @@ See [docs/hooks.md](docs/hooks.md) for the full markup, class rules, filter para
 
 ### Plugin Structure
 
-- **Block Integration**: Modifies core WordPress blocks to add query context support
-- **Query Handler**: Processes URL parameters and modifies WP_Query arguments
-- **Helper Classes**: Cached data providers for authors, taxonomies, etc.
-- **Interactivity API**: Client-side state management and navigation
+- **Block Integration** (`Integrations\BlockFilters`): makes every Query Loop a router region, joins core's Search input to the loop, and injects each loop's hidden `<form>`
+- **Custom loops** (`Core\QueryLoopHandler`): applies URL parameters on `query_loop_block_query_vars`
+- **Inherited loops** (`Integrations\MainQueryFilter`): applies them to the main query on `pre_get_posts`
+- **URL and query logic** (`Url\*`, `Query\*`): parameter names, parsing and validation, query arguments, sort options and result counts
+- **Helpers**: option lists for post types, terms and authors
+- **Interactivity API**: client-side navigation and screen reader announcements
 
 ### Security
 
-- All user inputs are sanitized using WordPress functions
-- POST type and taxonomy validation prevents invalid queries
+- URL input is sanitized or validated against an allowlist before it reaches a query: viewable post types and taxonomies, existing users, and the sort options list
+- Sort can't set arbitrary `orderby`, `order` or `meta_key` values
 - No database queries without proper validation
 - Follows WordPress security best practices
 
 ### Performance
 
-- **Caching**: Author lists and other expensive queries are cached
-- **Minimal Queries**: Only loads necessary data for active filters
-- **Client-Side Navigation**: No page reloads, uses WordPress Interactivity API
-- **Lazy Loading**: Scripts only enqueue when blocks are present
+- **Caching**: The author list is cached in a transient for up to an hour. Term and post type lists aren't cached by the plugin
+- **Client-Side Navigation**: With JavaScript, results update without a full page reload
+- **Lazy Loading**: The view script loads only when a filter or Sort block is on the page, or a core Search block sits inside a Query Loop
 
 ### Page-Level Caching
 
@@ -262,9 +281,11 @@ msginit --input=languages/pikari-gutenberg-query-filter.pot \
 ```text
 pikari-gutenberg-query-filter/
 ├── includes/                 # PHP classes
-│   ├── Core/                # Core functionality
-│   ├── Helpers/             # Helper classes
-│   └── Integrations/        # WordPress integrations
+│   ├── Core/                # Custom-loop query adapter
+│   ├── Helpers/             # Option lists
+│   ├── Integrations/        # Core block and main-query integrations
+│   ├── Query/               # Query arguments, sort options, result counts
+│   └── Url/                 # Parameter names, filter state, the loop form
 ├── src/                     # Source files
 │   ├── blocks/              # Block definitions
 │   │   ├── query-filter/    # Main filter block
@@ -292,18 +313,17 @@ pikari-gutenberg-query-filter/
 ### WordPress
 
 - **Core Query Loop**: Full support for WordPress core Query Loop blocks
-- **Advanced Query Loop**: Compatible with Advanced Query Loop by Ryan Welcher
+- **Advanced Query Loop**: Post type filters include AQL's extra post types in custom loops. In AQL's inherited mode, the Sort block has no effect. There is no automated test against AQL
 - **Query Settings**: Filters, sort and search apply to custom queries and to inherited queries on home, archive and search templates
 
 ### Themes
 
 - **Block Themes**: Full support for block-based themes
-- **Classic Themes**: Works with classic themes that support blocks
 - **Custom CSS**: Provides CSS classes for custom styling
 
 ### Browsers
 
-- **Modern Browsers**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
+- **Modern Browsers**: The view script is an ES module loaded through an import map, which needs Chrome or Edge 89+, Firefox 108+, or Safari 16.4+. An older browser with JavaScript on gets neither in-place updates nor the no-JS button
 - **JavaScript**: Optional. With it, results update in place through the Interactivity API router. Without it, every filter, sort and search control still works — each Query Filter and Sort block shows an "Apply filters" button, and core's Search block uses its own submit button; either submits the whole loop as a normal GET request and reloads the page
 
 ## Troubleshooting
@@ -312,7 +332,7 @@ pikari-gutenberg-query-filter/
 
 - Ensure the search block is placed inside a Query Loop block
 - Check that the Query Loop has a valid query configuration
-- Verify JavaScript is enabled and no console errors
+- Check the browser console for errors. With JavaScript off, search submits with a full page load; that's expected
 
 ### Filters Not Updating
 
@@ -337,7 +357,7 @@ This doesn't happen with JavaScript enabled: the plugin's `buildUrl()` omits emp
 ### Performance Issues
 
 - Review the number of posts being queried (use pagination)
-- Check if author caching is working properly
+- The author list is cached for up to an hour. After renaming a user, or on a site with a persistent object cache, delete the `pikari_query_filter_authors_*` transients to refresh it
 - Consider limiting the number of filter options
 
 ## License
