@@ -112,6 +112,23 @@ The markup above is abbreviated: WordPress also adds its own block classes to th
 
 The gap between options is the CSS custom property `--pikari-gutenberg-query-filter-option-gap` (default `0.5rem`), set on the block wrapper.
 
+| Element                  | Class                                                            |
+| ------------------------ | ---------------------------------------------------------------- |
+| Block wrapper            | `wp-block-pikari-gutenberg-query-filter`                         |
+| Option fieldset          | `wp-block-pikari-gutenberg-query-filter__fieldset`               |
+| Block label              | `wp-block-pikari-gutenberg-query-filter__label`                  |
+| Option group             | `wp-block-pikari-gutenberg-query-filter__{radio,checkbox}-group` |
+| Option `<label>`         | `wp-block-pikari-gutenberg-query-filter__{radio,checkbox}-item`  |
+| Option `<label>`, unique | `{key}_{slug}` — see [Option Classes](#option-classes)           |
+| Option text              | `wp-block-pikari-gutenberg-query-filter__{radio,checkbox}-text`  |
+| Dropdown                 | `wp-block-pikari-gutenberg-query-filter__select`                 |
+| Sort label               | `wp-block-pikari-gutenberg-query-filter-sort__label`             |
+| Sort dropdown            | `wp-block-pikari-gutenberg-query-filter-sort__select`            |
+| Injected loop form       | `wp-block-pikari-gutenberg-query-filter__form`                   |
+| No-JS submit button      | `wp-block-pikari-gutenberg-query-filter__submit`                 |
+
+See [Form and Controls](#form-and-controls) for the injected `<form>`, the `name` / `form` attributes on each control, and the no-JS `<noscript>` button.
+
 ### Sort block
 
 The Sort block shares the wrapper class and renders a `<label>` and a `<select>`:
@@ -153,21 +170,6 @@ The plugin also changes every `core/query` wrapper, with or without filter block
 - `data-wp-watch---pikari-gutenberg-query-filter`, which restores stylesheets that other scripts added at runtime after a navigation.
 - The hidden loop `<form>`, as its **last child**, when the loop contains a control. A theme selector such as `.wp-block-query > :last-child` matches the form.
 
-| Element                  | Class                                                            |
-| ------------------------ | ---------------------------------------------------------------- |
-| Block wrapper            | `wp-block-pikari-gutenberg-query-filter`                         |
-| Option fieldset          | `wp-block-pikari-gutenberg-query-filter__fieldset`               |
-| Block label              | `wp-block-pikari-gutenberg-query-filter__label`                  |
-| Option group             | `wp-block-pikari-gutenberg-query-filter__{radio,checkbox}-group` |
-| Option `<label>`         | `wp-block-pikari-gutenberg-query-filter__{radio,checkbox}-item`  |
-| Option `<label>`, unique | `{key}_{slug}` — see [Option Classes](#option-classes)           |
-| Option text              | `wp-block-pikari-gutenberg-query-filter__{radio,checkbox}-text`  |
-| Dropdown                 | `wp-block-pikari-gutenberg-query-filter__select`                 |
-| Injected loop form       | `wp-block-pikari-gutenberg-query-filter__form`                   |
-| No-JS submit button      | `wp-block-pikari-gutenberg-query-filter__submit`                 |
-
-See [Form and Controls](#form-and-controls) for the injected `<form>`, the `name` / `form` attributes on each control, and the no-JS `<noscript>` button.
-
 ---
 
 ## Form and Controls
@@ -180,7 +182,7 @@ The form itself is `hidden`, has an inline `style="display:none"`, and takes no 
 - `data-query-page-key`: the loop's page parameter;
 - `data-query-inherit`: `"true"` or `"false"`;
 - `data-query-pagination-base`: the rewrite's pagination base;
-- `data-wp-on--submit`: the plugin's submit action.
+- `data-wp-interactive` and `data-wp-on--submit`: the plugin's store and submit action.
 
 It also holds a hidden input for every other parameter already on the URL (language, UTM params, etc.) so a no-JS submit doesn't drop them. It leaves out the names its controls own, the loop's page key, and core's `page` and `cst`.
 
