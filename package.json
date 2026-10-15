@@ -39,6 +39,7 @@
 		"i18n": "npm run i18n:pot && npm run i18n:mo && npm run i18n:json"
 	},
 	"dependencies": {
+		"@wordpress/react-inert-value": "^1.0.0",
 		"classnames": "^2.5.1"
 	},
 	"devDependencies": {
