@@ -1,11 +1,11 @@
 /**
- * Mock for @wordpress/escape-html.
+ * Mock for `@wordpress/escape-html`.
  *
  * Provides functional implementations (not just pass-through) so tests
  * can verify that escaped output is correct.
  */
 
-const escapeHTML = jest.fn( ( text ) =>
+const escapeHTML = vi.fn( ( text ) =>
 	String( text )
 		.replace( /&/g, '&amp;' )
 		.replace( /</g, '&lt;' )
@@ -13,7 +13,7 @@ const escapeHTML = jest.fn( ( text ) =>
 		.replace( /"/g, '&quot;' )
 );
 
-const escapeAttribute = jest.fn( ( text ) =>
+const escapeAttribute = vi.fn( ( text ) =>
 	String( text ).replace( /&/g, '&amp;' ).replace( /"/g, '&quot;' )
 );
 

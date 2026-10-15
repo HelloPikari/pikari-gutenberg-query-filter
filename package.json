@@ -43,11 +43,15 @@
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.64.0",
-		"@wordpress/e2e-test-utils-playwright": "^1.54.0",
+		"@wordpress/e2e-test-utils-playwright": "^3.0.0",
 		"@wordpress/env": "^10.39.0",
 		"@wordpress/scripts": "latest",
+		"globals": "^17.13.0",
 		"husky": "latest",
-		"lint-staged": "latest"
+		"jsdom": "^26.1.0",
+		"lint-staged": "latest",
+		"vite": "^8.3.4",
+		"vitest": "^5.0.5"
 	},
 	"lint-staged": {
 		"*.php": [
