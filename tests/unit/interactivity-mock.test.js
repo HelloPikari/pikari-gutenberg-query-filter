@@ -26,6 +26,34 @@ describe( '@wordpress/interactivity mock', () => {
 		expect( seen ).toEqual( [ 'a' ] );
 	} );
 
+	it( 'throws a rejected yield back into the generator', async () => {
+		// WordPress resumes the generator with gen.throw( error ), so the
+		// generator's own try/catch/finally sees the rejection.
+		const seen = [];
+		const wrapped = withScope( function* () {
+			try {
+				yield Promise.reject( new Error( 'boom' ) );
+				seen.push( 'not reached' );
+			} catch ( error ) {
+				seen.push( error.message );
+			} finally {
+				seen.push( 'finally' );
+			}
+			return 'recovered';
+		} );
+
+		await expect( wrapped() ).resolves.toBe( 'recovered' );
+		expect( seen ).toEqual( [ 'boom', 'finally' ] );
+	} );
+
+	it( 'rejects when the generator does not catch the error', async () => {
+		const wrapped = withScope( function* () {
+			yield Promise.reject( new Error( 'uncaught' ) );
+		} );
+
+		await expect( wrapped() ).rejects.toThrow( 'uncaught' );
+	} );
+
 	it( 'runs a generator action read back off the store', async () => {
 		const ran = [];
 		store( 'test/ns', {
