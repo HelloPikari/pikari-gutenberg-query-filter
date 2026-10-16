@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # The bump branch is pushed with this token. Pushes and PRs made with
           # GITHUB_TOKEN trigger no workflows, so a bump PR opened with it would
