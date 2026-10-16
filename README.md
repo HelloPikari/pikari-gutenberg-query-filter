@@ -369,7 +369,7 @@ GPL-2.0-or-later - see [LICENSE](LICENSE) file for details.
 **Pikari Inc.**
 
 - Website: <https://pikari.io>
-- Email: development@pikari.io
+- Email: <development@pikari.io>
 - GitHub: <https://github.com/HelloPikari>
 
 ## Changelog

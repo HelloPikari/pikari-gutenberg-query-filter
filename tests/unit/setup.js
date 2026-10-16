@@ -1,5 +1,5 @@
 /**
- * Jest test setup — runs before each test suite.
+ * Vitest test setup — runs before each test suite.
  *
  * Resets the jsdom environment between tests to prevent state leaking.
  */

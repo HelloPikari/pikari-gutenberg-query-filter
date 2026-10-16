@@ -1,6 +1,6 @@
-/* eslint-disable jsx-a11y/label-has-associated-control */
 import { __ } from '@wordpress/i18n';
 import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
+import { inertValue } from '@wordpress/react-inert-value';
 import { PanelBody } from '@wordpress/components';
 import { useInstanceId } from '@wordpress/compose';
 import FilterInspectorControls from '../../components/FilterInspectorControls';
@@ -51,7 +51,7 @@ export default function Edit( { attributes, setAttributes } ) {
 				<select
 					id={ id }
 					className="wp-block-pikari-gutenberg-query-filter-sort__select wp-block-pikari-gutenberg-query-filter__select"
-					inert
+					inert={ inertValue( true ) }
 				>
 					<option>
 						{ emptyLabel || __( 'Default', 'pikari-gutenberg-query-filter' ) }

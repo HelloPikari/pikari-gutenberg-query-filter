@@ -12,9 +12,7 @@
  * re-enables those.
  */
 
-jest.mock( '@wordpress/a11y', () => ( { speak: jest.fn() } ), {
-	virtual: true,
-} );
+vi.mock( '@wordpress/a11y', () => ( { speak: vi.fn() } ) );
 
 let actions;
 let callbacks;
@@ -92,24 +90,22 @@ function fire( control, type, extra = {} ) {
  * @return {Promise} Resolves once the pending microtasks have run.
  */
 function flush() {
-	return jest.advanceTimersByTimeAsync( 0 );
+	return vi.advanceTimersByTimeAsync( 0 );
 }
 
 describe( 'pikari/gutenberg-query-filter view', () => {
-	beforeEach( () => {
+	beforeEach( async () => {
 		// view.js keeps per-page state, so load a fresh copy for each test.
-		jest.resetModules();
+		vi.resetModules();
 		let store;
-		( {
-			store,
-			getContext,
-			withSyncEvent,
-		} = require( '@wordpress/interactivity' ) );
+		( { store, getContext, withSyncEvent } = await import(
+			'@wordpress/interactivity'
+		) );
 		( {
 			actions: { navigate },
-		} = require( '@wordpress/interactivity-router' ) );
-		( { speak } = require( '@wordpress/a11y' ) );
-		require( '../../../../src/blocks/query-filter/view' );
+		} = await import( '@wordpress/interactivity-router' ) );
+		( { speak } = await import( '@wordpress/a11y' ) );
+		await import( '../../../../src/blocks/query-filter/view' );
 		( { actions, callbacks } = store.getStore(
 			'pikari/gutenberg-query-filter'
 		) );
@@ -197,24 +193,24 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 		let search;
 
 		beforeEach( () => {
-			jest.useFakeTimers();
+			vi.useFakeTimers();
 			form = addForm();
 			select = document.querySelector( 'select' );
 			search = document.querySelector( 'input[type="search"]' );
 		} );
 
 		afterEach( () => {
-			jest.useRealTimers();
+			vi.useRealTimers();
 		} );
 
 		it( 'navigates 250ms after a filter changes, and not before', async () => {
 			select.value = 'news';
 			fire( select, 'change' );
 
-			await jest.advanceTimersByTimeAsync( 249 );
+			await vi.advanceTimersByTimeAsync( 249 );
 			expect( navigate ).not.toHaveBeenCalled();
 
-			await jest.advanceTimersByTimeAsync( 1 );
+			await vi.advanceTimersByTimeAsync( 1 );
 			expect( navigate ).toHaveBeenCalledWith(
 				'http://localhost/?query-3-category=news',
 				{ screenReaderAnnouncement: false }
@@ -225,10 +221,10 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			search.value = 'mango';
 			fire( search, 'input' );
 
-			await jest.advanceTimersByTimeAsync( 250 );
+			await vi.advanceTimersByTimeAsync( 250 );
 			expect( navigate ).not.toHaveBeenCalled();
 
-			await jest.advanceTimersByTimeAsync( 150 );
+			await vi.advanceTimersByTimeAsync( 150 );
 			expect( navigate ).toHaveBeenCalledWith(
 				'http://localhost/?query-3-s=mango',
 				{ screenReaderAnnouncement: false }
@@ -239,11 +235,11 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			select.value = 'news';
 			fire( select, 'change' );
 
-			await jest.advanceTimersByTimeAsync( 100 );
+			await vi.advanceTimersByTimeAsync( 100 );
 			select.value = 'events';
 			fire( select, 'change' );
 
-			await jest.advanceTimersByTimeAsync( 400 );
+			await vi.advanceTimersByTimeAsync( 400 );
 			expect( navigate ).toHaveBeenCalledTimes( 1 );
 			expect( navigate ).toHaveBeenCalledWith(
 				'http://localhost/?query-3-category=events',
@@ -255,9 +251,9 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			search.value = 'mang';
 			fire( search, 'input', { isComposing: true } );
 
-			expect( jest.getTimerCount() ).toBe( 0 );
+			expect( vi.getTimerCount() ).toBe( 0 );
 
-			await jest.advanceTimersByTimeAsync( 400 );
+			await vi.advanceTimersByTimeAsync( 400 );
 			expect( navigate ).not.toHaveBeenCalled();
 		} );
 
@@ -265,7 +261,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			search.value = 'mango';
 			fire( search, 'compositionend', { isComposing: true } );
 
-			await jest.advanceTimersByTimeAsync( 400 );
+			await vi.advanceTimersByTimeAsync( 400 );
 			expect( navigate ).toHaveBeenCalledWith(
 				'http://localhost/?query-3-s=mango',
 				{ screenReaderAnnouncement: false }
@@ -288,9 +284,9 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			select.value = 'news';
 			fire( select, 'change' );
 
-			expect( jest.getTimerCount() ).toBe( 0 );
+			expect( vi.getTimerCount() ).toBe( 0 );
 
-			await jest.advanceTimersByTimeAsync( 400 );
+			await vi.advanceTimersByTimeAsync( 400 );
 			expect( navigate ).not.toHaveBeenCalled();
 		} );
 
@@ -298,11 +294,11 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			select.value = 'news';
 			fire( select, 'change' );
 
-			await jest.advanceTimersByTimeAsync( 100 );
+			await vi.advanceTimersByTimeAsync( 100 );
 			select.value = '';
 			fire( select, 'change' );
 
-			await jest.advanceTimersByTimeAsync( 400 );
+			await vi.advanceTimersByTimeAsync( 400 );
 			expect( navigate ).not.toHaveBeenCalled();
 		} );
 
@@ -311,12 +307,12 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 
 			select.value = 'news';
 			fire( select, 'change' );
-			await jest.advanceTimersByTimeAsync( 250 );
+			await vi.advanceTimersByTimeAsync( 250 );
 			expect( navigate ).toHaveBeenCalledTimes( 1 );
 
 			fire( select, 'change' );
 
-			await jest.advanceTimersByTimeAsync( 400 );
+			await vi.advanceTimersByTimeAsync( 400 );
 			expect( navigate ).toHaveBeenCalledTimes( 1 );
 		} );
 
@@ -325,7 +321,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 
 			select.value = 'news';
 			fire( select, 'change' );
-			await jest.advanceTimersByTimeAsync( 250 );
+			await vi.advanceTimersByTimeAsync( 250 );
 
 			select.value = 'events';
 			fire( select, 'change' );
@@ -341,12 +337,12 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 
 			// And it did not *also* schedule a debounce timer alongside the
 			// immediate call: nothing more arrives once one would have fired.
-			await jest.advanceTimersByTimeAsync( 250 );
+			await vi.advanceTimersByTimeAsync( 250 );
 			expect( navigate ).toHaveBeenCalledTimes( 2 );
 		} );
 
 		it( 'submits at once, cancelling anything pending', async () => {
-			const preventDefault = jest.fn();
+			const preventDefault = vi.fn();
 
 			select.value = 'news';
 			fire( select, 'change' );
@@ -360,7 +356,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			await flush();
 			expect( navigate ).toHaveBeenCalledTimes( 1 );
 
-			await jest.advanceTimersByTimeAsync( 400 );
+			await vi.advanceTimersByTimeAsync( 400 );
 			expect( navigate ).toHaveBeenCalledTimes( 1 );
 			expect( navigate ).toHaveBeenCalledWith(
 				'http://localhost/?query-3-category=news',
@@ -375,7 +371,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 		it( 'replaces the history entry for a second search in one burst', async () => {
 			search.value = 'man';
 			fire( search, 'input' );
-			await jest.advanceTimersByTimeAsync( 400 );
+			await vi.advanceTimersByTimeAsync( 400 );
 
 			expect( navigate ).toHaveBeenNthCalledWith(
 				1,
@@ -385,7 +381,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 
 			search.value = 'mango';
 			fire( search, 'input' );
-			await jest.advanceTimersByTimeAsync( 400 );
+			await vi.advanceTimersByTimeAsync( 400 );
 
 			expect( navigate ).toHaveBeenNthCalledWith(
 				2,
@@ -397,13 +393,13 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 		it( 'pushes a history entry again once the burst has ended', async () => {
 			search.value = 'man';
 			fire( search, 'input' );
-			await jest.advanceTimersByTimeAsync( 400 );
+			await vi.advanceTimersByTimeAsync( 400 );
 
 			actions.endBurst();
 
 			search.value = 'mango';
 			fire( search, 'input' );
-			await jest.advanceTimersByTimeAsync( 400 );
+			await vi.advanceTimersByTimeAsync( 400 );
 
 			expect( navigate ).toHaveBeenNthCalledWith(
 				2,
@@ -415,15 +411,15 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 		it( 'ends the burst when another control navigates', async () => {
 			search.value = 'man';
 			fire( search, 'input' );
-			await jest.advanceTimersByTimeAsync( 400 );
+			await vi.advanceTimersByTimeAsync( 400 );
 
 			select.value = 'news';
 			fire( select, 'change' );
-			await jest.advanceTimersByTimeAsync( 250 );
+			await vi.advanceTimersByTimeAsync( 250 );
 
 			search.value = 'mango';
 			fire( search, 'input' );
-			await jest.advanceTimersByTimeAsync( 400 );
+			await vi.advanceTimersByTimeAsync( 400 );
 
 			expect( navigate ).toHaveBeenNthCalledWith(
 				3,
@@ -438,7 +434,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 
 			select.value = 'events';
 
-			await jest.advanceTimersByTimeAsync( 250 );
+			await vi.advanceTimersByTimeAsync( 250 );
 
 			expect( navigate ).toHaveBeenCalledWith(
 				'http://localhost/?query-3-category=news',
@@ -473,7 +469,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 			it( 'turns off the router announcement', async () => {
 				select.value = 'news';
 				fire( select, 'change' );
-				await jest.advanceTimersByTimeAsync( 250 );
+				await vi.advanceTimersByTimeAsync( 250 );
 
 				expect( navigate ).toHaveBeenCalledWith(
 					expect.any( String ),
@@ -487,7 +483,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 				rendersPageWith( '3 results found' );
 				select.value = 'news';
 				fire( select, 'change' );
-				await jest.advanceTimersByTimeAsync( 250 );
+				await vi.advanceTimersByTimeAsync( 250 );
 				await flush();
 
 				expect( speak ).toHaveBeenCalledWith( '3 results found' );
@@ -510,7 +506,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 				rendersPageWith( null );
 				select.value = 'news';
 				fire( select, 'change' );
-				await jest.advanceTimersByTimeAsync( 250 );
+				await vi.advanceTimersByTimeAsync( 250 );
 				await flush();
 
 				expect( speak ).not.toHaveBeenCalled();
@@ -528,7 +524,7 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 
 				select.value = 'news';
 				fire( select, 'change' );
-				await jest.advanceTimersByTimeAsync( 250 );
+				await vi.advanceTimersByTimeAsync( 250 );
 
 				// A second change while the first is in flight navigates at once.
 				select.value = 'events';
@@ -558,12 +554,12 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 
 				select.value = 'news';
 				fire( select, 'change' );
-				await jest.advanceTimersByTimeAsync( 250 );
+				await vi.advanceTimersByTimeAsync( 250 );
 
-				await jest.advanceTimersByTimeAsync( 399 );
+				await vi.advanceTimersByTimeAsync( 399 );
 				expect( speak ).not.toHaveBeenCalledWith( 'Loading page…' );
 
-				await jest.advanceTimersByTimeAsync( 1 );
+				await vi.advanceTimersByTimeAsync( 1 );
 				expect( speak ).toHaveBeenCalledWith( 'Loading page…' );
 
 				finish();
@@ -579,9 +575,9 @@ describe( 'pikari/gutenberg-query-filter view', () => {
 
 				select.value = 'news';
 				fire( select, 'change' );
-				await jest.advanceTimersByTimeAsync( 250 );
+				await vi.advanceTimersByTimeAsync( 250 );
 				await flush();
-				await jest.advanceTimersByTimeAsync( 1000 );
+				await vi.advanceTimersByTimeAsync( 1000 );
 
 				expect( speak ).not.toHaveBeenCalledWith( 'Loading page…' );
 			} );

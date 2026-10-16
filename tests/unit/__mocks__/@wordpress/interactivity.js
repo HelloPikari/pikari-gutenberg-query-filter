@@ -1,5 +1,5 @@
 /**
- * Mock for @wordpress/interactivity.
+ * Mock for `@wordpress/interactivity`.
  *
  * The Interactivity API uses generator functions (function*) with yield
  * instead of async/await. This mock provides testable versions of store(),
@@ -24,7 +24,7 @@
  *   gen.next( mockResponse );  // Resume with yielded value
  */
 
-const store = jest.fn( ( storeName, storeDefinition ) => {
+const store = vi.fn( ( storeName, storeDefinition ) => {
 	if ( storeDefinition ) {
 		registered.set( storeName, storeDefinition );
 	}
@@ -33,7 +33,7 @@ const store = jest.fn( ( storeName, storeDefinition ) => {
 } );
 
 // Registered store definitions, by namespace. Derived from store.mock.calls
-// this would not survive jest.clearAllMocks(), which the monorepo's own
+// this would not survive vi.clearAllMocks(), which the monorepo's own
 // testing examples call in beforeEach — after which store( ns ).actions would
 // be undefined and every timer-driven test would throw.
 const registered = new Map();
@@ -95,15 +95,15 @@ store.getStore = ( name ) => {
 	return call[ 1 ];
 };
 
-const getContext = jest.fn( () => ( {} ) );
+const getContext = vi.fn( () => ( {} ) );
 
-const getElement = jest.fn( () => ( {
+const getElement = vi.fn( () => ( {
 	ref: document.createElement( 'div' ),
 } ) );
 
-const getConfig = jest.fn( () => ( {} ) );
+const getConfig = vi.fn( () => ( {} ) );
 
-const withScope = jest.fn( ( func ) => {
+const withScope = vi.fn( ( func ) => {
 	// WordPress returns non-generators untouched; the modals plugin passes
 	// plain arrow functions through here.
 	if ( func?.constructor?.name !== 'GeneratorFunction' ) {
@@ -122,7 +122,7 @@ const withScope = jest.fn( ( func ) => {
 	};
 } );
 
-const withSyncEvent = jest.fn( ( handler ) => handler );
+const withSyncEvent = vi.fn( ( handler ) => handler );
 
 module.exports = {
 	store,
