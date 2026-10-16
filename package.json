@@ -46,7 +46,7 @@
 		"@playwright/test": "^1.64.0",
 		"@wordpress/e2e-test-utils-playwright": "^3.0.0",
 		"@wordpress/env": "^10.39.0",
-		"@wordpress/scripts": "latest",
+		"@wordpress/scripts": "^36.1.0",
 		"globals": "^17.13.0",
 		"husky": "latest",
 		"jsdom": "^26.1.0",
