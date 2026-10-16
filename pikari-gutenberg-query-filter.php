@@ -13,6 +13,7 @@
  * Requires at least: 6.8
  * Tested up to: 7.1
  * Requires PHP: 8.4
+ * Update URI:  https://github.com/HelloPikari/pikari-gutenberg-query-filter
  * Network: false
  *
  * @package pikari-gutenberg-query-filter
