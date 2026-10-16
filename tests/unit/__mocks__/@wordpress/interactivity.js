@@ -111,14 +111,32 @@ const withScope = vi.fn( ( func ) => {
 	}
 
 	return async ( ...args ) => {
+		// Mirrors WordPress: a rejected yield is thrown back into the
+		// generator, so its own try/catch/finally runs.
 		const generator = func( ...args );
-		let result = generator.next();
+		let value;
+		let error;
 
-		while ( ! result.done ) {
-			result = generator.next( await result.value );
+		while ( true ) {
+			const result = error
+				? generator.throw( error )
+				: generator.next( value );
+			error = undefined;
+
+			try {
+				value = await result.value;
+			} catch ( e ) {
+				error = e;
+			}
+
+			if ( result.done ) {
+				if ( error ) {
+					throw error;
+				}
+
+				return value;
+			}
 		}
-
-		return result.value;
 	};
 } );
 
