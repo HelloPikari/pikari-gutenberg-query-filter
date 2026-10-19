@@ -49,7 +49,7 @@
 		"@wordpress/scripts": "^36.1.0",
 		"globals": "^17.13.0",
 		"husky": "latest",
-		"jsdom": "^26.1.0",
+		"jsdom": "^30.1.3",
 		"lint-staged": "latest",
 		"vite": "^8.3.4",
 		"vitest": "^5.0.5"
