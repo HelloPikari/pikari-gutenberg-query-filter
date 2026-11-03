@@ -24,7 +24,7 @@
 		"wp-coding-standards/wpcs": "^3.1",
 		"dealerdirect/phpcodesniffer-composer-installer": "^1.0",
 		"phpcsstandards/phpcsutils": "^1.0.12",
-		"phpunit/phpunit": "^9.5",
+		"phpunit/phpunit": "^13.4",
 		"php-stubs/wordpress-stubs": "^7.0",
 		"brain/monkey": "^2.6",
 		"mockery/mockery": "^1.6"
